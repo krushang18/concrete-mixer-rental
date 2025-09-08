@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Quote - M/S O.C.Shah | Concrete Mixer Rental Gujarat, Rajasthan, Maharashtra</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Submit your inquiry for self-loading concrete mixer rental. Get competitive quotes for construction equipment rental across Gujarat, Rajasthan, and Maharashtra. Fast response guaranteed.">
+    <meta name="keywords" content="concrete mixer rental quote, self loading concrete mixer rent Gujarat, construction equipment hire quote, concrete mixer rental inquiry">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0081C9;
+            --secondary-color: #FFC93C;
+            --background-light: #FFFFFF;
+            --background-grey: #F8F9FA;
+            --text-dark: #333333;
+            --text-darker: #212529;
+            --primary-dark: #006ba3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --shadow-elegant: 0 10px 40px rgba(0,0,0,0.1);
+            --shadow-hover: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: linear-gradient(135deg, var(--background-grey) 0%, #e8f4fd 100%);
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--background-light);
+            box-shadow: var(--shadow-elegant);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+            background: rgba(0, 129, 201, 0.05);
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            color: var(--text-darker);
+            margin-bottom: 1rem;
+        }
+
+        .page-header p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section-divider {
+            width: 80px;
+            height: 4px;
+            background: var(--secondary-color);
+            margin: 1.5rem auto;
+            border-radius: 2px;
+        }
+
+        /* Form Container */
+        .form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+
+        .form-section {
+            background: var(--background-light);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-elegant);
+            height: fit-content;
+        }
+
+        .form-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-darker);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .form-section h2 i {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-darker);
+            font-size: 0.95rem;
+        }
+
+        .required {
+            color: var(--error-color);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: var(--background-light);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 129, 201, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-input.error {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+
+        .form-input.success {
+            border-color: var(--success-color);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .input-icon {
+            position: relative;
+        }
+
+        .input-icon i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            z-index: 10;
+        }
+
+        .input-icon .form-input {
+            padding-left: 2.5rem;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .success-message {
+            color: var(--success-color);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Submit Button */
+        .submit-button {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 129, 201, 0.3);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Info Section */
+        .info-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .info-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        .info-section h2 {
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-list {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .info-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .info-list i {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            width: 20px;
+        }
+
+        .contact-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-item i {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            width: 20px;
+        }
+
+        .contact-item a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .contact-item a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: var(--success-color);
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: var(--error-color);
+        }
+
+        .alert-info {
+            background: rgba(0, 129, 201, 0.1);
+            border: 1px solid rgba(0, 129, 201, 0.3);
+            color: var(--primary-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .form-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .main-content {
+                padding: 2rem 1rem;
+            }
+
+            .form-section {
+                padding: 1.5rem;
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .loading-content h3 {
+            margin-bottom: 1rem;
+            color: var(--text-darker);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <a href="index.html" class="logo">M/S O.C.Shah</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="query.html" style="color: var(--primary-color); font-weight: 600;">Get Quote</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Request a Quote</h1>
+            <div class="section-divider"></div>
+            <p>Submit your inquiry for concrete mixer rental and we'll get back to you within 24 hours with the best solution for your construction project.</p>
+        </div>
+
+        <div class="form-container">
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2>
+                    <i class="fas fa-file-alt"></i>
+                    Project Details
+                </h2>
+
+                <div id="alert-container"></div>
+
+                <form id="queryForm">
+                    <div class="form-group">
+                        <label for="company_name" class="form-label">
+                            Company Name <span class="required">*</span>
+                        </label>
+                        <div class="input-icon">
+                            <i class="fas fa-building"></i>
+                            <input type="text" id="company_name" name="company_name" class="form-input" required>
+                        </div>
+                        <div class="error-message" id="company_name_error" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            Email Address <span class="required">*</span>
+                        </label>
+                        <div class="input-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" class="form-input" required>
+                        </div>
+                        <div class="error-message" id="email_error" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contact_number" class="form-label">
+                            Contact Number <span class="required">*</span>
+                        </label>
+                        <div class="input-icon">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="contact_number" name="contact_number" class="form-input" placeholder="9898020677" required>
+                        </div>
+                        <div class="error-message" id="contact_number_error" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="site_location" class="form-label">
+                            Site Location <span class="required">*</span>
+                        </label>
+                        <div class="input-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <input type="text" id="site_location" name="site_location" class="form-input" placeholder="City, State" required>
+                        </div>
+                        <div class="error-message" id="site_location_error" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="duration" class="form-label">
+                            Rental Duration <span class="required">*</span>
+                        </label>
+                        <div class="input-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="text" id="duration" name="duration" class="form-input" placeholder="e.g., 2 weeks, 1 month" required>
+                        </div>
+                        <div class="error-message" id="duration_error" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="work_description" class="form-label">
+                            Work Description <span class="required">*</span>
+                        </label>
+                        <textarea id="work_description" name="work_description" class="form-input" rows="4" placeholder="Please describe your construction project and specific requirements..." required></textarea>
+                        <div class="error-message" id="work_description_error" style="display: none;"></div>
+                    </div>
+
+                    <button type="submit" class="submit-button" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        Submit Inquiry
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info Section -->
+            <div class="form-section info-section">
+                <div class="info-content">
+                    <h2>
+                        <i class="fas fa-info-circle"></i>
+                        Why Choose Us?
+                    </h2>
+
+                    <ul class="info-list">
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            High-quality self-loading concrete mixers
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Flexible rental periods (daily, weekly, monthly)
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Professional maintenance and support
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            On-time delivery and pickup
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Competitive pricing
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            Fully insured equipment
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            24/7 technical support
+                        </li>
+                    </ul>
+
+                    <div class="contact-info">
+                        <h3 style="color: white; margin-bottom: 1rem;">Need Immediate Assistance?</h3>
+                        
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:+919898020677">+91-9898020677</a>
+                        </div>
+                        
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:+919913737777">+91-9913737777</a>
+                        </div>
+                        
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:ocsfiori@gmail.com">ocsfiori@gmail.com</a>
+                        </div>
+                        
+                        <div class="contact-item">
+                            <i class="fas fa-clock"></i>
+                            <span>24/7 Service Available</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner" style="margin: 0 auto 1rem;"></div>
+            <h3>Submitting your inquiry...</h3>
+            <p>Please wait while we process your request.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
+    <script>
+        // Form validation and submission
+        class QueryFormHandler {
+            constructor() {
+                this.form = document.getElementById('queryForm');
+                this.submitBtn = document.getElementById('submitBtn');
+                this.loadingOverlay = document.getElementById('loadingOverlay');
+                this.alertContainer = document.getElementById('alert-container');
+                
+                this.initializeForm();
+            }
+
+            initializeForm() {
+                // Add event listeners
+                this.form.addEventListener('submit', this.handleSubmit.bind(this));
+                
+                // Real-time validation
+                this.form.querySelectorAll('.form-input').forEach(input => {
+                    input.addEventListener('blur', () => this.validateField(input));
+                    input.addEventListener('input', () => this.clearFieldError(input));
+                });
+            }
+
+            validateField(field) {
+                const value = field.value.trim();
+                const fieldName = field.name;
+                let isValid = true;
+                let errorMessage = '';
+
+                // Clear previous error
+                this.clearFieldError(field);
+
+                // Required field validation
+                if (!value) {
+                    errorMessage = 'This field is required';
+                    isValid = false;
+                }
+                
+                // Specific field validations
+                switch (fieldName) {
+                    case 'email':
+                        if (value && !this.isValidEmail(value)) {
+                            errorMessage = 'Please enter a valid email address';
+                            isValid = false;
+                        }
+                        break;
+                    
+                    case 'contact_number':
+                        if (value && !this.isValidMobile(value)) {
+                            errorMessage = 'Please enter a valid 10-digit mobile number';
+                            isValid = false;
+                        }
+                        break;
+                    
+                    case 'company_name':
+                        if (value && value.length < 2) {
+                            errorMessage = 'Company name must be at least 2 characters';
+                            isValid = false;
+                        }
+                        break;
+                    
+                    case 'work_description':
+                        if (value && value.length < 10) {
+                            errorMessage = 'Please provide a more detailed description (minimum 10 characters)';
+                            isValid = false;
+                        }
+                        break;
+                }
+
+                if (!isValid) {
+                    this.showFieldError(field, errorMessage);
+                } else {
+                    this.showFieldSuccess(field);
+                }
+
+                return isValid;
+            }
+
+            isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            isValidMobile(mobile) {
+                // Remove any non-digits
+                const cleanMobile = mobile.replace(/\D/g, '');
+                // Check if it's a valid 10-digit Indian mobile number
+                const mobileRegex = /^[6-9]\d{9}$/;
+                return cleanMobile.length === 10 && mobileRegex.test(cleanMobile);
+            }
+
+            showFieldError(field, message) {
+                field.classList.add('error');
+                field.classList.remove('success');
+                
+                const errorElement = document.getElementById(`${field.name}_error`);
+                if (errorElement) {
+                    errorElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+                    errorElement.style.display = 'flex';
+                }
+            }
+
+            showFieldSuccess(field) {
+                field.classList.add('success');
+                field.classList.remove('error');
+                
+                const errorElement = document.getElementById(`${field.name}_error`);
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+
+            clearFieldError(field) {
+                field.classList.remove('error');
+                
+                const errorElement = document.getElementById(`${field.name}_error`);
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+            }
+
+            showAlert(message, type = 'info') {
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type}`;
+                
+                const icon = type === 'success' ? 'check-circle' : 
+                           type === 'error' ? 'exclamation-circle' : 'info-circle';
+                
+                alert.innerHTML = `
+                    <i class="fas fa-${icon}"></i>
+                    ${message}
+                `;
+                
+                this.alertContainer.innerHTML = '';
+                this.alertContainer.appendChild(alert);
+                
+                // Auto-remove after 10 seconds for non-error messages
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        if (alert.parentNode) {
+                            alert.remove();
+                        }
+                    }, 10000);
+                }
+                
+                // Scroll to top to show alert
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                // Validate all fields
+                let isFormValid = true;
+                const formData = new FormData(this.form);
+                const data = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    data[key] = value.trim();
+                    const field = this.form.querySelector(`[name="${key}"]`);
+                    if (!this.validateField(field)) {
+                        isFormValid = false;
+                    }
+                }
+
+                if (!isFormValid) {
+                    this.showAlert('Please correct the errors below and try again.', 'error');
+                    return;
+                }
+
+                // Show loading state
+                this.setLoadingState(true);
+
+                try {
+                    // Submit to API
+                    const response = await apiService.submitQuery(data);
+                    
+                    if (response.success) {
+                        this.showAlert(
+                            `Thank you! Your inquiry has been submitted successfully. Reference: ${response.data.reference}. We will contact you within 24 hours.`,
+                            'success'
+                        );
+                        
+                        // Reset form
+                        this.form.reset();
+                        this.form.querySelectorAll('.form-input').forEach(input => {
+                            input.classList.remove('success', 'error');
+                        });
+                        
+                    } else {
+                        throw new Error(response.message || 'Submission failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Form submission error:', error);
+                    this.showAlert(
+                        'We apologize, but there was an error submitting your inquiry. Please try again or call us directly at +91-9898020677.',
+                        'error'
+                    );
+                } finally {
+                    this.setLoadingState(false);
+                }
+            }
+
+            setLoadingState(loading) {
+                if (loading) {
+                    this.submitBtn.disabled = true;
+                    this.submitBtn.innerHTML = `
+                        <div class="loading-spinner"></div>
+                        Submitting...
+                    `;
+                    this.loadingOverlay.classList.add('active');
+                } else {
+                    this.submitBtn.disabled = false;
+                    this.submitBtn.innerHTML = `
+                        <i class="fas fa-paper-plane"></i>
+                        Submit Inquiry
+                    `;
+                    this.loadingOverlay.classList.remove('active');
+                }
+            }
+        }
+
+        // Initialize form handler when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            new QueryFormHandler();
+        });
+
+        // Improved phone number input handling
+        document.getElementById('contact_number').addEventListener('input', function(e) {
+            // Get only numbers from input
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Limit to 10 digits
+            if (value.length > 10) {
+                value = value.substring(0, 10);
+            }
+            
+            // Set the cleaned value back to input
+            e.target.value = value;
+        });
+
+        // Prevent non-numeric input on keypress
+        document.getElementById('contact_number').addEventListener('keypress', function(e) {
+            // Allow backspace, delete, tab, escape, enter
+            if ([8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true)) {
+                // Let it happen, don't do anything
+                return;
+            }
+            // Ensure that it is a number and stop the keypress
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                e.preventDefault();
+            }
+        });
+
+        // Auto-resize textarea
+        const textarea = document.getElementById('work_description');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    </script>
+</body>
+</html>

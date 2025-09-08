@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About M/S O.C.Shah - Leading Concrete Mixer Rental Company | Gujarat, Rajasthan, Maharashtra</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Learn about M/S O.C.Shah, a trusted provider of self-loading concrete mixer rentals with years of experience serving construction companies across Gujarat, Rajasthan, and Maharashtra.">
+    <meta name="keywords" content="concrete mixer rental company Gujarat, construction equipment rental experience, M/S O.C.Shah company profile, self loading concrete mixer provider">
+    <meta name="robots" content="index, follow">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0081C9;
+            --secondary-color: #FFC93C;
+            --background-light: #FFFFFF;
+            --background-grey: #F8F9FA;
+            --text-dark: #333333;
+            --text-darker: #212529;
+            --primary-dark: #006ba3;
+            --shadow-elegant: 0 10px 40px rgba(0,0,0,0.1);
+            --shadow-hover: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--background-light);
+            box-shadow: var(--shadow-elegant);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+
+        .navbar {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .logo:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+            background: rgba(0, 129, 201, 0.05);
+        }
+
+        .nav-links a.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .cta-button {
+            background: var(--primary-color);
+            color: white !important;
+            padding: 0.75rem 1.25rem !important;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 129, 201, 0.3);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0.5rem;
+            z-index: 1001;
+        }
+
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .mobile-nav.active {
+            display: block;
+        }
+
+        .mobile-nav-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            padding: 2rem 1rem;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-nav.active .mobile-nav-content {
+            transform: translateX(0);
+        }
+
+        .mobile-nav-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .mobile-nav-links {
+            list-style: none;
+            margin-top: 3rem;
+        }
+
+        .mobile-nav-links li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-nav-links a {
+            display: block;
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+            transition: color 0.3s ease;
+        }
+
+        .mobile-nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .mobile-nav-links a.cta-button {
+            background: var(--primary-color);
+            color: white !important;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border-bottom: none;
+            margin-top: 1rem;
+        }
+
+        .mobile-nav-links a.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 50vh;
+            min-height: 300px;
+            background: linear-gradient(135deg, rgba(0, 129, 201, 0.9), rgba(0, 107, 163, 0.9)),
+                        url('assets/images/ss1.jpg') center/cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            position: relative;
+            width: 100%;
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            line-height: 1.2;
+        }
+
+        .hero-content p {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            opacity: 0.9;
+        }
+
+        .section-divider {
+            width: 80px;
+            height: 4px;
+            background: var(--secondary-color);
+            margin: 1.5rem auto;
+            border-radius: 2px;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            width: 100%;
+        }
+
+        .section {
+            padding: 3rem 0;
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-darker);
+            margin-bottom: 1rem;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .section-subtitle {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        /* Company Story Section */
+        .company-story {
+            background: var(--background-light);
+        }
+
+        .story-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        .story-text h3 {
+            font-size: clamp(1.3rem, 4vw, 1.75rem);
+            font-weight: 600;
+            color: var(--text-darker);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .story-text p {
+            font-size: clamp(0.95rem, 2.5vw, 1.05rem);
+            line-height: 1.7;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .story-image {
+            position: relative;
+            margin-top: 2rem;
+        }
+
+        .story-image img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: var(--shadow-elegant);
+        }
+
+        .story-image::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 60px;
+            height: 60px;
+            background: var(--secondary-color);
+            border-radius: 12px;
+            z-index: -1;
+        }
+
+        .story-image::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: -15px;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            border-radius: 12px;
+            z-index: -1;
+        }
+
+        /* Values Section */
+        .values-section {
+            background: var(--background-grey);
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .value-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-elegant);
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .value-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 129, 201, 0.05), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .value-card:hover::before {
+            left: 100%;
+        }
+
+        .value-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .value-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, rgba(0, 129, 201, 0.1), rgba(0, 129, 201, 0.05));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 1.8rem;
+            color: var(--primary-color);
+        }
+
+        .value-card h3 {
+            font-size: clamp(1.1rem, 3vw, 1.3rem);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-darker);
+        }
+
+        .value-card p {
+            color: #666;
+            line-height: 1.6;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        /* Team Section */
+        .team-section {
+            background: var(--background-light);
+        }
+
+        .team-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-number {
+            font-size: clamp(2rem, 6vw, 2.5rem);
+            font-weight: 800;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        /* Service Areas Section */
+        .service-areas {
+            background: var(--background-grey);
+        }
+
+        .areas-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .area-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-elegant);
+            transition: all 0.3s ease;
+        }
+
+        .area-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .area-card h3 {
+            font-size: clamp(1.2rem, 3.5vw, 1.4rem);
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .area-card h3 i {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .area-card ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        .area-card li {
+            padding: 0.5rem 0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
+        }
+
+        .area-card li i {
+            color: var(--secondary-color);
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            text-align: center;
+            padding: 3rem 0;
+            width: 100%;
+        }
+
+        .cta-content h2 {
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .cta-content p {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            color: var(--text-darker);
+            min-width: 160px;
+            justify-content: center;
+        }
+
+        .btn-primary:hover {
+            background: #e6b235;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 201, 60, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            min-width: 160px;
+            justify-content: center;
+        }
+
+        .btn-outline:hover {
+            background: white;
+            color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text-darker);
+            color: white;
+            padding: 2rem 0 1rem;
+            width: 100%;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .footer-section p, .footer-section a {
+            color: #ccc;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            display: block;
+            transition: color 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .footer-section a:hover {
+            color: var(--secondary-color);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #444;
+            padding-top: 1.5rem;
+            text-align: center;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Desktop Responsive Design */
+        @media (min-width: 769px) {
+            .navbar {
+                padding: 1rem 2rem;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+
+            .nav-links {
+                gap: 2rem;
+            }
+
+            .nav-links a {
+                font-size: 0.95rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .main-content {
+                padding: 0 2rem;
+            }
+
+            .section {
+                padding: 4rem 0;
+            }
+
+            .story-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 4rem;
+                margin-top: 3rem;
+            }
+
+            .story-image {
+                margin-top: 0;
+            }
+
+            .story-image img {
+                height: 450px;
+            }
+
+            .story-image::before {
+                top: -20px;
+                right: -20px;
+                width: 100px;
+                height: 100px;
+            }
+
+            .story-image::after {
+                bottom: -20px;
+                left: -20px;
+                width: 80px;
+                height: 80px;
+            }
+
+            .values-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
+                margin-top: 3rem;
+            }
+
+            .value-card {
+                padding: 2.5rem;
+            }
+
+            .value-icon {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+
+            .team-stats {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 2rem;
+                margin-top: 3rem;
+            }
+
+            .stat-card {
+                padding: 2rem;
+            }
+
+            .areas-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 2rem;
+                margin-top: 3rem;
+            }
+
+            .area-card ul {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .cta-section {
+                padding: 4rem 0;
+            }
+
+            .footer {
+                padding: 3rem 0 1rem;
+            }
+
+            .footer-content {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+
+            .footer-section h3 {
+                font-size: 1.2rem;
+            }
+
+            .footer-section p, .footer-section a {
+                font-size: 1rem;
+            }
+
+            .footer-bottom {
+                padding-top: 2rem;
+                font-size: 1rem;
+            }
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .hero {
+                min-height: 300px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+            .navbar {
+                padding: 1rem 0.5rem;
+            }
+
+            .main-content {
+                padding: 0 0.5rem;
+            }
+
+            .value-card, .area-card {
+                padding: 1.5rem;
+            }
+
+            .stat-card {
+                padding: 1.25rem;
+            }
+
+            .team-stats {
+                gap: 1rem;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 250px;
+                padding: 1rem 1.5rem;
+            }
+
+            .cta-content > div {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
+        }
+
+        /* Animation classes */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <a href="index.html" class="logo">M/S O.C.Shah</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html" class="active">About</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="query.html" class="cta-button">Get Quote</a></li>
+            </ul>
+            <button class="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-content">
+            <button class="mobile-nav-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <ul class="mobile-nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html" class="active">About</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="query.html" class="cta-button">Get Quote</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>About M/S O.C.Shah</h1>
+            <div class="section-divider"></div>
+            <p>Your trusted partner for reliable concrete mixer rental solutions</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Company Story Section -->
+        <section class="section company-story">
+            <div class="section-subtitle">Our Story</div>
+            <h2 class="section-title">Leading Provider of Construction Equipment</h2>
+            <div class="section-divider"></div>
+
+            <div class="story-content">
+                <div class="story-text fade-in-up">
+                    <h3>Established Excellence in Equipment Rental</h3>
+                    <p>M/S O.C.Shah has been a cornerstone in the construction equipment rental industry, specializing in self-loading concrete mixers. With years of dedicated service, we have built a reputation for reliability, quality, and customer satisfaction across Gujarat, Rajasthan, and Maharashtra.</p>
+                    
+                    <p>Our journey began with a simple vision: to provide construction companies with access to high-quality, well-maintained equipment that helps them complete their projects efficiently and on time. Today, we are proud to be a trusted partner for numerous large-scale and specialized projects, including solar power plants, RCC road works, canal lining projects, and a wide range of other infrastructure developments.</p>
+                    
+                    <p>Our commitment to excellence is reflected in every aspect of our business - from maintaining our equipment fleet to providing exceptional customer service. We understand the challenges faced by construction professionals and strive to make equipment rental as seamless and reliable as possible.</p>
+                </div>
+                
+                <div class="story-image fade-in-up">
+                    <img src="assets/images/ss7.jpeg" alt="M/S O.C.Shah concrete mixer equipment">
+                </div>
+            </div>
+        </section>
+
+        <!-- Values Section -->
+        <section class="section values-section">
+            <div class="section-subtitle">Our Values</div>
+            <h2 class="section-title">What Drives Us</h2>
+            <div class="section-divider"></div>
+
+            <div class="values-grid">
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Trust & Reliability</h3>
+                    <p>We build lasting relationships with our clients through consistent, dependable service and transparent business practices.</p>
+                </div>
+
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <h3>Quality Excellence</h3>
+                    <p>Our equipment is regularly maintained and inspected to ensure optimal performance and safety on every project.</p>
+                </div>
+
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Customer Focus</h3>
+                    <p>We prioritize our customers' needs and work closely with them to provide customized solutions for their specific requirements.</p>
+                    </div>
+
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Timely Service</h3>
+                    <p>We understand the importance of project timelines and ensure prompt delivery and pickup of equipment.</p>
+                </div>
+
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3>Technical Expertise</h3>
+                    <p>Our team has extensive knowledge of construction equipment and provides expert guidance and support.</p>
+                </div>
+
+                <div class="value-card fade-in-up">
+                    <div class="value-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h3>Innovation</h3>
+                    <p>We continuously update our fleet with modern, efficient equipment to meet evolving industry standards.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Stats Section -->
+        <section class="section team-section">
+            <div class="section-subtitle">Our Impact</div>
+            <h2 class="section-title">Experience You Can Trust</h2>
+            <div class="section-divider"></div>
+
+            <div class="team-stats">
+                <div class="stat-card fade-in-up">
+                    <div class="stat-number">9+</div>
+                    <div class="stat-label">Years of Experience</div>
+                </div>
+
+                <div class="stat-card fade-in-up">
+                    <div class="stat-number">800+</div>
+                    <div class="stat-label">Projects Completed</div>
+                </div>
+
+                <div class="stat-card fade-in-up">
+                    <div class="stat-number">300+</div>
+                    <div class="stat-label">Happy Clients</div>
+                </div>
+
+                <div class="stat-card fade-in-up">
+                    <div class="stat-number">11</div>
+                    <div class="stat-label">Machines</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Service Areas Section -->
+        <section class="section service-areas">
+            <div class="section-subtitle">Service Coverage</div>
+            <h2 class="section-title">Where We Operate</h2>
+            <div class="section-divider"></div>
+            <p style="text-align: center; color: #666; font-size: clamp(1rem, 2.5vw, 1.1rem); max-width: 600px; margin: 0 auto 2rem;">
+                We provide concrete mixer rental services throughout Gujarat, Rajasthan, and Maharashtra. Listed below are some of the major cities we serve.
+            </p>
+
+            <div class="areas-grid">
+                <div class="area-card fade-in-up">
+                    <h3><i class="fas fa-map-marker-alt"></i> Gujarat</h3>
+                    <ul>
+                        <li><i class="fas fa-circle"></i> Surat</li>
+                        <li><i class="fas fa-circle"></i> Ahmedabad</li>
+                        <li><i class="fas fa-circle"></i> Rajkot</li>
+                        <li><i class="fas fa-circle"></i> Vadodara</li>
+                        <li><i class="fas fa-circle"></i> Gandhinagar (Headquarters)</li>
+                        <li><i class="fas fa-circle"></i> Talod </li>
+                    </ul>
+                </div>
+
+                <div class="area-card fade-in-up">
+                    <h3><i class="fas fa-map-marker-alt"></i> Rajasthan</h3>
+                    <ul>
+                        <li><i class="fas fa-circle"></i> Jaipur</li>
+                        <li><i class="fas fa-circle"></i> Jodhpur</li>
+                        <li><i class="fas fa-circle"></i> Udaipur</li>
+                        <li><i class="fas fa-circle"></i> Kota</li>
+                        <li><i class="fas fa-circle"></i> Ajmer</li>
+                        <li><i class="fas fa-circle"></i> Bikaner</li>
+                    </ul>
+                </div>
+
+                <div class="area-card fade-in-up">
+                    <h3><i class="fas fa-map-marker-alt"></i> Maharashtra</h3>
+                    <ul>
+                        <li><i class="fas fa-circle"></i> Mumbai</li>
+                        <li><i class="fas fa-circle"></i> Pune</li>
+                        <li><i class="fas fa-circle"></i> Nagpur</li>
+                        <li><i class="fas fa-circle"></i> Nashik</li>
+                        <li><i class="fas fa-circle"></i> Aurangabad</li>
+                        <li><i class="fas fa-circle"></i> Solapur</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="main-content">
+            <div class="cta-content">
+                <h2>Ready to Work With Us?</h2>
+                <p>Experience the difference of working with a trusted concrete mixer rental partner.</p>
+                <div>
+                    <a href="query.html" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Get Quote
+                    </a>
+                    <a href="tel:+919898020677" class="btn btn-outline">
+                        <i class="fas fa-phone"></i>
+                        Call Us Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="main-content">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>M/S O.C.Shah</h3>
+                    <p>Leading provider of self-loading concrete mixers for rent across Gujarat, Rajasthan, and Maharashtra.</p>
+                    <p><i class="fas fa-map-marker-alt"></i> E-706, Radhe infinity, Raksha Shakti Circle Kudasan, Gandhinagar, Gujarat - 382426</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <a href="tel:+919898020677"><i class="fas fa-phone"></i> +91-9898020677</a>
+                    <a href="tel:+919913737777"><i class="fas fa-phone"></i> +91-9913737777</a>
+                    <a href="mailto:ocsfiori@gmail.com"><i class="fas fa-envelope"></i> ocsfiori@gmail.com</a>
+                    <p><i class="fas fa-clock"></i> Available 24/7</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="index.html">Home</a>
+                    <a href="about.html">About Us</a>
+                    <a href="services.html">Services</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="query.html">Get Quote</a>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Service Areas</h3>
+                    <p>Gujarat</p>
+                    <p>Rajasthan</p>
+                    <p>Maharashtra</p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 M/S O.C.Shah. All rights reserved. | OCS Fiori Services</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileToggle = document.querySelector('.mobile-menu-toggle');
+        const mobileNav = document.querySelector('.mobile-nav');
+        const mobileNavClose = document.querySelector('.mobile-nav-close');
+        
+        mobileToggle.addEventListener('click', function() {
+            mobileNav.classList.add('active');
+        });
+
+        mobileNavClose.addEventListener('click', function() {
+            mobileNav.classList.remove('active');
+        });
+
+        // Close mobile nav when clicking outside
+        mobileNav.addEventListener('click', function(e) {
+            if (e.target === mobileNav) {
+                mobileNav.classList.remove('active');
+            }
+        });
+
+        // Close mobile nav when clicking links
+        document.querySelectorAll('.mobile-nav-links a').forEach(link => {
+            link.addEventListener('click', function() {
+                mobileNav.classList.remove('active');
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all fade-in-up elements
+        document.querySelectorAll('.fade-in-up').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Counter animation for stats
+        function animateCounter(element, target) {
+            let current = 0;
+            const increment = target / 100;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target + '+';
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current) + '+';
+                }
+            }, 20);
+        }
+
+        // Animate counters when they come into view
+        const statObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const numberElement = entry.target.querySelector('.stat-number');
+                    const targetNumber = parseInt(numberElement.textContent);
+                    animateCounter(numberElement, targetNumber);
+                    statObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.stat-card').forEach(card => {
+            statObserver.observe(card);
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

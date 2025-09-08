@@ -1,0 +1,45 @@
+# Customer Site .gitignore
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+.cache/
+
+# Build files (if using build tools later)
+dist/
+build/
+
+# Logs
+*.log
+
+# Environment files (if needed later)
+.env
+.env.local
+
+# Node modules (if adding build tools later)
+node_modules/
+
+# Backup files
+*.bak
+*.backup
+
+# Test files
+test/
+*.test.html

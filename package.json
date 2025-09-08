@@ -1,0 +1,35 @@
+{
+  "name": "concrete-mixer-rental",
+  "version": "1.0.0",
+  "description": "Professional web application for M/S O.C.Shah concrete mixer rental business",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm start",
+    "test": "cd backend && npm test",
+    "deploy": "bash deployment/scripts/deploy.sh",
+    "backup": "bash deployment/scripts/backup.sh",
+    "install-all": "cd backend && npm install",
+    "build": "echo 'Building customer site...' && echo 'Static site - no build required'",
+    "lint": "cd backend && npm run lint"
+  },
+  "keywords": [
+    "concrete-mixer",
+    "rental",
+    "construction-equipment",
+    "gujarat",
+    "rajasthan",
+    "maharashtra",
+    "surat",
+    "business"
+  ],
+  "author": "M/S O.C.Shah",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/concrete-mixer-rental.git"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
