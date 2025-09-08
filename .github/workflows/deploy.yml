@@ -50,9 +50,35 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /var/www/concrete-mixer-rental
+            # Navigate to correct project directory
+            cd /var/www/fioriforrent.com
+
+            # Create backup
+            sudo cp -r /var/www/fioriforrent.com /var/www/fioriforrent.com.backup.$(date +%Y%m%d_%H%M%S)
+
+            # Pull latest changes
             git pull origin main
+
+            # Update backend dependencies if needed
             cd backend
             npm install --production
-            pm2 reload ecosystem.config.js --env production
-            echo "✅ Deployment completed!"
+            cd ..
+
+            # Deploy frontend files
+            sudo cp -r customer-site/* /var/www/fioriforrent.com/
+
+            # Set proper permissions
+            sudo chown -R www-data:www-data /var/www/fioriforrent.com/
+            sudo chmod -R 755 /var/www/fioriforrent.com/
+
+            # Restart PM2 application
+            sudo pm2 restart fiori-for-rent
+
+            # Reload Nginx
+            sudo systemctl reload nginx
+
+            # Verify deployment
+            sleep 5
+            curl -f https://fioriforrent.com/api/customer/health || exit 1
+
+            echo "✅ Deployment completed successfully!"
