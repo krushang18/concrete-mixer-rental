@@ -44,27 +44,30 @@ jobs:
             # Configure git
             git config --global --add safe.directory /var/www/fioriforrent.com
 
-            # Fix permissions
+            # Fix permissions for git operations
             sudo chown -R krushang:krushang /var/www/fioriforrent.com
 
-            # Pull changes
+            # Pull latest changes
             git pull origin main
 
-            # Deploy frontend
-            sudo cp -r customer-site/* /var/www/fioriforrent.com/
+            # Remove old HTML files and deploy new ones
+            sudo rm -f /var/www/fioriforrent.com/*.html
+            sudo cp customer-site/*.html /var/www/fioriforrent.com/
+            sudo cp customer-site/robots.txt /var/www/fioriforrent.com/
+            sudo cp customer-site/sitemap.xml /var/www/fioriforrent.com/
 
-            # Set permissions
+            # Set final permissions
             sudo chown -R www-data:www-data /var/www/fioriforrent.com/
             sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git
 
             # Restart application
             sudo pm2 restart fiori-for-rent
 
-            # Verify local application
+            # Verify deployment
             sleep 15
             if curl -f http://127.0.0.1:3000/health > /dev/null 2>&1; then
-              echo "✅ Deployment successful - Application running"
+              echo "Deployment successful - Application running"
             else
-              echo "❌ Application not responding locally"
+              echo "Application not responding locally"
               exit 1
             fi
