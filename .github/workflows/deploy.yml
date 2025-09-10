@@ -9,38 +9,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
-
       - name: Install dependencies
-        run: |
-          cd backend
-          npm ci
-
+        run: cd backend && npm ci
       - name: Run tests
-        run: |
-          cd backend
-          npm test || echo "No tests configured yet"
-
+        run: cd backend && npm test || echo "No tests configured yet"
       - name: Security audit
-        run: |
-          cd backend
-          npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
+        run: cd backend && npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v0.1.8
@@ -50,73 +38,33 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            set -e
             echo "Starting deployment..."
-
-            # Navigate to project directory
             cd /var/www/fioriforrent.com
 
-            # Trust deployment directory for git
+            # Configure git
             git config --global --add safe.directory /var/www/fioriforrent.com
 
-            # Fix permissions before git operations
-            echo "Fixing file permissions..."
+            # Fix permissions
             sudo chown -R krushang:krushang /var/www/fioriforrent.com
-            chmod -R u+w /var/www/fioriforrent.com
 
-            # Clean any untracked files that might cause conflicts
-            git clean -fd
-
-            # Pull latest changes
-            echo "Pulling latest changes..."
+            # Pull changes
             git pull origin main
 
-            # Update backend if needed
-            echo "Updating backend..."
-            cd backend
-            npm install --production --silent
-            cd ..
-
-            # Deploy frontend files
-            echo "Deploying frontend..."
+            # Deploy frontend
             sudo cp -r customer-site/* /var/www/fioriforrent.com/
 
-            # Fix final permissions
-            echo "Setting final permissions..."
+            # Set permissions
             sudo chown -R www-data:www-data /var/www/fioriforrent.com/
             sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git
-            sudo chmod -R 755 /var/www/fioriforrent.com/
 
             # Restart application
-            echo "Restarting application..."
             sudo pm2 restart fiori-for-rent
 
-            # Wait longer for application to fully start
-            echo "Waiting for application to start..."
-            sleep 30
-
-            # Check PM2 status
-            echo "Checking PM2 status..."
-            sudo pm2 list
-
-            # Check local application health first
-            echo "Testing local application..."
-            if curl -f -s http://127.0.0.1:3000/health > /dev/null; then
-              echo "Local application responding"
+            # Verify local application
+            sleep 15
+            if curl -f http://127.0.0.1:3000/health > /dev/null 2>&1; then
+              echo "✅ Deployment successful - Application running"
             else
-              echo "Local application not responding"
-              sudo pm2 logs fiori-for-rent --lines 10
+              echo "❌ Application not responding locally"
+              exit 1
             fi
-
-            # Verify external website access with detailed output
-            echo "Verifying external website access..."
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' https://fioriforrent.com/)
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Website accessible (HTTP $HTTP_CODE)"
-            else
-              echo "Website check failed (HTTP $HTTP_CODE)"
-              echo "This may be due to SSL handshake time or DNS propagation"
-              echo "Deployment completed successfully - manual verification recommended"
-            fi
-
-            echo "Deployment completed"
