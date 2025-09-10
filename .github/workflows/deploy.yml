@@ -59,6 +59,14 @@ jobs:
             # Trust deployment directory for git
             git config --global --add safe.directory /var/www/fioriforrent.com
 
+            # Fix permissions before git operations
+            echo "Fixing file permissions..."
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com
+            chmod -R u+w /var/www/fioriforrent.com
+
+            # Clean any untracked files that might cause conflicts
+            git clean -fd
+
             # Pull latest changes
             echo "Pulling latest changes..."
             git pull origin main
@@ -73,9 +81,10 @@ jobs:
             echo "Deploying frontend..."
             sudo cp -r customer-site/* /var/www/fioriforrent.com/
 
-            # Fix permissions
-            echo "Setting permissions..."
+            # Fix final permissions
+            echo "Setting final permissions..."
             sudo chown -R www-data:www-data /var/www/fioriforrent.com/
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git
             sudo chmod -R 755 /var/www/fioriforrent.com/
 
             # Restart application
