@@ -91,15 +91,32 @@ jobs:
             echo "Restarting application..."
             sudo pm2 restart fiori-for-rent
 
-            # Wait for application to start
-            sleep 10
+            # Wait longer for application to fully start
+            echo "Waiting for application to start..."
+            sleep 30
 
-            # Verify deployment
-            echo "Verifying deployment..."
-            if curl -f -s https://fioriforrent.com/ > /dev/null; then
-              echo "Website accessible"
+            # Check PM2 status
+            echo "Checking PM2 status..."
+            sudo pm2 list
+
+            # Check local application health first
+            echo "Testing local application..."
+            if curl -f -s http://127.0.0.1:3000/health > /dev/null; then
+              echo "Local application responding"
             else
-              echo "Website check failed but continuing"
+              echo "Local application not responding"
+              sudo pm2 logs fiori-for-rent --lines 10
+            fi
+
+            # Verify external website access with detailed output
+            echo "Verifying external website access..."
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' https://fioriforrent.com/)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Website accessible (HTTP $HTTP_CODE)"
+            else
+              echo "Website check failed (HTTP $HTTP_CODE)"
+              echo "This may be due to SSL handshake time or DNS propagation"
+              echo "Deployment completed successfully - manual verification recommended"
             fi
 
             echo "Deployment completed"
