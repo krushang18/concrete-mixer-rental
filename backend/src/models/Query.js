@@ -32,12 +32,14 @@ class Query {
   }
 
   // Get all queries (for admin - Phase 2)
+  // Debug version of Query.getAll method
+  // FINAL FIX: Query.getAll method with dynamic LIMIT (no parameters)
   static async getAll(filters = {}) {
     let query = `
-      SELECT id, company_name, email, site_location, contact_number, 
-             duration, work_description, status, created_at, updated_at
-      FROM customer_queries
-    `;
+    SELECT id, company_name, email, site_location, contact_number, 
+           duration, work_description, status, created_at, updated_at
+    FROM customer_queries
+  `;
 
     const params = [];
     const conditions = [];
@@ -63,16 +65,28 @@ class Query {
 
     query += " ORDER BY created_at DESC";
 
+    // ✅ SOLUTION: Build LIMIT directly into SQL string, don't use parameters
     if (filters.limit) {
-      query += " LIMIT ?";
-      params.push(parseInt(filters.limit));
+      const limitValue = parseInt(filters.limit);
+      if (!isNaN(limitValue) && limitValue > 0 && limitValue <= 1000) {
+        // Add limit directly to SQL string (safe because we validate it's a number)
+        query += ` LIMIT ${limitValue}`;
+      } else {
+        query += ` LIMIT 50`; // Default limit
+      }
+    } else {
+      query += ` LIMIT 50`; // Default limit
     }
+
+    console.log("📝 Final SQL:", query);
+    console.log("📝 Parameters:", params);
 
     try {
       const rows = await executeQuery(query, params);
+      console.log("✅ Query successful, rows returned:", rows.length);
       return rows;
     } catch (error) {
-      console.error("Error fetching queries:", error);
+      console.error("❌ Error fetching queries:", error);
       throw new Error("Failed to fetch queries");
     }
   }

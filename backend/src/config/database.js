@@ -40,8 +40,19 @@ const executeQuery = async (query, params = []) => {
   }
 };
 
+const getConnection = async () => {
+  try {
+    const connection = await pool.getConnection();
+    return connection;
+  } catch (error) {
+    console.error("Error getting database connection:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   testConnection,
   executeQuery,
+  getConnection,
 };

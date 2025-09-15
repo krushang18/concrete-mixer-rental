@@ -85,7 +85,7 @@ class QueryController {
         status: req.query.status,
         startDate: req.query.startDate,
         endDate: req.query.endDate,
-        limit: req.query.limit || 50,
+        limit: req.query.limit ? parseInt(req.query.limit) : 50, // ✅ Fixed: Convert to number
       };
 
       const queries = await Query.getAll(filters);

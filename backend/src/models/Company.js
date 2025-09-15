@@ -4,7 +4,7 @@ class Company {
   // Get company details
   static async getDetails() {
     const query = `
-      SELECT company_name, gst_number, email, phone, address, 
+      SELECT company_name, gst_number, email, phone, phone2, address, 
              logo_url, signature_url, created_at, updated_at
       FROM our_company_details 
       ORDER BY id DESC 
@@ -20,9 +20,8 @@ class Company {
     }
   }
 
-  // Create or update company details (for admin - Phase 2)
+  // Create or update company details
   static async createOrUpdate(companyData) {
-    // First check if company details exist
     const existingQuery = "SELECT id FROM our_company_details LIMIT 1";
     const existing = await executeQuery(existingQuery);
 
@@ -32,7 +31,7 @@ class Company {
       // Update existing
       query = `
         UPDATE our_company_details 
-        SET company_name = ?, gst_number = ?, email = ?, phone = ?, 
+        SET company_name = ?, gst_number = ?, email = ?, phone = ?, phone2 = ?,
             address = ?, logo_url = ?, signature_url = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
@@ -41,6 +40,7 @@ class Company {
         companyData.gst_number,
         companyData.email,
         companyData.phone,
+        companyData.phone2 || null,
         companyData.address,
         companyData.logo_url || null,
         companyData.signature_url || null,
@@ -50,17 +50,18 @@ class Company {
       // Create new
       query = `
         INSERT INTO our_company_details 
-        (company_name, gst_number, email, phone, address, logo_url, signature_url) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (company_name, gst_number, email, phone, phone2, address, logo_url, signature_url) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
       params = [
         companyData.company_name,
         companyData.gst_number,
         companyData.email,
         companyData.phone,
+        companyData.phone2 || null,
         companyData.address,
-        companyData.logo_url || null,
-        companyData.signature_url || null,
+        companyData.logo_url || "/uploads/company/logo.png",
+        companyData.signature_url || "/uploads/company/signature.png",
       ];
     }
 
@@ -77,17 +78,55 @@ class Company {
     }
   }
 
+  // Get company details with image info
+  static async getDetailsWithImages() {
+    try {
+      const CompanyImageManager = require("../utils/imageManager");
+      const company = await this.getDetails();
+
+      if (!company) return null;
+
+      // Get actual image info
+      const [logoInfo, signatureInfo] = await Promise.all([
+        CompanyImageManager.getImageInfo("logo"),
+        CompanyImageManager.getImageInfo("signature"),
+      ]);
+
+      return {
+        ...company,
+        // Update to use secure endpoints
+        logo_url: "/api/admin/company/logo",
+        signature_url: "/api/admin/company/signature",
+        logo_info: {
+          ...logoInfo,
+          url: "/api/admin/company/logo",
+        },
+        signature_info: {
+          ...signatureInfo,
+          url: "/api/admin/company/signature",
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching company details with images:", error);
+      throw error;
+    }
+  }
+
   // Initialize default company data
   static async initializeDefault() {
     const existing = await this.getDetails();
 
     if (!existing) {
       const defaultData = {
-        company_name: "Concrete Mixer Rental Services",
-        gst_number: "GST_NUMBER_HERE",
-        email: "info@concretemixerrental.com",
-        phone: "+91-XXXXXXXXXX",
-        address: "Business Address, Gujarat, India",
+        company_name: "M/S Ochhavlal Chhotalal Shah",
+        gst_number: "24AAAFO2654G1ZK",
+        email: "ocsfiori@gmail.com",
+        phone: "+91-9913737777",
+        phone2: "+91-9898020677",
+        address:
+          "E-706, Radhe infinity, Raksha Shakti Circle Kudasan, Gandhinagar, Gujarat - 382426",
+        logo_url: "/uploads/company/logo.png",
+        signature_url: "/uploads/company/signature.png",
       };
 
       return await this.createOrUpdate(defaultData);
@@ -109,7 +148,23 @@ class Company {
     }
 
     if (!data.phone || data.phone.trim().length < 10) {
-      errors.push("Valid phone number is required");
+      errors.push("Primary phone number is required");
+    }
+
+    // Validate primary phone format
+    if (data.phone) {
+      const phoneRegex = /^[\+]?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(data.phone.replace(/\s|-/g, ""))) {
+        errors.push("Primary phone number format is invalid");
+      }
+    }
+
+    // Validate secondary phone format (optional)
+    if (data.phone2 && data.phone2.trim().length > 0) {
+      const phoneRegex = /^[\+]?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(data.phone2.replace(/\s|-/g, ""))) {
+        errors.push("Secondary phone number format is invalid");
+      }
     }
 
     if (!data.address || data.address.trim().length < 10) {
