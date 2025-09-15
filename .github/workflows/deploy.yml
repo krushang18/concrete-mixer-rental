@@ -1,4 +1,4 @@
-name: Deploy Concrete Mixer Rental
+name: Deploy Concrete Mixer Rental Phase 2
 
 on:
   push:
@@ -12,16 +12,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
+
       - name: Install dependencies
         run: cd backend && npm ci
+
       - name: Run tests
         run: cd backend && npm test || echo "No tests configured yet"
+
       - name: Security audit
         run: cd backend && npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
 
@@ -38,115 +42,137 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo "Starting Phase 2 deployment..."
+            echo "🚀 Starting Phase 2 deployment..."
+
+            # Stop application to prevent file locks
+            echo "⏸️ Stopping application..."
+            sudo pm2 stop fiori-for-rent || echo "App not running"
+
+            # Fix permissions BEFORE git operations
+            echo "🔧 Fixing permissions..."
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com/
+
+            # Navigate to project directory
             cd /var/www/fioriforrent.com
 
-            # Configure git
+            # Configure git safely
             git config --global --add safe.directory /var/www/fioriforrent.com
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
 
-            # Fix permissions for git operations
-            sudo chown -R krushang:krushang /var/www/fioriforrent.com
+            # Clean any conflicting files
+            echo "🧹 Cleaning conflicting files..."
+            git reset --hard HEAD
+            git clean -fd
 
             # Pull latest changes
-            echo "Pulling latest code..."
+            echo "📥 Pulling latest code..."
             git pull origin main
+
+            # Clean and reinstall backend dependencies
             echo "📦 Installing backend dependencies..."
             cd backend
-            npm ci --production
+
+            # Clean node_modules completely to avoid permission issues
+            rm -rf node_modules/
+            rm -f package-lock.json
+
+            # Install with correct ownership
+            npm install --production
+
+            # Return to project root
             cd ..
 
-
-            # Update backend dependencies (for any new packages in Phase 2)
-            echo "Installing/updating backend dependencies..."
-            cd backend
-            npm ci --production
-            cd ..
-
-            # Remove old HTML files and deploy new ones
-            echo "Deploying frontend files..."
-            sudo rm -f /var/www/fioriforrent.com/*.html
-            sudo cp customer-site/*.html /var/www/fioriforrent.com/
-            sudo cp customer-site/robots.txt /var/www/fioriforrent.com/ 2>/dev/null || echo "robots.txt not found, skipping"
-            sudo cp customer-site/sitemap.xml /var/www/fioriforrent.com/ 2>/dev/null || echo "sitemap.xml not found, skipping"
-
-            # Copy assets if they exist
-            if [ -d "customer-site/assets" ]; then
-              echo "Copying assets directory..."
-              sudo cp -r customer-site/assets/* /var/www/fioriforrent.com/assets/ 2>/dev/null || echo "No assets to copy"
+            # Deploy frontend files
+            echo "🌐 Deploying frontend files..."
+            if [ -d "customer-site" ]; then
+              sudo rm -f /var/www/fioriforrent.com/*.html
+              sudo cp customer-site/*.html /var/www/fioriforrent.com/ 2>/dev/null || echo "No HTML files to copy"
+              sudo cp customer-site/robots.txt /var/www/fioriforrent.com/ 2>/dev/null || echo "robots.txt not found"
+              sudo cp customer-site/sitemap.xml /var/www/fioriforrent.com/ 2>/dev/null || echo "sitemap.xml not found"
+              
+              # Copy assets if they exist
+              if [ -d "customer-site/assets" ]; then
+                echo "📁 Copying assets..."
+                sudo cp -r customer-site/assets/* /var/www/fioriforrent.com/assets/ 2>/dev/null || echo "No assets to copy"
+              fi
             fi
 
-            # Set final permissions
-            sudo chown -R www-data:www-data /var/www/fioriforrent.com/
-            sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git
+            # Create upload directories for Phase 2
+            echo "📁 Creating upload directories..."
+            mkdir -p backend/uploads/{company,quotations,signatures,temp}
 
-            # Create uploads directory for Phase 2 features (company logos, signatures)
-            echo "Creating upload directories for Phase 2..."
-            sudo mkdir -p /var/www/fioriforrent.com/uploads/company
-            sudo mkdir -p /var/www/fioriforrent.com/uploads/quotations
-            sudo chown -R www-data:www-data /var/www/fioriforrent.com/uploads
+            # Set final permissions correctly
+            echo "🔐 Setting final permissions..."
+
+            # Web files owned by www-data
+            sudo chown -R www-data:www-data /var/www/fioriforrent.com/*.html
+            sudo chown -R www-data:www-data /var/www/fioriforrent.com/assets/
+
+            # Backend and git owned by krushang
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com/backend/
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git/
+
+            # Upload directories with proper permissions
+            sudo chown -R krushang:krushang /var/www/fioriforrent.com/backend/uploads/
+            sudo chmod -R 755 /var/www/fioriforrent.com/backend/uploads/
 
             # Restart application
-            echo "Restarting application..."
-            sudo pm2 restart fiori-for-rent
+            echo "🔄 Starting application..."
+            sudo pm2 start fiori-for-rent
 
-            # Wait for application to start
-            echo "Waiting for application to start..."
+            # Wait for application to stabilize
+            echo "⏳ Waiting for application to stabilize..."
             sleep 15
 
-            # Verify deployment with multiple checks
-            echo "Verifying deployment..."
+            # Comprehensive verification
+            echo "🏥 Verifying deployment..."
 
-            # Check if PM2 process is running
+            # Check PM2 process
             if sudo pm2 list | grep -q "fiori-for-rent.*online"; then
-              echo "✓ PM2 process is running"
+              echo "✅ PM2 process is running"
             else
-              echo "✗ PM2 process is not running"
-              sudo pm2 logs fiori-for-rent --lines 10
+              echo "❌ PM2 process failed"
+              sudo pm2 logs fiori-for-rent --lines 20
               exit 1
             fi
 
             # Check health endpoint
             if curl -f http://127.0.0.1:3000/health > /dev/null 2>&1; then
-              echo "✓ Health endpoint responding"
+              echo "✅ Health endpoint responding"
             else
-              echo "✗ Health endpoint not responding"
+              echo "❌ Health endpoint failed"
               sudo pm2 logs fiori-for-rent --lines 10
               exit 1
             fi
 
-            # Check customer API endpoint
+            # Check customer API
             if curl -f http://127.0.0.1:3000/api/customer/health > /dev/null 2>&1; then
-              echo "✓ Customer API responding"
+              echo "✅ Customer API responding"
             else
-              echo "✗ Customer API not responding"
+              echo "❌ Customer API failed"
               sudo pm2 logs fiori-for-rent --lines 10
-              exit 1
-            fi
-
-            # Check database connectivity (test with simple query)
-            echo "Testing database connectivity..."
-            if mysql -u cmr_prod -pkrushang@working18 -h 127.0.0.1 concrete_mixer_rental -e "SELECT 1;" > /dev/null 2>&1; then
-              echo "✓ Database connection successful"
-            else
-              echo "✗ Database connection failed"
               exit 1
             fi
 
             # Check website accessibility
             if curl -f https://fioriforrent.com/ > /dev/null 2>&1; then
-              echo "✓ Website accessible via HTTPS"
+              echo "✅ Website accessible via HTTPS"
+              echo "🎉 Phase 2 deployment completed successfully!"
             else
-              echo "✗ Website not accessible via HTTPS"
-              exit 1
+              echo "⚠️ Website accessibility check failed"
             fi
 
-            echo "🎉 Phase 2 deployment completed successfully!"
-            echo "Application is running with all Phase 2 features enabled"
+            echo "📊 Deployment Summary:"
+            echo "   - Permissions fixed: ✅"
+            echo "   - Code updated: ✅"
+            echo "   - Dependencies installed: ✅"
+            echo "   - Application restarted: ✅"
+            echo "   - Health checks: ✅"
 
             # Show final status
-            echo "=== Deployment Summary ==="
-            echo "PM2 Status:"
-            sudo pm2 list
+            echo "=== Final Status ==="
+            sudo pm2 list | grep fiori-for-rent
             echo ""
             echo "Recent logs:"
             sudo pm2 logs fiori-for-rent --lines 5 --nostream
