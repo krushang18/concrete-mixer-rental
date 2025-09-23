@@ -1,6 +1,5 @@
 // src/services/dashboardApi.js
 import apiClient from "./api";
-import toast from "react-hot-toast";
 
 export class DashboardApiError extends Error {
   constructor(message, errors = [], status = null) {
