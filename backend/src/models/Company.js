@@ -86,26 +86,34 @@ class Company {
 
       if (!company) return null;
 
-      // Get actual image info
+      // Get actual image info from the file system
       const [logoInfo, signatureInfo] = await Promise.all([
         CompanyImageManager.getImageInfo("logo"),
         CompanyImageManager.getImageInfo("signature"),
       ]);
 
+      // 🔽🔽🔽 THIS IS THE PART TO CHANGE 🔽🔽🔽
+
       return {
         ...company,
-        // Update to use secure endpoints
-        logo_url: "/api/admin/company/logo",
-        signature_url: "/api/admin/company/signature",
+        // Only provide the URL if the image file actually exists
+        logo_url: logoInfo.exists ? "/api/admin/company/logo" : null,
+        signature_url: signatureInfo.exists
+          ? "/api/admin/company/signature"
+          : null,
         logo_info: {
           ...logoInfo,
-          url: "/api/admin/company/logo",
+          // Also update the info object's URL conditionally
+          url: logoInfo.exists ? "/api/admin/company/logo" : null,
         },
         signature_info: {
           ...signatureInfo,
-          url: "/api/admin/company/signature",
+          // Do the same for the signature
+          url: signatureInfo.exists ? "/api/admin/company/signature" : null,
         },
       };
+
+      // 🔼🔼🔼 END OF CHANGES 🔼🔼🔼
     } catch (error) {
       console.error("Error fetching company details with images:", error);
       throw error;

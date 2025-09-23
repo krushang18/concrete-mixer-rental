@@ -127,6 +127,74 @@ router.post(
   AuthController.resetPassword
 );
 
+router.get("/company/logo", async (req, res) => {
+  try {
+    const logoPath = path.join(__dirname, "../../uploads/company/logo.png");
+
+    // Check if file exists
+    try {
+      await fs.access(logoPath);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: "Logo not found",
+      });
+    }
+
+    // Set proper headers
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    // Send file
+    res.sendFile(logoPath);
+  } catch (error) {
+    console.error("Error serving logo:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to serve logo",
+    });
+  }
+});
+
+// Get company signature (SECURED - Admin only)
+router.get("/company/signature", async (req, res) => {
+  try {
+    const signaturePath = path.join(
+      __dirname,
+      "../../uploads/company/signature.png"
+    );
+
+    // Check if file exists
+    try {
+      await fs.access(signaturePath);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: "Signature not found",
+      });
+    }
+
+    // Set proper headers (no caching for sensitive content)
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Cache-Control",
+      "private, no-cache, no-store, must-revalidate"
+    );
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+
+    // Send file
+    res.sendFile(signaturePath);
+  } catch (error) {
+    console.error("Error serving signature:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to serve signature",
+    });
+  }
+});
+
 // =============================================================================
 // AUTHENTICATED ROUTES
 // =============================================================================
@@ -160,6 +228,8 @@ router.get("/dashboard/summary", DashboardController.getBusinessSummary);
 // =============================================================================
 
 router.get("/queries/stats", QueryController.getDashboardStats);
+router.get("/queries/filter-options", QueryController.getFilterOptions);
+router.get("/queries/summary", QueryController.getPaginationSummary);
 router.get("/queries", QueryController.getAllQueries);
 router.get("/queries/:id", QueryController.getQueryById);
 router.put("/queries/:id/status", QueryController.updateQueryStatus);
@@ -289,21 +359,40 @@ router.delete("/documents/:id", DocumentController.delete);
 // SERVICE RECORDS ROUTES - Only existing methods
 // =============================================================================
 
-router.get("/services/export", ServiceController.exportToCSV);
+// Service statistics and data
 router.get("/services/stats", ServiceController.getStats);
+router.get("/services/export", ServiceController.exportToCSV);
+
+// Service categories management
 router.get("/services/categories", ServiceController.getServiceCategories);
 router.post("/services/categories", ServiceController.createServiceCategory);
-router.post("/services/sub-items", ServiceController.createSubServiceItem);
-router.get("/services/machine/:machineId", ServiceController.getByMachine);
-router.get(
-  "/services/machine/:machineId/summary",
-  ServiceController.getMachineServiceSummary
+router.put("/services/categories/:id", ServiceController.updateServiceCategory);
+router.delete(
+  "/services/categories/:id",
+  ServiceController.deleteServiceCategory
 );
+
+// Sub-service items management
+router.get(
+  "/services/categories/:categoryId/sub-services",
+  ServiceController.getSubServices
+);
+router.post("/services/sub-items", ServiceController.createSubServiceItem);
+router.put("/services/sub-items/:id", ServiceController.updateSubServiceItem);
+router.delete(
+  "/services/sub-items/:id",
+  ServiceController.deleteSubServiceItem
+);
+
+// Service records CRUD
 router.get("/services", ServiceController.getAll);
 router.post("/services", ServiceController.create);
 router.get("/services/:id", ServiceController.getById);
 router.put("/services/:id", ServiceController.update);
 router.delete("/services/:id", ServiceController.delete);
+
+// Machine-specific service records
+router.get("/services/machine/:machineId", ServiceController.getByMachine);
 
 // =============================================================================
 // TERMS & CONDITIONS ROUTES - Only existing methods
@@ -568,74 +657,6 @@ router.get("/company/images/status", async (req, res) => {
       success: false,
       message: "Failed to get image status",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-});
-
-router.get("/company/logo", async (req, res) => {
-  try {
-    const logoPath = path.join(__dirname, "../../uploads/company/logo.png");
-
-    // Check if file exists
-    try {
-      await fs.access(logoPath);
-    } catch (error) {
-      return res.status(404).json({
-        success: false,
-        message: "Logo not found",
-      });
-    }
-
-    // Set proper headers
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
-    res.setHeader("X-Content-Type-Options", "nosniff");
-
-    // Send file
-    res.sendFile(logoPath);
-  } catch (error) {
-    console.error("Error serving logo:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to serve logo",
-    });
-  }
-});
-
-// Get company signature (SECURED - Admin only)
-router.get("/company/signature", async (req, res) => {
-  try {
-    const signaturePath = path.join(
-      __dirname,
-      "../../uploads/company/signature.png"
-    );
-
-    // Check if file exists
-    try {
-      await fs.access(signaturePath);
-    } catch (error) {
-      return res.status(404).json({
-        success: false,
-        message: "Signature not found",
-      });
-    }
-
-    // Set proper headers (no caching for sensitive content)
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader(
-      "Cache-Control",
-      "private, no-cache, no-store, must-revalidate"
-    );
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-
-    // Send file
-    res.sendFile(signaturePath);
-  } catch (error) {
-    console.error("Error serving signature:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to serve signature",
     });
   }
 });

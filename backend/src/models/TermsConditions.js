@@ -123,8 +123,8 @@ class TermsConditions {
       const { title, description, category, is_default, display_order } =
         tcData;
 
-      // Validate required fields
-      const validation = this.validateTCData(tcData);
+      // Validate data
+      const validation = this.validateTCData(tcData, false);
       if (!validation.isValid) {
         return {
           success: false,
@@ -133,27 +133,27 @@ class TermsConditions {
         };
       }
 
-      // Get next display order if not provided
       let finalDisplayOrder = display_order;
+
+      // Auto-assign GLOBAL display order if not provided
       if (!finalDisplayOrder) {
         const maxOrderResult = await executeQuery(
-          "SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM terms_conditions WHERE category = ? OR (category IS NULL AND ? IS NULL)",
-          [category || null, category || null]
+          "SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM terms_conditions"
         );
         finalDisplayOrder = maxOrderResult[0].next_order;
       }
 
       const query = `
-        INSERT INTO terms_conditions (
-          title,
-          description,
-          category,
-          is_default,
-          display_order,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-      `;
+      INSERT INTO terms_conditions (
+        title,
+        description,
+        category,
+        is_default,
+        display_order,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+    `;
 
       const result = await executeQuery(query, [
         title,
@@ -233,19 +233,29 @@ class TermsConditions {
   // Delete terms and conditions
   static async delete(id) {
     try {
-      // Check if T&C exists
+      // Ensure term exists
       const existingTC = await this.getById(id);
       if (!existingTC) {
-        return {
-          success: false,
-          message: "Terms and conditions not found",
-        };
+        return { success: false, message: "Terms and conditions not found" };
       }
 
-      // Check if T&C is used in any quotations (if quotation_terms table exists)
-      // For now, we'll allow deletion
-
+      // Delete the term
       await executeQuery("DELETE FROM terms_conditions WHERE id = ?", [id]);
+
+      // Reorder ALL remaining terms globally
+      const remainingTerms = await executeQuery(
+        `SELECT id FROM terms_conditions
+       ORDER BY display_order ASC, id ASC`
+      );
+
+      const reorderData = remainingTerms.map((term, index) => ({
+        id: term.id,
+        display_order: index + 1,
+      }));
+
+      if (reorderData.length > 0) {
+        await this.reorder({ items: reorderData });
+      }
 
       return {
         success: true,
@@ -258,26 +268,49 @@ class TermsConditions {
   }
 
   // Reorder terms and conditions
+  // Helper: batch-update using a single UPDATE ... CASE
   static async reorder(reorderData) {
     try {
-      const { items } = reorderData; // Array of {id, display_order}
-
+      const { items } = reorderData;
       if (!items || !Array.isArray(items) || items.length === 0) {
-        return {
-          success: false,
-          message: "Items array is required",
-        };
+        return { success: false, message: "Items array is required" };
       }
 
-      // Update display orders in a transaction-like manner
+      // Validate
       for (const item of items) {
-        if (item.id && item.display_order !== undefined) {
-          await executeQuery(
-            "UPDATE terms_conditions SET display_order = ?, updated_at = NOW() WHERE id = ?",
-            [item.display_order, item.id]
-          );
+        if (
+          !item.id ||
+          item.display_order === undefined ||
+          item.display_order === null
+        ) {
+          return {
+            success: false,
+            message: "Each item must have id and display_order",
+          };
         }
       }
+
+      // Build CASE ... WHEN ? THEN ?  (params: id1, order1, id2, order2, ... , id1, id2, ...)
+      const caseParts = items.map(() => "WHEN ? THEN ?").join(" ");
+      const idPlaceholders = items.map(() => "?").join(",");
+      const params = [];
+      // first 2*N params for CASE
+      for (const it of items) {
+        params.push(it.id, it.display_order);
+      }
+      // then N params for WHERE IN
+      for (const it of items) {
+        params.push(it.id);
+      }
+
+      const sql = `
+      UPDATE terms_conditions
+      SET display_order = CASE id ${caseParts} ELSE display_order END,
+          updated_at = NOW()
+      WHERE id IN (${idPlaceholders})
+    `;
+
+      await executeQuery(sql, params);
 
       return {
         success: true,
@@ -358,6 +391,7 @@ class TermsConditions {
   }
 
   // Bulk delete terms and conditions
+  // Improved bulkDelete (delete then reorder per affected category)
   static async bulkDelete(ids) {
     try {
       if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -367,16 +401,34 @@ class TermsConditions {
         };
       }
 
+      // Perform delete
       const placeholders = ids.map(() => "?").join(",");
-      const result = await executeQuery(
+      const deleteResult = await executeQuery(
         `DELETE FROM terms_conditions WHERE id IN (${placeholders})`,
         ids
       );
 
+      // Reorder ALL remaining terms globally
+      const remainingTerms = await executeQuery(
+        `SELECT id FROM terms_conditions
+       ORDER BY display_order ASC, id ASC`
+      );
+
+      const reorderData = remainingTerms.map((term, index) => ({
+        id: term.id,
+        display_order: index + 1,
+      }));
+
+      if (reorderData.length > 0) {
+        await this.reorder({ items: reorderData });
+      }
+
       return {
         success: true,
-        message: `${result.affectedRows} terms and conditions deleted successfully`,
-        deletedCount: result.affectedRows,
+        message: `${
+          deleteResult.affectedRows || 0
+        } terms and conditions deleted successfully`,
+        deletedCount: deleteResult.affectedRows || 0,
       };
     } catch (error) {
       console.error("Error bulk deleting terms and conditions:", error);

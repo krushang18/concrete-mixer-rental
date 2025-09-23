@@ -4,54 +4,71 @@ class Service {
   // Get all service records with filtering
   static async getAll(filters = {}) {
     try {
+      // Build query without parameter binding for LIMIT/OFFSET
       let query = `
-        SELECT 
-          sr.id,
-          sr.machine_id,
-          m.machine_number,
-          m.name as machine_name,
-          sr.service_date,
-          sr.engine_hours,
-          sr.site_location,
-          sr.operator,
-          sr.general_notes,
-          sr.created_at,
-          sr.updated_at,
-          u.username as created_by_user,
-          GROUP_CONCAT(DISTINCT sc.name ORDER BY sc.display_order SEPARATOR ', ') as services_performed,
-          COUNT(srs.id) as service_count
-        FROM service_records sr
-        JOIN machines m ON sr.machine_id = m.id
-        LEFT JOIN users u ON sr.created_by = u.id
-        LEFT JOIN service_record_services srs ON sr.id = srs.service_record_id
-        LEFT JOIN service_categories sc ON srs.service_category_id = sc.id
-      `;
+      SELECT 
+        sr.id,
+        sr.machine_id,
+        sr.service_date,
+        sr.engine_hours,
+        sr.site_location,
+        sr.operator,
+        sr.general_notes,
+        sr.created_at,
+        sr.updated_at,
+        m.machine_number,
+        m.name as machine_name,
+        u.username as created_by_user
+      FROM service_records sr
+      LEFT JOIN machines m ON sr.machine_id = m.id
+      LEFT JOIN users u ON sr.created_by = u.id
+    `;
 
       const conditions = [];
       const params = [];
 
-      // Apply filters
-      if (filters.machine_id) {
+      // Apply filters with proper parameter binding only for WHERE clause
+      if (
+        filters.machine_id &&
+        filters.machine_id !== "" &&
+        filters.machine_id !== undefined
+      ) {
         conditions.push("sr.machine_id = ?");
-        params.push(filters.machine_id);
+        params.push(parseInt(filters.machine_id));
       }
 
-      if (filters.start_date) {
+      if (
+        filters.start_date &&
+        filters.start_date !== "" &&
+        filters.start_date !== undefined
+      ) {
         conditions.push("sr.service_date >= ?");
         params.push(filters.start_date);
       }
 
-      if (filters.end_date) {
+      if (
+        filters.end_date &&
+        filters.end_date !== "" &&
+        filters.end_date !== undefined
+      ) {
         conditions.push("sr.service_date <= ?");
         params.push(filters.end_date);
       }
 
-      if (filters.operator) {
+      if (
+        filters.operator &&
+        filters.operator !== "" &&
+        filters.operator !== undefined
+      ) {
         conditions.push("sr.operator LIKE ?");
         params.push(`%${filters.operator}%`);
       }
 
-      if (filters.site_location) {
+      if (
+        filters.site_location &&
+        filters.site_location !== "" &&
+        filters.site_location !== undefined
+      ) {
         conditions.push("sr.site_location LIKE ?");
         params.push(`%${filters.site_location}%`);
       }
@@ -60,44 +77,46 @@ class Service {
         query += " WHERE " + conditions.join(" AND ");
       }
 
-      query +=
-        " GROUP BY sr.id ORDER BY sr.service_date DESC, sr.created_at DESC";
+      query += " ORDER BY sr.service_date DESC, sr.created_at DESC";
 
-      // Add pagination
-      if (filters.limit) {
-        query += " LIMIT ?";
-        params.push(parseInt(filters.limit));
+      // Add pagination directly to query string to avoid parameter binding issues
+      const limit = parseInt(filters.limit) || 50;
+      const offset = parseInt(filters.offset) || 0;
 
-        if (filters.offset) {
-          query += " OFFSET ?";
-          params.push(parseInt(filters.offset));
-        }
-      }
+      query += ` LIMIT ${limit} OFFSET ${offset}`;
+
+      console.log("Executing query:", query);
+      console.log("With params:", params);
 
       const serviceRecords = await executeQuery(query, params);
-      return serviceRecords;
+
+      const serviceRecordsWithServices = serviceRecords.map((record) => ({
+        ...record,
+        services: [],
+      }));
+
+      return serviceRecordsWithServices;
     } catch (error) {
       console.error("Error getting all service records:", error);
       throw error;
     }
   }
-
   // Get service record by ID with full details
   static async getById(id) {
     try {
-      // Get main service record
+      // Get main service record with machine and user info
       const mainQuery = `
-        SELECT 
-          sr.*,
-          m.machine_number,
-          m.name as machine_name,
-          u.username as created_by_user
-        FROM service_records sr
-        JOIN machines m ON sr.machine_id = m.id
-        LEFT JOIN users u ON sr.created_by = u.id
-        WHERE sr.id = ?
-        LIMIT 1
-      `;
+      SELECT 
+        sr.*,
+        m.machine_number,
+        m.name as machine_name,
+        u.username as created_by_user
+      FROM service_records sr
+      LEFT JOIN machines m ON sr.machine_id = m.id
+      LEFT JOIN users u ON sr.created_by = u.id
+      WHERE sr.id = ?
+      LIMIT 1
+    `;
 
       const serviceRecord = await executeQuery(mainQuery, [id]);
       if (serviceRecord.length === 0) {
@@ -108,36 +127,36 @@ class Service {
 
       // Get services performed
       const servicesQuery = `
-        SELECT 
-          srs.id as record_service_id,
-          srs.service_category_id,
-          sc.name as service_name,
-          sc.description as service_description,
-          srs.was_performed,
-          srs.service_notes
-        FROM service_record_services srs
-        JOIN service_categories sc ON srs.service_category_id = sc.id
-        WHERE srs.service_record_id = ?
-        ORDER BY sc.display_order
-      `;
+      SELECT 
+        srs.id as record_service_id,
+        srs.service_category_id as category_id,
+        sc.name as service_name,
+        sc.description as service_description,
+        srs.was_performed,
+        srs.service_notes
+      FROM service_record_services srs
+      JOIN service_categories sc ON srs.service_category_id = sc.id
+      WHERE srs.service_record_id = ?
+      ORDER BY sc.display_order, sc.name
+    `;
 
       const services = await executeQuery(servicesQuery, [id]);
 
       // Get sub-services for each service
       for (let service of services) {
         const subServicesQuery = `
-          SELECT 
-            srss.id as record_sub_service_id,
-            srss.sub_service_id,
-            ssi.name as sub_service_name,
-            ssi.description as sub_service_description,
-            srss.was_performed,
-            srss.sub_service_notes
-          FROM service_record_sub_services srss
-          JOIN service_sub_items ssi ON srss.sub_service_id = ssi.id
-          WHERE srss.service_record_service_id = ?
-          ORDER BY ssi.display_order
-        `;
+        SELECT 
+          srss.id as record_sub_service_id,
+          srss.sub_service_id as id,
+          ssi.name as sub_service_name,
+          ssi.description as sub_service_description,
+          srss.was_performed,
+          srss.sub_service_notes
+        FROM service_record_sub_services srss
+        JOIN service_sub_items ssi ON srss.sub_service_id = ssi.id
+        WHERE srss.service_record_service_id = ?
+        ORDER BY ssi.display_order, ssi.name
+      `;
 
         const subServices = await executeQuery(subServicesQuery, [
           service.record_service_id,
@@ -156,16 +175,36 @@ class Service {
   // Get service records for a specific machine
   static async getByMachine(machineId) {
     try {
-      return await this.getAll({ machine_id: machineId });
+      const query = `
+        SELECT 
+          sr.*,
+          m.machine_number,
+          m.name as machine_name
+        FROM service_records sr
+        LEFT JOIN machines m ON sr.machine_id = m.id
+        WHERE sr.machine_id = ?
+        ORDER BY sr.service_date DESC
+      `;
+
+      const services = await executeQuery(query, [parseInt(machineId)]);
+      return services;
     } catch (error) {
-      console.error("Error getting service records by machine:", error);
+      console.error("Error getting services by machine:", error);
       throw error;
     }
   }
 
   // Create new service record
-  static async create(serviceData, userId) {
+  static async create(serviceData) {
     try {
+      console.log(
+        "---------------------------------------------------------------------------------------"
+      );
+      console.log("serviceData: " + JSON.stringify(serviceData));
+      console.log(
+        "---------------------------------------------------------------------------------------"
+      );
+
       const {
         machine_id,
         service_date,
@@ -173,97 +212,96 @@ class Service {
         site_location,
         operator,
         general_notes,
-        services, // Array of service objects with sub-services
+        services, // This is the array you're ignoring!
+        created_by,
       } = serviceData;
 
-      // Validate required fields
-      const validation = this.validateServiceData(serviceData);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          message: "Validation failed",
-          errors: validation.errors,
-        };
-      }
-
       // Create main service record
-      const mainQuery = `
-        INSERT INTO service_records (
-          machine_id,
-          service_date,
-          engine_hours,
-          site_location,
-          operator,
-          general_notes,
-          created_by,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-      `;
+      const query = `
+      INSERT INTO service_records 
+      (machine_id, service_date, engine_hours, site_location, operator, general_notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
 
-      const mainResult = await executeQuery(mainQuery, [
-        machine_id,
+      const params = [
+        parseInt(machine_id),
         service_date,
-        engine_hours || null,
+        engine_hours ? parseFloat(engine_hours) : null,
         site_location || null,
-        operator || null,
+        operator,
         general_notes || null,
-        userId,
-      ]);
+        created_by || null,
+      ];
 
-      const serviceRecordId = mainResult.insertId;
+      const result = await executeQuery(query, params);
+      const serviceRecordId = result.insertId;
 
-      // Create service entries
+      console.log("Main service record created with ID:", serviceRecordId);
+
+      // NOW SAVE THE SERVICES AND SUB-SERVICES (this was missing!)
       if (services && services.length > 0) {
+        console.log("Processing", services.length, "service categories...");
+
         for (const service of services) {
+          console.log("Creating service category:", service.category_id);
+
+          // Insert into service_record_services
           const serviceQuery = `
-            INSERT INTO service_record_services (
-              service_record_id,
-              service_category_id,
-              was_performed,
-              service_notes,
-              created_at
-            ) VALUES (?, ?, ?, ?, NOW())
-          `;
+          INSERT INTO service_record_services (
+            service_record_id,
+            service_category_id,
+            was_performed,
+            service_notes,
+            created_at
+          ) VALUES (?, ?, ?, ?, NOW())
+        `;
 
           const serviceResult = await executeQuery(serviceQuery, [
             serviceRecordId,
             service.category_id,
             service.was_performed ? 1 : 0,
-            service.notes || null,
+            service.service_notes || null,
           ]);
 
           const recordServiceId = serviceResult.insertId;
+          console.log("Service category created with ID:", recordServiceId);
 
-          // Create sub-service entries
+          // Insert sub-services
           if (service.sub_services && service.sub_services.length > 0) {
+            console.log(
+              "Processing",
+              service.sub_services.length,
+              "sub-services..."
+            );
+
             for (const subService of service.sub_services) {
+              console.log("Creating sub-service:", subService.id);
+
               const subServiceQuery = `
-                INSERT INTO service_record_sub_services (
-                  service_record_service_id,
-                  sub_service_id,
-                  was_performed,
-                  sub_service_notes,
-                  created_at
-                ) VALUES (?, ?, ?, ?, NOW())
-              `;
+              INSERT INTO service_record_sub_services (
+                service_record_service_id,
+                sub_service_id,
+                was_performed,
+                sub_service_notes,
+                created_at
+              ) VALUES (?, ?, ?, ?, NOW())
+            `;
 
               await executeQuery(subServiceQuery, [
                 recordServiceId,
-                subService.sub_service_id,
+                subService.id, // This is the sub_service_id from your frontend
                 subService.was_performed ? 1 : 0,
-                subService.notes || null,
+                subService.sub_service_notes || null,
               ]);
+
+              console.log("Sub-service created successfully");
             }
           }
         }
       }
 
-      return {
-        success: true,
-        id: serviceRecordId,
-        message: "Service record created successfully",
-      };
+      console.log("Service record creation completed successfully");
+      return serviceRecordId;
     } catch (error) {
       console.error("Error creating service record:", error);
       throw error;
@@ -283,15 +321,11 @@ class Service {
         services,
       } = serviceData;
 
-      // Validate data
-      const validation = this.validateServiceData(serviceData, true);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          message: "Validation failed",
-          errors: validation.errors,
-        };
-      }
+      console.log("=== SERVICE UPDATE BACKEND ===");
+      console.log("Update ID:", id);
+      console.log("Update data:", JSON.stringify(serviceData, null, 2));
+      console.log("Services to update:", services);
+      console.log("==============================");
 
       // Check if service record exists
       const existingRecord = await this.getById(id);
@@ -304,17 +338,17 @@ class Service {
 
       // Update main service record
       const mainQuery = `
-        UPDATE service_records 
-        SET 
-          machine_id = ?,
-          service_date = ?,
-          engine_hours = ?,
-          site_location = ?,
-          operator = ?,
-          general_notes = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `;
+      UPDATE service_records 
+      SET 
+        machine_id = ?,
+        service_date = ?,
+        engine_hours = ?,
+        site_location = ?,
+        operator = ?,
+        general_notes = ?,
+        updated_at = NOW()
+      WHERE id = ?
+    `;
 
       await executeQuery(mainQuery, [
         machine_id || existingRecord.machine_id,
@@ -330,63 +364,79 @@ class Service {
         id,
       ]);
 
-      // If services are provided, update them
-      if (services && services.length > 0) {
-        // Delete existing services and sub-services
-        await executeQuery(
-          "DELETE FROM service_record_sub_services WHERE service_record_service_id IN (SELECT id FROM service_record_services WHERE service_record_id = ?)",
-          [id]
-        );
-        await executeQuery(
-          "DELETE FROM service_record_services WHERE service_record_id = ?",
-          [id]
-        );
+      // Always update services - delete and recreate for consistency
+      console.log("Deleting existing services...");
 
-        // Re-create services (same logic as create)
+      // Delete existing services and sub-services
+      await executeQuery(
+        "DELETE FROM service_record_sub_services WHERE service_record_service_id IN (SELECT id FROM service_record_services WHERE service_record_id = ?)",
+        [id]
+      );
+      await executeQuery(
+        "DELETE FROM service_record_services WHERE service_record_id = ?",
+        [id]
+      );
+
+      // Re-create services if provided
+      if (services && services.length > 0) {
+        console.log(`Creating ${services.length} service categories...`);
+
         for (const service of services) {
+          console.log("Creating service category:", service.category_id);
+
           const serviceQuery = `
-            INSERT INTO service_record_services (
-              service_record_id,
-              service_category_id,
-              was_performed,
-              service_notes,
-              created_at
-            ) VALUES (?, ?, ?, ?, NOW())
-          `;
+          INSERT INTO service_record_services (
+            service_record_id,
+            service_category_id,
+            was_performed,
+            service_notes,
+            created_at
+          ) VALUES (?, ?, ?, ?, NOW())
+        `;
 
           const serviceResult = await executeQuery(serviceQuery, [
             id,
             service.category_id,
             service.was_performed ? 1 : 0,
-            service.notes || null,
+            service.service_notes || null,
           ]);
 
           const recordServiceId = serviceResult.insertId;
+          console.log("Service category created with ID:", recordServiceId);
 
           // Create sub-service entries
           if (service.sub_services && service.sub_services.length > 0) {
+            console.log(
+              `Creating ${service.sub_services.length} sub-services...`
+            );
+
             for (const subService of service.sub_services) {
+              console.log("Creating sub-service:", subService.id);
+
               const subServiceQuery = `
-                INSERT INTO service_record_sub_services (
-                  service_record_service_id,
-                  sub_service_id,
-                  was_performed,
-                  sub_service_notes,
-                  created_at
-                ) VALUES (?, ?, ?, ?, NOW())
-              `;
+              INSERT INTO service_record_sub_services (
+                service_record_service_id,
+                sub_service_id,
+                was_performed,
+                sub_service_notes,
+                created_at
+              ) VALUES (?, ?, ?, ?, NOW())
+            `;
 
               await executeQuery(subServiceQuery, [
                 recordServiceId,
-                subService.sub_service_id,
+                subService.id,
                 subService.was_performed ? 1 : 0,
-                subService.notes || null,
+                subService.sub_service_notes || null,
               ]);
+
+              console.log("Sub-service created successfully");
             }
           }
         }
       }
 
+      console.log("Service record update completed successfully");
       return {
         success: true,
         message: "Service record updated successfully",
@@ -397,6 +447,7 @@ class Service {
     }
   }
 
+  // Delete service record
   // Delete service record
   static async delete(id) {
     try {
@@ -410,14 +461,19 @@ class Service {
       }
 
       // Delete related records first (cascading should handle this, but being explicit)
+      // First delete sub-services
       await executeQuery(
         "DELETE FROM service_record_sub_services WHERE service_record_service_id IN (SELECT id FROM service_record_services WHERE service_record_id = ?)",
         [id]
       );
+
+      // Then delete services
       await executeQuery(
         "DELETE FROM service_record_services WHERE service_record_id = ?",
         [id]
       );
+
+      // Finally delete the main service record
       await executeQuery("DELETE FROM service_records WHERE id = ?", [id]);
 
       return {
@@ -498,35 +554,6 @@ class Service {
       throw error;
     }
   }
-
-  // Get machines due for service (based on last service date)
-  //   static async getMachinesDueForService(daysSinceLastService = 30) {
-  //     try {
-  //       const query = `
-  //         SELECT
-  //           m.id,
-  //           m.machine_number,
-  //           m.name as machine_name,
-  //           MAX(sr.service_date) as last_service_date,
-  //           DATEDIFF(CURDATE(), MAX(sr.service_date)) as days_since_service,
-  //           COUNT(sr.id) as total_services
-  //         FROM machines m
-  //         LEFT JOIN service_records sr ON m.id = sr.machine_id
-  //         WHERE m.is_active = 1
-  //         GROUP BY m.id
-  //         HAVING
-  //           last_service_date IS NULL OR
-  //           DATEDIFF(CURDATE(), MAX(sr.service_date)) >= ?
-  //         ORDER BY days_since_service DESC, machine_number ASC
-  //       `;
-
-  //       const machines = await executeQuery(query, [daysSinceLastService]);
-  //       return machines;
-  //     } catch (error) {
-  //       console.error("Error getting machines due for service:", error);
-  //       throw error;
-  //     }
-  //   }
 
   // Get service history summary for a machine
   static async getMachineServiceSummary(machineId) {
@@ -730,18 +757,42 @@ class Service {
     try {
       const records = await this.getAll(filters);
 
-      const csvData = records.map((record) => ({
-        machine_number: record.machine_number,
-        machine_name: record.machine_name,
-        service_date: record.service_date,
-        engine_hours: record.engine_hours || "",
-        site_location: record.site_location || "",
-        operator: record.operator || "",
-        services_performed: record.services_performed || "",
-        general_notes: record.general_notes || "",
-        created_by: record.created_by_user || "",
-        created_at: record.created_at,
-      }));
+      const csvData = records.map((record) => {
+        // Format services performed from the services array
+        let servicesPerformed = "";
+        if (record.services && record.services.length > 0) {
+          servicesPerformed = record.services
+            .map((service) => {
+              const subServices = service.sub_services
+                ? service.sub_services.map((sub) => sub.name).join(", ")
+                : "";
+              return `${service.category_name}: ${subServices}`;
+            })
+            .join(" | ");
+        }
+
+        // Format date for better readability
+        const serviceDate = record.service_date
+          ? new Date(record.service_date).toLocaleDateString("en-GB")
+          : "";
+
+        const createdAt = record.created_at
+          ? new Date(record.created_at).toLocaleDateString("en-GB")
+          : "";
+
+        return {
+          machine_number: record.machine_number || "",
+          machine_name: record.machine_name || "",
+          service_date: serviceDate,
+          engine_hours: record.engine_hours || "",
+          site_location: record.site_location || "",
+          operator: record.operator || "",
+          services_performed: servicesPerformed,
+          general_notes: record.general_notes || "",
+          created_by: record.created_by_user || "",
+          created_at: createdAt,
+        };
+      });
 
       return {
         success: true,

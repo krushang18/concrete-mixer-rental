@@ -123,27 +123,29 @@ class DashboardController {
   }
 
   // Get quotation statistics
+  // Get quotation statistics - FIXED VERSION
   static async getQuotationStats() {
     try {
       const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total,
-          COUNT(CASE WHEN quotation_status = 'draft' THEN 1 END) as draft,
-          COUNT(CASE WHEN quotation_status = 'sent' THEN 1 END) as sent,
-          COUNT(CASE WHEN quotation_status = 'accepted' THEN 1 END) as accepted,
-          COUNT(CASE WHEN quotation_status = 'rejected' THEN 1 END) as rejected,
-          COUNT(CASE WHEN delivery_status = 'delivered' THEN 1 END) as delivered,
-          AVG(total_amount) as avg_amount,
-          SUM(CASE WHEN quotation_status = 'accepted' THEN total_amount ELSE 0 END) as total_accepted_value,
-          COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as today,
-          COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week
-        FROM quotations
-      `);
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN quotation_status = 'draft' THEN 1 END) as draft,
+        COUNT(CASE WHEN quotation_status = 'sent' THEN 1 END) as sent,
+        COUNT(CASE WHEN quotation_status = 'accepted' THEN 1 END) as accepted,
+        COUNT(CASE WHEN quotation_status = 'rejected' THEN 1 END) as rejected,
+        COUNT(CASE WHEN delivery_status = 'delivered' THEN 1 END) as delivered,
+        AVG(grand_total) as avg_amount,
+        SUM(CASE WHEN quotation_status = 'accepted' THEN grand_total ELSE 0 END) as total_accepted_value,
+        COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as today,
+        COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week
+      FROM quotations
+    `);
 
       return {
         ...stats[0],
         avg_amount: Math.round(stats[0].avg_amount || 0),
         total_accepted_value: stats[0].total_accepted_value || 0,
+        pending: stats[0].sent || 0, // sent = pending customer response
         conversion_rate:
           stats[0].total > 0
             ? Math.round((stats[0].accepted / stats[0].total) * 100)
@@ -667,42 +669,76 @@ class DashboardController {
   }
 
   // Get business summary for specific date range
+  // Get business summary for specific date range or period - FIXED VERSION
   static async getBusinessSummary(req, res) {
     try {
-      const { start_date, end_date } = req.query;
+      let { start_date, end_date, period } = req.query;
 
+      // If period is provided, calculate start_date and end_date
+      if (period && !start_date && !end_date) {
+        const today = new Date();
+        const endDate = today;
+        let startDate;
+
+        switch (period) {
+          case "7d":
+            startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case "30d":
+            startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case "90d":
+            startDate = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+            break;
+          case "12m":
+            startDate = new Date(
+              today.getFullYear() - 1,
+              today.getMonth(),
+              today.getDate()
+            );
+            break;
+          default:
+            startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000); // Default to 30 days
+        }
+
+        start_date = startDate.toISOString().split("T")[0];
+        end_date = endDate.toISOString().split("T")[0];
+      }
+
+      // Validate that we have start_date and end_date
       if (!start_date || !end_date) {
         return res.status(400).json({
           success: false,
-          message: "Start date and end date are required",
+          message:
+            "Either provide start_date and end_date, or a period parameter (7d, 30d, 90d, 12m)",
         });
       }
 
       const summary = await executeQuery(
         `
-        SELECT 
-          -- Queries
-          COUNT(DISTINCT cq.id) as total_queries,
-          COUNT(DISTINCT CASE WHEN cq.status = 'completed' THEN cq.id END) as completed_queries,
-          
-          -- Quotations
-          COUNT(DISTINCT q.id) as total_quotations,
-          COUNT(DISTINCT CASE WHEN q.quotation_status = 'accepted' THEN q.id END) as accepted_quotations,
-          COUNT(DISTINCT CASE WHEN q.delivery_status = 'delivered' THEN q.id END) as delivered_orders,
-          
-          -- Revenue
-          SUM(CASE WHEN q.quotation_status = 'accepted' THEN q.total_amount ELSE 0 END) as total_revenue,
-          AVG(CASE WHEN q.quotation_status = 'accepted' THEN q.total_amount END) as avg_order_value,
-          
-          -- Customers
-          COUNT(DISTINCT c.id) as new_customers,
-          COUNT(DISTINCT q.customer_id) as active_customers
-          
-        FROM customer_queries cq
-        LEFT JOIN quotations q ON DATE(q.created_at) BETWEEN ? AND ?
-        LEFT JOIN customers c ON DATE(c.created_at) BETWEEN ? AND ?
-        WHERE DATE(cq.created_at) BETWEEN ? AND ?
-      `,
+      SELECT 
+        -- Queries
+        COUNT(DISTINCT cq.id) as total_queries,
+        COUNT(DISTINCT CASE WHEN cq.status = 'completed' THEN cq.id END) as completed_queries,
+        
+        -- Quotations
+        COUNT(DISTINCT q.id) as total_quotations,
+        COUNT(DISTINCT CASE WHEN q.quotation_status = 'accepted' THEN q.id END) as accepted_quotations,
+        COUNT(DISTINCT CASE WHEN q.delivery_status = 'delivered' THEN q.id END) as delivered_orders,
+        
+        -- Revenue (FIXED: using grand_total instead of total_amount)
+        SUM(CASE WHEN q.quotation_status = 'accepted' THEN q.grand_total ELSE 0 END) as total_revenue,
+        AVG(CASE WHEN q.quotation_status = 'accepted' THEN q.grand_total END) as avg_order_value,
+        
+        -- Customers
+        COUNT(DISTINCT c.id) as new_customers,
+        COUNT(DISTINCT q.customer_id) as active_customers
+        
+      FROM customer_queries cq
+      LEFT JOIN quotations q ON DATE(q.created_at) BETWEEN ? AND ?
+      LEFT JOIN customers c ON DATE(c.created_at) BETWEEN ? AND ?
+      WHERE DATE(cq.created_at) BETWEEN ? AND ?
+    `,
         [start_date, end_date, start_date, end_date, start_date, end_date]
       );
 
@@ -715,6 +751,7 @@ class DashboardController {
           period: {
             startDate: start_date,
             endDate: end_date,
+            periodType: period || "custom",
           },
           queries: {
             total: result.total_queries || 0,

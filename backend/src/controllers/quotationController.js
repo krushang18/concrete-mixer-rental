@@ -11,15 +11,23 @@ class QuotationController {
   // Get all quotations
   static async getAll(req, res) {
     try {
+      // Parse pagination parameters
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Max 100 per page
+      const offset = (page - 1) * limit;
+
       const filters = {
         status: req.query.status,
         delivery_status: req.query.delivery_status,
+        search: req.query.search, // Combined search term
         customer_name: req.query.customer_name,
         machine_id: req.query.machine_id,
         start_date: req.query.start_date,
         end_date: req.query.end_date,
-        limit: parseInt(req.query.limit) || 50,
-        offset: parseInt(req.query.offset) || 0,
+        sort_by: req.query.sort_by || "created_at",
+        sort_order: req.query.sort_order || "DESC",
+        limit,
+        offset,
       };
 
       // Remove undefined values
@@ -27,13 +35,23 @@ class QuotationController {
         (key) => filters[key] === undefined && delete filters[key]
       );
 
-      const quotations = await Quotation.getAll(filters);
+      // Get quotations with count
+      const result = await Quotation.getAllWithPagination(filters);
+
+      const totalPages = Math.ceil(result.total / limit);
 
       res.json({
         success: true,
         message: "Quotations retrieved successfully",
-        data: quotations,
-        count: quotations.length,
+        data: result.quotations,
+        pagination: {
+          current_page: page,
+          per_page: limit,
+          total: result.total,
+          total_pages: totalPages,
+          has_next: page < totalPages,
+          has_prev: page > 1,
+        },
         filters: filters,
       });
     } catch (error) {
@@ -100,6 +118,9 @@ class QuotationController {
         customer_name: req.body.customer_name?.trim(),
         customer_contact: req.body.customer_contact?.replace(/\D/g, ""),
         company_name: req.body.company_name?.trim(),
+        customer_gst_number:
+          req.body.customer_gst_number?.trim().toUpperCase() || null, // ADD THIS
+
         customer_id: req.body.customer_id
           ? parseInt(req.body.customer_id)
           : null,
@@ -196,7 +217,7 @@ class QuotationController {
 
       const updateData = {};
 
-      // Only include fields that are provided
+      // Basic quotation fields
       if (req.body.customer_name !== undefined) {
         updateData.customer_name = req.body.customer_name.trim();
       }
@@ -208,6 +229,10 @@ class QuotationController {
       }
       if (req.body.company_name !== undefined) {
         updateData.company_name = req.body.company_name?.trim();
+      }
+      if (req.body.customer_gst_number !== undefined) {
+        updateData.customer_gst_number =
+          req.body.customer_gst_number?.trim().toUpperCase() || null;
       }
       if (req.body.customer_id !== undefined) {
         updateData.customer_id = req.body.customer_id
@@ -223,6 +248,19 @@ class QuotationController {
       if (req.body.delivery_status !== undefined) {
         updateData.delivery_status = req.body.delivery_status;
       }
+
+      // CRITICAL FIX: Include items and terms_conditions
+      if (req.body.items !== undefined) {
+        updateData.items = req.body.items;
+      }
+      if (req.body.terms_conditions !== undefined) {
+        updateData.terms_conditions = req.body.terms_conditions;
+      }
+
+      console.log(
+        "Controller updateData:",
+        JSON.stringify(updateData, null, 2)
+      ); // Debug log
 
       const result = await Quotation.update(
         parseInt(id),
@@ -573,12 +611,9 @@ class QuotationController {
   // Get quotation statistics
   static async getStats(req, res, next) {
     try {
-      console.log("QuotationController.getStats: Starting...");
-
       const stats = await Quotation.getStats();
-      console.log("QuotationController.getStats: Got stats from model:", stats);
 
-      const responseData = {
+      res.json({
         success: true,
         message: "Quotation statistics retrieved successfully",
         data: {
@@ -591,12 +626,12 @@ class QuotationController {
           averageQuotationAmount:
             Math.round(parseFloat(stats.average_quotation_amount)) || 0,
           conversionRate: parseFloat(stats.conversion_rate) || 0,
+          recentQuotations: parseInt(stats.recent_quotations) || 0,
+          todayQuotations: parseInt(stats.today_quotations) || 0,
+          weekQuotations: parseInt(stats.week_quotations) || 0,
           lastUpdated: new Date().toISOString(),
         },
-      };
-
-      console.log("QuotationController.getStats: Sending JSON response");
-      res.json(responseData);
+      });
     } catch (error) {
       console.error("Error in QuotationController.getStats:", error);
       res.status(500).json({

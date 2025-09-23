@@ -5,12 +5,21 @@ class CustomerController {
   // Get all customers
   static async getAll(req, res) {
     try {
+      // Parse pagination parameters
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 10, 100); // Max 100 items per page
+      const offset = (page - 1) * limit;
+
       const filters = {
         search: req.query.search,
         city: req.query.city,
         has_gst: req.query.has_gst,
-        limit: req.query.limit,
-        offset: req.query.offset,
+        page,
+        limit,
+        offset,
+        // Additional sorting options
+        sortBy: req.query.sortBy || "created_at",
+        sortOrder: req.query.sortOrder || "DESC",
       };
 
       // Remove undefined values
@@ -18,14 +27,40 @@ class CustomerController {
         (key) => filters[key] === undefined && delete filters[key]
       );
 
-      const customers = await Customer.getAll(filters);
+      console.log("📝 Customer filters:", filters);
+
+      // Get customers with total count
+      const result = await Customer.getAllWithPagination(filters);
+
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(result.total / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      const pagination = {
+        currentPage: page,
+        limit,
+        totalItems: result.total,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? page + 1 : null,
+        prevPage: hasPrevPage ? page - 1 : null,
+        offset,
+      };
 
       res.json({
         success: true,
         message: "Customers retrieved successfully",
-        data: customers,
-        count: customers.length,
-        filters: filters,
+        data: result.customers,
+        pagination,
+        filters: {
+          search: filters.search,
+          city: filters.city,
+          has_gst: filters.has_gst,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
+        },
       });
     } catch (error) {
       console.error("Error in CustomerController.getAll:", error);
@@ -433,6 +468,8 @@ class CustomerController {
   // Export customers to Excel/CSV
   static async exportCustomers(req, res) {
     try {
+      const XLSX = require("xlsx"); // Make sure to install: npm install xlsx
+
       const format = req.query.format || "excel";
       const filters = {
         search: req.query.search,
@@ -460,19 +497,65 @@ class CustomerController {
         "Accepted Quotations": customer.accepted_quotations || 0,
         "Average Quotation Amount": customer.avg_quotation_amount || 0,
         "Last Quotation Date": customer.last_quotation_date || "",
-        "Created Date": customer.created_at,
+        "Created Date": customer.created_at
+          ? new Date(customer.created_at).toLocaleDateString("en-IN")
+          : "",
       }));
 
-      res.json({
-        success: true,
-        message: `Customer data exported successfully (${format})`,
-        data: exportData,
-        count: exportData.length,
-        format: format,
-        filename: `customers_export_${new Date().toISOString().split("T")[0]}.${
-          format === "excel" ? "xlsx" : "csv"
-        }`,
-      });
+      if (format === "excel") {
+        // Create Excel workbook
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+
+        // Generate filename
+        const filename = `customers_export_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+
+        // Set headers for Excel download
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${filename}"`
+        );
+
+        // Write Excel file to response
+        const buffer = XLSX.write(workbook, {
+          type: "buffer",
+          bookType: "xlsx",
+        });
+        res.send(buffer);
+      } else {
+        // CSV format
+        const filename = `customers_export_${
+          new Date().toISOString().split("T")[0]
+        }.csv`;
+
+        // Convert to CSV
+        const csv = [
+          Object.keys(exportData[0]).join(","), // Headers
+          ...exportData.map((row) =>
+            Object.values(row)
+              .map((value) =>
+                typeof value === "string" && value.includes(",")
+                  ? `"${value}"`
+                  : value
+              )
+              .join(",")
+          ),
+        ].join("\n");
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${filename}"`
+        );
+        res.send(csv);
+      }
     } catch (error) {
       console.error("Error in CustomerController.exportCustomers:", error);
       res.status(500).json({

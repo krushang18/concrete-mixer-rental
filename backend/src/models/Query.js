@@ -31,63 +31,198 @@ class Query {
     }
   }
 
-  // Get all queries (for admin - Phase 2)
-  // Debug version of Query.getAll method
-  // FINAL FIX: Query.getAll method with dynamic LIMIT (no parameters)
   static async getAll(filters = {}) {
-    let query = `
-    SELECT id, company_name, email, site_location, contact_number, 
-           duration, work_description, status, created_at, updated_at
-    FROM customer_queries
-  `;
-
-    const params = [];
-    const conditions = [];
-
-    if (filters.status) {
-      conditions.push("status = ?");
-      params.push(filters.status);
-    }
-
-    if (filters.startDate) {
-      conditions.push("created_at >= ?");
-      params.push(filters.startDate);
-    }
-
-    if (filters.endDate) {
-      conditions.push("created_at <= ?");
-      params.push(filters.endDate);
-    }
-
-    if (conditions.length > 0) {
-      query += " WHERE " + conditions.join(" AND ");
-    }
-
-    query += " ORDER BY created_at DESC";
-
-    // ✅ SOLUTION: Build LIMIT directly into SQL string, don't use parameters
-    if (filters.limit) {
-      const limitValue = parseInt(filters.limit);
-      if (!isNaN(limitValue) && limitValue > 0 && limitValue <= 1000) {
-        // Add limit directly to SQL string (safe because we validate it's a number)
-        query += ` LIMIT ${limitValue}`;
-      } else {
-        query += ` LIMIT 50`; // Default limit
-      }
-    } else {
-      query += ` LIMIT 50`; // Default limit
-    }
-
-    console.log("📝 Final SQL:", query);
-    console.log("📝 Parameters:", params);
-
     try {
-      const rows = await executeQuery(query, params);
-      console.log("✅ Query successful, rows returned:", rows.length);
-      return rows;
+      const page = Math.max(1, parseInt(filters.page) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(filters.limit) || 10));
+      const offset = (page - 1) * limit;
+      const sortBy = filters.sortBy || "created_at";
+      const sortOrder = filters.sortOrder || "DESC";
+
+      console.log("Pagination params:", {
+        page,
+        limit,
+        offset,
+        sortBy,
+        sortOrder,
+      });
+
+      // Build WHERE conditions
+      let conditions = [];
+      let params = [];
+
+      if (filters.status) {
+        conditions.push("status = ?");
+        params.push(filters.status);
+      }
+
+      if (filters.startDate) {
+        conditions.push("DATE(created_at) >= DATE(?)");
+        params.push(filters.startDate);
+      }
+
+      if (filters.endDate) {
+        conditions.push("DATE(created_at) <= DATE(?)");
+        params.push(filters.endDate);
+      }
+
+      if (filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        conditions.push(`(
+        company_name LIKE ? OR 
+        email LIKE ? OR 
+        site_location LIKE ? OR 
+        work_description LIKE ? OR
+        contact_number LIKE ?
+      )`);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      }
+
+      const whereClause =
+        conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+
+      // Get total count
+      const countQuery = `SELECT COUNT(*) as total FROM customer_queries ${whereClause}`;
+      const countResult = await executeQuery(countQuery, params);
+      const totalRecords = parseInt(countResult[0].total);
+      const totalPages = Math.ceil(totalRecords / limit);
+
+      // Get paginated data - FIXED: Use direct values instead of parameters
+      const dataQuery = `
+      SELECT 
+        id, company_name, email, site_location, contact_number, 
+        duration, work_description, status, created_at, updated_at
+      FROM customer_queries 
+      ${whereClause}
+      ORDER BY ${sortBy} ${sortOrder}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+      console.log("Data Query:", dataQuery);
+      console.log("Data Params:", params);
+
+      const rows = await executeQuery(dataQuery, params);
+
+      const fromRecord = totalRecords === 0 ? 0 : offset + 1;
+      const toRecord = Math.min(offset + limit, totalRecords);
+
+      return {
+        data: rows,
+        pagination: {
+          current_page: page,
+          per_page: limit,
+          total: totalRecords,
+          total_pages: totalPages,
+          has_prev_page: page > 1,
+          has_next_page: page < totalPages,
+          prev_page: page > 1 ? page - 1 : null,
+          next_page: page < totalPages ? page + 1 : null,
+          from: fromRecord,
+          to: toRecord,
+        },
+      };
     } catch (error) {
-      console.error("❌ Error fetching queries:", error);
-      throw new Error("Failed to fetch queries");
+      console.error("Database error in Query.getAll:", error);
+      throw new Error("Failed to fetch queries: " + error.message);
+    }
+  }
+
+  // Additional utility method for getting pagination summary
+  static async getPaginationSummary(filters = {}) {
+    try {
+      let conditions = [];
+      let params = [];
+
+      if (filters.status) {
+        conditions.push("status = ?");
+        params.push(filters.status);
+      }
+
+      if (filters.startDate) {
+        conditions.push("DATE(created_at) >= DATE(?)");
+        params.push(filters.startDate);
+      }
+
+      if (filters.endDate) {
+        conditions.push("DATE(created_at) <= DATE(?)");
+        params.push(filters.endDate);
+      }
+
+      if (filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        conditions.push(`(
+        company_name LIKE ? OR 
+        email LIKE ? OR 
+        site_location LIKE ? OR 
+        work_description LIKE ?
+      )`);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      }
+
+      const whereClause =
+        conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+
+      const summaryQuery = `
+      SELECT 
+        COUNT(*) as total_records,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_count,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count,
+        MIN(created_at) as earliest_date,
+        MAX(created_at) as latest_date
+      FROM customer_queries 
+      ${whereClause}
+    `;
+
+      const result = await executeQuery(summaryQuery, params);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting pagination summary:", error);
+      throw new Error("Failed to get pagination summary");
+    }
+  }
+
+  // Method to get available filter options
+  static async getFilterOptions() {
+    try {
+      const optionsQuery = `
+      SELECT 
+        DISTINCT status,
+        COUNT(*) as count
+      FROM customer_queries 
+      WHERE status IS NOT NULL
+      GROUP BY status
+      ORDER BY count DESC
+    `;
+
+      const statusOptions = await executeQuery(optionsQuery, []);
+
+      const dateRangeQuery = `
+      SELECT 
+        MIN(DATE(created_at)) as min_date,
+        MAX(DATE(created_at)) as max_date
+      FROM customer_queries
+    `;
+
+      const dateRange = await executeQuery(dateRangeQuery, []);
+
+      return {
+        statuses: statusOptions.map((row) => ({
+          value: row.status,
+          label:
+            row.status.charAt(0).toUpperCase() +
+            row.status.slice(1).replace("_", " "),
+          count: row.count,
+        })),
+        date_range: {
+          min: dateRange[0].min_date,
+          max: dateRange[0].max_date,
+        },
+      };
+    } catch (error) {
+      console.error("Error getting filter options:", error);
+      throw new Error("Failed to get filter options");
     }
   }
 

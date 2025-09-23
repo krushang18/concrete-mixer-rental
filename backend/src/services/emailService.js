@@ -77,8 +77,8 @@ class EmailService {
   async sendPasswordResetEmail(email, resetToken, username) {
     try {
       const resetUrl = `${
-        process.env.FRONTEND_URL || "http://localhost:3000"
-      }/admin/reset-password?token=${resetToken}`;
+        process.env.FRONTEND_URL || "http://localhost:5000"
+      }/reset-password/${resetToken}`;
 
       const subject = "Password Reset Request - Concrete Mixer Rental Admin";
 

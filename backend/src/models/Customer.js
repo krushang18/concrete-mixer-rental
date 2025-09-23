@@ -90,45 +90,187 @@ class Customer {
     }
   }
 
+  static async getAllWithPagination(filters = {}) {
+    try {
+      // Build the base query for counting and selecting
+      const baseQuery = `
+      FROM customers c
+      LEFT JOIN quotations q ON c.id = q.customer_id
+    `;
+
+      const conditions = [];
+      const params = [];
+
+      // Apply filters (same logic as before)
+      if (filters.search) {
+        conditions.push(
+          "(c.company_name LIKE ? OR c.contact_person LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)"
+        );
+        const searchTerm = `%${filters.search}%`;
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      }
+
+      if (filters.city) {
+        conditions.push("c.address LIKE ?");
+        params.push(`%${filters.city}%`);
+      }
+
+      if (filters.has_gst !== undefined) {
+        if (filters.has_gst === "true" || filters.has_gst === true) {
+          conditions.push('c.gst_number IS NOT NULL AND c.gst_number != ""');
+        } else if (filters.has_gst === "false" || filters.has_gst === false) {
+          conditions.push('(c.gst_number IS NULL OR c.gst_number = "")');
+        }
+      }
+
+      const whereClause =
+        conditions.length > 0 ? " WHERE " + conditions.join(" AND ") : "";
+
+      // First, get the total count
+      const countQuery = `
+      SELECT COUNT(DISTINCT c.id) as total
+      ${baseQuery}
+      ${whereClause}
+    `;
+
+      console.log("📝 Count Query:", countQuery);
+      console.log("📝 Count Params:", params);
+
+      const [countResult] = await executeQuery(countQuery, params);
+      const total = countResult.total || 0;
+
+      // If no records found, return early
+      if (total === 0) {
+        return {
+          customers: [],
+          total: 0,
+        };
+      }
+
+      // Build the main query with sorting and pagination
+      let mainQuery = `
+      SELECT 
+        c.id,
+        c.company_name,
+        c.contact_person,
+        c.email,
+        c.phone,
+        c.address,
+        c.site_location,
+        c.gst_number,
+        c.created_at,
+        c.updated_at,
+        COUNT(q.id) as total_quotations,
+        MAX(q.created_at) as last_quotation_date,
+        SUM(CASE WHEN q.quotation_status = 'accepted' THEN 1 ELSE 0 END) as accepted_quotations,
+        AVG(q.grand_total) as avg_quotation_amount
+      ${baseQuery}
+      ${whereClause}
+      GROUP BY c.id
+    `;
+
+      // Add sorting
+      const validSortFields = [
+        "company_name",
+        "contact_person",
+        "created_at",
+        "updated_at",
+        "total_quotations",
+        "last_quotation_date",
+        "accepted_quotations",
+      ];
+      const sortBy = validSortFields.includes(filters.sortBy)
+        ? filters.sortBy
+        : "created_at";
+      const sortOrder =
+        filters.sortOrder && filters.sortOrder.toUpperCase() === "ASC"
+          ? "ASC"
+          : "DESC";
+
+      mainQuery += ` ORDER BY c.${sortBy} ${sortOrder}`;
+
+      // Add pagination
+      const limit = Math.min(Math.max(parseInt(filters.limit) || 10, 1), 100);
+      const offset = Math.max(parseInt(filters.offset) || 0, 0);
+
+      mainQuery += ` LIMIT ${limit} OFFSET ${offset}`;
+
+      console.log("📝 Main Customer SQL:", mainQuery);
+      console.log("📝 Parameters:", params);
+
+      const customers = await executeQuery(mainQuery, params);
+
+      console.log(
+        `✅ Customer query successful - Total: ${total}, Returned: ${customers.length}`
+      );
+
+      return {
+        customers,
+        total,
+      };
+    } catch (error) {
+      console.error("❌ Error getting customers with pagination:", error);
+      throw error;
+    }
+  }
+
+  // Keep the old method for backward compatibility (if needed)
+  static async getAll(filters = {}) {
+    console.warn(
+      "⚠️ Customer.getAll() is deprecated. Use getAllWithPagination() instead."
+    );
+
+    // Convert to new method
+    const result = await this.getAllWithPagination(filters);
+    return result.customers;
+  }
+
   // Get customer by ID
   static async getById(id) {
     try {
+      if (!id) {
+        return null;
+      }
+
       const query = `
-        SELECT 
-          c.*,
-          COUNT(q.id) as total_quotations,
-          MAX(q.created_at) as last_quotation_date,
-          SUM(CASE WHEN q.quotation_status = 'accepted' THEN 1 ELSE 0 END) as accepted_quotations,
-          SUM(CASE WHEN q.delivery_status = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
-          AVG(q.total_amount) as avg_quotation_amount
-        FROM customers c
-        LEFT JOIN quotations q ON c.id = q.customer_id
-        WHERE c.id = ?
-        GROUP BY c.id
-        LIMIT 1
+        SELECT id, company_name, contact_person, email, phone, 
+               address, site_location, gst_number, created_at, updated_at
+        FROM customers 
+        WHERE id = ?
       `;
 
       const result = await executeQuery(query, [id]);
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting customer by ID:", error);
+      console.error("❌ Error getting customer by ID:", error);
       throw error;
     }
   }
 
   // Find customer by contact details
-  static async findByContact(phone, email) {
+  static async findByContact(contact) {
     try {
+      // FIX: Ensure contact is not undefined
+      if (!contact) {
+        console.log("⚠️ Contact is missing or undefined");
+        return null;
+      }
+
       const query = `
-        SELECT * FROM customers 
-        WHERE phone = ? OR email = ?
-        LIMIT 1
+        SELECT id, company_name, contact_person, email, phone, 
+               address, site_location, gst_number, created_at, updated_at
+        FROM customers 
+        WHERE phone = ?
       `;
 
-      const result = await executeQuery(query, [phone, email]);
+      // FIX: Convert undefined to null
+      const cleanContact = contact || null;
+      console.log("🔧 Finding customer by contact:", cleanContact);
+
+      const result = await executeQuery(query, [cleanContact]);
       return result[0] || null;
     } catch (error) {
-      console.error("Error finding customer by contact:", error);
+      console.error("❌ Error finding customer by contact:", error);
       throw error;
     }
   }
@@ -136,64 +278,54 @@ class Customer {
   // Create new customer
   static async create(customerData) {
     try {
-      const {
-        company_name,
-        contact_person,
-        email,
-        phone,
-        address,
-        site_location,
-        gst_number,
-      } = customerData;
+      console.log("🔧 Customer.create called with:", customerData);
+
+      // FIX: Convert all undefined values to null
+      const cleanData = {
+        company_name: customerData.company_name || null,
+        contact_person: customerData.contact_person || null,
+        email: customerData.email || null,
+        phone: customerData.phone || null,
+        address: customerData.address || null,
+        site_location: customerData.site_location || null,
+        gst_number: customerData.gst_number || null,
+      };
 
       // Validate required fields
-      const validation = this.validateCustomerData(customerData);
-      if (!validation.isValid) {
+      if (!cleanData.phone) {
         return {
           success: false,
-          message: "Validation failed",
-          errors: validation.errors,
+          message: "Phone number is required",
         };
       }
 
-      // Check if customer already exists
-      const existingCustomer = await this.findByContact(phone, email);
-      if (existingCustomer) {
+      if (!cleanData.contact_person && !cleanData.company_name) {
         return {
           success: false,
-          message: "Customer with this phone or email already exists",
-          existingCustomer: {
-            id: existingCustomer.id,
-            company_name: existingCustomer.company_name,
-            phone: existingCustomer.phone,
-            email: existingCustomer.email,
-          },
+          message: "Either contact person or company name is required",
         };
       }
 
       const query = `
         INSERT INTO customers (
-          company_name,
-          contact_person,
-          email,
-          phone,
-          address,
-          site_location,
-          gst_number,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+          company_name, contact_person, email, phone, 
+          address, site_location, gst_number
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
-      const result = await executeQuery(query, [
-        company_name,
-        contact_person || null,
-        email || null,
-        phone,
-        address || null,
-        site_location || null,
-        gst_number || null,
-      ]);
+      const params = [
+        cleanData.company_name,
+        cleanData.contact_person,
+        cleanData.email,
+        cleanData.phone,
+        cleanData.address,
+        cleanData.site_location,
+        cleanData.gst_number,
+      ];
+
+      console.log("🔧 Customer create SQL params:", params);
+
+      const result = await executeQuery(query, params);
 
       return {
         success: true,
@@ -201,7 +333,16 @@ class Customer {
         message: "Customer created successfully",
       };
     } catch (error) {
-      console.error("Error creating customer:", error);
+      console.error("❌ Error creating customer:", error);
+
+      // Handle duplicate entry error
+      if (error.code === "ER_DUP_ENTRY") {
+        return {
+          success: false,
+          message: "Customer with this phone number already exists",
+        };
+      }
+
       throw error;
     }
   }
@@ -424,36 +565,61 @@ class Customer {
   // Get or create customer (for quotations)
   static async getOrCreate(customerData) {
     try {
-      const { company_name, phone, email } = customerData;
+      console.log("🔧 Customer.getOrCreate called with:", customerData);
 
-      // Try to find existing customer
-      let customer = await this.findByContact(phone, email);
+      // FIX: Clean and validate input data
+      const cleanData = {
+        company_name:
+          customerData.company_name || customerData.customer_name || null,
+        contact_person:
+          customerData.contact_person || customerData.customer_name || null,
+        email: customerData.email || null,
+        phone: customerData.phone || customerData.customer_contact || null,
+        address: customerData.address || null,
+        site_location: customerData.site_location || null,
+        gst_number: customerData.gst_number || null,
+      };
 
-      if (customer) {
+      console.log("🔧 Cleaned customer data:", cleanData);
+
+      // Validate required fields
+      if (!cleanData.phone) {
+        throw new Error("Customer phone number is required");
+      }
+
+      if (!cleanData.contact_person && !cleanData.company_name) {
+        throw new Error("Either contact person or company name is required");
+      }
+
+      // Try to find existing customer by phone
+      let existingCustomer = await this.findByContact(cleanData.phone);
+
+      if (existingCustomer) {
+        console.log("✅ Found existing customer:", existingCustomer.id);
         return {
           success: true,
-          customer,
+          customer: existingCustomer,
           created: false,
-          message: "Existing customer found",
         };
       }
 
       // Create new customer
-      const result = await this.create(customerData);
+      console.log("🔧 Creating new customer...");
+      const createResult = await this.create(cleanData);
 
-      if (result.success) {
-        customer = await this.getById(result.id);
+      if (createResult.success) {
+        const newCustomer = await this.getById(createResult.id);
+        console.log("✅ Created new customer:", createResult.id);
         return {
           success: true,
-          customer,
+          customer: newCustomer,
           created: true,
-          message: "New customer created",
         };
+      } else {
+        throw new Error(createResult.message || "Failed to create customer");
       }
-
-      return result;
     } catch (error) {
-      console.error("Error in getOrCreate customer:", error);
+      console.error("❌ Error in getOrCreate customer:", error);
       throw error;
     }
   }

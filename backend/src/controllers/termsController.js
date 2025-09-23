@@ -373,6 +373,15 @@ class TermsController {
   // Bulk delete terms and conditions
   static async bulkDelete(req, res) {
     try {
+      console.log(
+        "--------------------------------------------------------------"
+      );
+      console.log("Bulk Delete Called");
+
+      console.log(
+        "--------------------------------------------------------------"
+      );
+
       const { ids } = req.body;
 
       if (!ids || !Array.isArray(ids) || ids.length === 0) {

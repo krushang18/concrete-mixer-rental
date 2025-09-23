@@ -4,91 +4,100 @@ class Machine {
   // Get all machines with optional filtering
   // Simple Machine.getAll in Machine.js model
   static async getAll(filters = {}) {
-    console.log("Machine.getAll called with filters:", {
-      is_active: filters.is_active,
-      search: filters.search,
-      limit: filters.limit,
-      offset: filters.offset,
-    });
-
     try {
       let query = `
-      SELECT 
-        id, machine_number, name, description,
-        priceByDay, priceByWeek, priceByMonth,
-        gst_percentage, is_active, created_at, updated_at
-      FROM machines
-    `;
+        SELECT
+          id, machine_number, name, description,
+          priceByDay, priceByWeek, priceByMonth,
+          gst_percentage, is_active, created_at, updated_at
+        FROM machines
+      `;
 
       const conditions = [];
       const params = [];
 
+      // FIX: Proper boolean conversion for is_active
       if (filters.is_active !== undefined) {
         conditions.push("is_active = ?");
-        params.push(parseInt(filters.is_active));
+
+        // Convert string 'true'/'false' to boolean, then to 1/0
+        let isActiveValue;
+        if (typeof filters.is_active === "string") {
+          isActiveValue = filters.is_active.toLowerCase() === "true" ? 1 : 0;
+        } else if (typeof filters.is_active === "boolean") {
+          isActiveValue = filters.is_active ? 1 : 0;
+        } else {
+          isActiveValue = filters.is_active ? 1 : 0;
+        }
+
+        params.push(isActiveValue);
+        console.log(
+          `🔧 Fixed is_active filter: ${filters.is_active} -> ${isActiveValue}`
+        );
       }
 
+      // Search filter
       if (filters.search) {
         conditions.push(
-          "(machine_number LIKE ? OR name LIKE ? OR description LIKE ?)"
+          "(name LIKE ? OR description LIKE ? OR machine_number LIKE ?)"
         );
         const searchTerm = `%${filters.search}%`;
         params.push(searchTerm, searchTerm, searchTerm);
       }
 
+      // Add WHERE clause if conditions exist
       if (conditions.length > 0) {
         query += " WHERE " + conditions.join(" AND ");
       }
 
+      // Add ordering
       query += " ORDER BY machine_number ASC";
 
-      console.log("SQL:", query);
-      console.log("Params:", params);
+      // FIX: Proper LIMIT/OFFSET handling
+      if (filters.limit) {
+        const limitValue = parseInt(filters.limit);
+        if (!isNaN(limitValue) && limitValue > 0 && limitValue <= 1000) {
+          query += ` LIMIT ${limitValue}`;
+
+          if (filters.offset) {
+            const offsetValue = parseInt(filters.offset);
+            if (!isNaN(offsetValue) && offsetValue >= 0) {
+              query += ` OFFSET ${offsetValue}`;
+            }
+          }
+        }
+      }
+
+      console.log("🔧 Fixed Machine SQL:", query);
+      console.log("🔧 Fixed Machine Params:", params);
 
       const machines = await executeQuery(query, params);
-
-      // Apply limit in JavaScript
-      if (filters.limit) {
-        const limit = parseInt(filters.limit);
-        return machines.slice(0, limit);
-      }
+      console.log(
+        `✅ Machine query successful, rows returned: ${machines.length}`
+      );
 
       return machines;
     } catch (error) {
-      console.error("Error getting all machines:", error);
+      console.error("❌ Error in Machine.getAll:", error);
       throw error;
     }
   }
 
-  // Get active machines only (for quotations)
+  // Get active machines only
   static async getActive() {
-    try {
-      return await this.getAll({ is_active: 1 });
-    } catch (error) {
-      console.error("Error getting active machines:", error);
-      throw error;
-    }
+    return this.getAll({ is_active: true });
   }
 
   // Get machine by ID
   static async getById(id) {
     try {
       const query = `
-        SELECT 
-          id,
-          machine_number,
-          name,
-          description,
-          priceByDay,
-          priceByWeek,
-          priceByMonth,
-          gst_percentage,
-          is_active,
-          created_at,
-          updated_at
-        FROM machines 
-        WHERE id = ? 
-        LIMIT 1
+        SELECT
+          id, machine_number, name, description,
+          priceByDay, priceByWeek, priceByMonth,
+          gst_percentage, is_active, created_at, updated_at
+        FROM machines
+        WHERE id = ?
       `;
 
       const result = await executeQuery(query, [id]);

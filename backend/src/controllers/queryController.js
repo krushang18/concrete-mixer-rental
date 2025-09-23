@@ -81,26 +81,181 @@ class QueryController {
   // Get all queries (for admin - Phase 2)
   static async getAllQueries(req, res) {
     try {
+      // Input validation and sanitization
       const filters = {
-        status: req.query.status,
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
-        limit: req.query.limit ? parseInt(req.query.limit) : 50, // ✅ Fixed: Convert to number
+        status: req.query.status?.trim() || null,
+        startDate: req.query.startDate?.trim() || null,
+        endDate: req.query.endDate?.trim() || null,
+        search: req.query.search?.trim() || null, // Added search functionality
+        sortBy: req.query.sortBy?.trim() || "created_at",
+        sortOrder: req.query.sortOrder?.trim()?.toUpperCase() || "DESC",
+        page: Math.max(1, parseInt(req.query.page) || 1), // Ensure minimum page is 1
+        limit: Math.min(100, Math.max(1, parseInt(req.query.limit) || 10)), // Clamp between 1-100
       };
 
-      const queries = await Query.getAll(filters);
+      // Validate sort parameters
+      const allowedSortColumns = [
+        "id",
+        "company_name",
+        "email",
+        "status",
+        "created_at",
+        "updated_at",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+
+      if (!allowedSortColumns.includes(filters.sortBy)) {
+        filters.sortBy = "created_at";
+      }
+
+      if (!allowedSortOrders.includes(filters.sortOrder)) {
+        filters.sortOrder = "DESC";
+      }
+
+      // Validate status if provided
+      const allowedStatuses = [
+        "pending",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ];
+      if (filters.status && !allowedStatuses.includes(filters.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status. Allowed values: ${allowedStatuses.join(
+            ", "
+          )}`,
+        });
+      }
+
+      // Validate date format if provided
+      if (filters.startDate && !isValidDate(filters.startDate)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid startDate format. Use YYYY-MM-DD",
+        });
+      }
+
+      if (filters.endDate && !isValidDate(filters.endDate)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid endDate format. Use YYYY-MM-DD",
+        });
+      }
+
+      // Ensure startDate is not after endDate
+      if (
+        filters.startDate &&
+        filters.endDate &&
+        new Date(filters.startDate) > new Date(filters.endDate)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "startDate cannot be after endDate",
+        });
+      }
+
+      console.log("Processed filters:", filters);
+
+      const result = await Query.getAll(filters);
 
       res.json({
         success: true,
         message: "Queries retrieved successfully",
-        data: queries,
-        count: queries.length,
+        data: result.data,
+        pagination: result.pagination,
+        filters: {
+          status: filters.status,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          search: filters.search,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
+        },
+        // Additional metadata
+        meta: {
+          total_filtered: result.pagination.total,
+          request_timestamp: new Date().toISOString(),
+          processing_time: Date.now() - req.startTime, // Add timing middleware
+        },
       });
     } catch (error) {
       console.error("Error in getAllQueries:", error);
+
+      // Different error handling based on error type
+      if (error.name === "ValidationError") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation error",
+          errors: error.errors,
+        });
+      }
+
+      if (error.name === "DatabaseError") {
+        return res.status(503).json({
+          success: false,
+          message: "Database temporarily unavailable",
+        });
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to retrieve queries",
+        error:
+          process.env.NODE_ENV === "development"
+            ? {
+                message: error.message,
+                stack: error.stack,
+              }
+            : undefined,
+      });
+    }
+  }
+
+  // Get filter options for dropdowns
+  static async getFilterOptions(req, res) {
+    try {
+      const filterOptions = await Query.getFilterOptions();
+
+      res.json({
+        success: true,
+        message: "Filter options retrieved successfully",
+        data: filterOptions,
+      });
+    } catch (error) {
+      console.error("Error in getFilterOptions:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve filter options",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Get pagination summary with current filters
+  static async getPaginationSummary(req, res) {
+    try {
+      const filters = {
+        status: req.query.status?.trim() || null,
+        startDate: req.query.startDate?.trim() || null,
+        endDate: req.query.endDate?.trim() || null,
+        search: req.query.search?.trim() || null,
+      };
+
+      const summary = await Query.getPaginationSummary(filters);
+
+      res.json({
+        success: true,
+        message: "Pagination summary retrieved successfully",
+        data: summary,
+        applied_filters: filters,
+      });
+    } catch (error) {
+      console.error("Error in getPaginationSummary:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve pagination summary",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });
@@ -249,6 +404,18 @@ class QueryController {
       });
     }
   }
+}
+
+function isValidDate(dateString) {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!regex.test(dateString)) return false;
+
+  const date = new Date(dateString);
+  return (
+    date instanceof Date &&
+    !isNaN(date) &&
+    dateString === date.toISOString().split("T")[0]
+  );
 }
 
 module.exports = QueryController;
