@@ -1,4 +1,4 @@
-name: Deploy Concrete Mixer Rental Full Stack
+name: Deploy Concrete Mixer Rental Phase 2
 
 on:
   push:
@@ -18,24 +18,23 @@ jobs:
         with:
           node-version: "18"
           cache: "npm"
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Test Backend
-        run: |
-          cd backend && npm ci
-          npm test || echo "No tests configured yet"
-          npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
+      - name: Install dependencies
+        run: cd backend && npm ci
 
-      - name: Test Frontend Build
-        run: |
-          cd admin-frontend && npm ci
-          npm run build
+      - name: Run tests
+        run: cd backend && npm test || echo "No tests configured yet"
+
+      - name: Security audit
+        run: cd backend && npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Deploy Full Stack to Production
+      - name: Deploy to Production Server
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -43,69 +42,55 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo "🚀 Starting Full Stack deployment..."
+            echo "🚀 Starting Phase 2 deployment..."
 
-            # Test sudo access
+            # Test sudo access first
             if ! sudo -n true 2>/dev/null; then
-              echo "❌ Sudo access not configured"
+              echo "❌ Sudo access not configured for passwordless operation"
+              echo "💡 Run: sudo visudo and add: krushang ALL=(ALL) NOPASSWD: ALL"
               exit 1
             fi
+
+            echo "✅ Sudo access confirmed"
 
             # Stop application
             echo "⏸️ Stopping application..."
             sudo pm2 stop fiori-for-rent || echo "App not running"
 
-            # Fix permissions and navigate
+            # Fix permissions
+            echo "🔧 Fixing permissions..."
             sudo chown -R krushang:krushang /var/www/fioriforrent.com/
+
+            # Navigate to project directory
             cd /var/www/fioriforrent.com
 
-            # Git configuration
+            # Configure git
             git config --global --add safe.directory /var/www/fioriforrent.com
             git config user.name "GitHub Actions"
             git config user.email "actions@github.com"
 
-            # Clean and pull
-            echo "📥 Pulling latest code..."
+            # Clean any conflicts
+            echo "🧹 Cleaning conflicts..."
             git reset --hard HEAD
             git clean -fd
+
+            # Pull latest changes
+            echo "📥 Pulling latest code..."
             git pull origin main
 
-            # Install Node.js 18 if not present
-            if ! node --version | grep -q "v18"; then
-              echo "📦 Installing Node.js 18..."
-              curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-              sudo apt-get install -y nodejs
-            fi
-
-            # Backend deployment
-            echo "🔧 Deploying backend..."
+            # Backend dependencies
+            echo "📦 Installing backend dependencies..."
             cd backend
             rm -rf node_modules/ package-lock.json
             npm install --production
             cd ..
 
-            # Admin Frontend deployment
-            echo "🌐 Building admin frontend..."
-            cd admin-frontend
+            # Create upload directories
+            echo "📁 Creating upload directories..."
+            mkdir -p backend/uploads/{company,quotations,signatures,temp}
 
-            # Clean install
-            rm -rf node_modules/ package-lock.json build/
-            npm install
-
-            # Build for production
-            npm run build
-
-            echo "📁 Deploying admin frontend..."
-            # Create admin directories
-            sudo mkdir -p /var/www/fioriforrent.com/admin-frontend/build/
-
-            # Copy build files
-            sudo cp -r build/* /var/www/fioriforrent.com/admin-frontend/build/
-
-            cd ..
-
-            # Customer site deployment
-            echo "🌍 Deploying customer site..."
+            # Deploy frontend files (with sudo)
+            echo "🌐 Deploying frontend files..."
             if [ -d "customer-site" ]; then
               sudo rm -f /var/www/fioriforrent.com/*.html || true
               sudo cp customer-site/*.html /var/www/fioriforrent.com/ 2>/dev/null || echo "No HTML files"
@@ -113,115 +98,58 @@ jobs:
               sudo cp customer-site/sitemap.xml /var/www/fioriforrent.com/ 2>/dev/null || echo "No sitemap.xml"
               
               if [ -d "customer-site/assets" ]; then
+                echo "📁 Copying assets..."
                 sudo mkdir -p /var/www/fioriforrent.com/assets/
                 sudo cp -r customer-site/assets/* /var/www/fioriforrent.com/assets/ 2>/dev/null || echo "No assets"
               fi
-            fi
-
-            # Create upload directories
-            mkdir -p backend/uploads/{company,quotations,signatures,temp}
-
-            # Update Nginx configuration for admin routes
-            echo "🔧 Updating nginx configuration..."
-            sudo tee /tmp/admin-nginx.conf > /dev/null << 'EOF'
-
-            # Admin panel static files
-            location /admin {
-                alias /var/www/fioriforrent.com/admin-frontend/build;
-                try_files $uri $uri/ /admin/index.html;
-                index index.html;
-                
-                # Cache static assets
-                location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-                    expires 1y;
-                    add_header Cache-Control "public, immutable";
-                }
-            }
-
-            # Admin API routes (must be BEFORE general /api location)
-            location /api/admin {
-                proxy_pass http://127.0.0.1:3000/api/admin;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-            }
-            EOF
-
-            # Check if admin routes already exist in nginx config
-            if ! grep -q "location /admin" /etc/nginx/sites-available/fioriforrent.com; then
-              echo "📝 Adding admin routes to nginx..."
-              # Insert admin config before existing api location
-              sudo sed -i '/location \/api/i\    # Admin panel static files\n    location /admin {\n        alias /var/www/fioriforrent.com/admin-frontend/build;\n        try_files $uri $uri/ /admin/index.html;\n        index index.html;\n        \n        location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg)$ {\n            expires 1y;\n            add_header Cache-Control "public, immutable";\n        }\n    }\n    \n    # Admin API routes\n    location /api/admin {\n        proxy_pass http://127.0.0.1:3000/api/admin;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n    ' /etc/nginx/sites-available/fioriforrent.com
-            else
-              echo "✅ Admin routes already configured in nginx"
-            fi
-
-            # Test and reload nginx
-            if sudo nginx -t; then
-              echo "✅ Nginx config valid"
-              sudo systemctl reload nginx
-            else
-              echo "❌ Nginx config invalid"
-              exit 1
             fi
 
             # Set permissions
             echo "🔐 Setting permissions..."
             sudo chown -R www-data:www-data /var/www/fioriforrent.com/*.html
             sudo chown -R www-data:www-data /var/www/fioriforrent.com/assets/
-            sudo chown -R www-data:www-data /var/www/fioriforrent.com/admin-frontend/
             sudo chown -R krushang:krushang /var/www/fioriforrent.com/backend/
             sudo chown -R krushang:krushang /var/www/fioriforrent.com/.git/
             chmod -R 755 /var/www/fioriforrent.com/backend/uploads/
-            sudo chmod -R 755 /var/www/fioriforrent.com/admin-frontend/
 
             # Restart application
             echo "🔄 Starting application..."
             sudo pm2 start fiori-for-rent
 
-            # Health checks
+            # Wait and verify
             echo "⏳ Waiting for startup..."
-            sleep 20
+            sleep 15
 
+            # Health checks
             echo "🏥 Verifying deployment..."
 
-            # Check PM2
             if sudo pm2 list | grep -q "fiori-for-rent.*online"; then
-              echo "✅ Backend running"
+              echo "✅ PM2 process running"
             else
-              echo "❌ Backend failed"
+              echo "❌ PM2 process failed"
+              sudo pm2 logs fiori-for-rent --lines 20
+              exit 1
+            fi
+
+            if curl -f http://127.0.0.1:3000/health > /dev/null 2>&1; then
+              echo "✅ Health check passed"
+            else
+              echo "❌ Health check failed"
               sudo pm2 logs fiori-for-rent --lines 10
               exit 1
             fi
 
-            # Check backend health
-            if curl -f http://127.0.0.1:3000/health > /dev/null 2>&1; then
-              echo "✅ Backend health check passed"
-            else
-              echo "❌ Backend health check failed"
-              exit 1
-            fi
-
-            # Check customer site
             if curl -f https://fioriforrent.com/ > /dev/null 2>&1; then
-              echo "✅ Customer site accessible"
+              echo "✅ Website accessible"
+              echo "🎉 Phase 2 deployment successful!"
             else
-              echo "⚠️ Customer site check failed"
+              echo "⚠️ Website check failed"
             fi
 
-            # Check admin panel
-            if curl -f https://fioriforrent.com/admin > /dev/null 2>&1; then
-              echo "✅ Admin panel accessible"
-            else
-              echo "⚠️ Admin panel check failed"
-            fi
-
-            echo "🎉 Full Stack Deployment Complete!"
-            echo "📊 Services Status:"
-            echo "   - Customer Site: https://fioriforrent.com"
-            echo "   - Admin Panel: https://fioriforrent.com/admin"
-            echo "   - Backend API: https://fioriforrent.com/api"
-            echo "   - Admin API: https://fioriforrent.com/api/admin"
+            echo "📊 Deployment Complete:"
+            echo "   - Sudo access: ✅"
+            echo "   - Code updated: ✅"
+            echo "   - Dependencies: ✅"
+            echo "   - App restarted: ✅"
 
             sudo pm2 list | grep fiori-for-rent
