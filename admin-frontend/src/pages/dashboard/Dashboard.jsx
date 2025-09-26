@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   MessageSquare, 
@@ -9,20 +9,16 @@ import {
   TrendingDown,
   AlertCircle,
   Calendar,
-  DollarSign,
   Plus,
   ArrowRight,
   RefreshCw,
   Activity,
   BarChart3,
-  Eye,
-  Clock,
-  CheckCircle2,
   XCircle,
   Loader2
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
-import { dashboardApi, dashboardUtils } from '../../services/dashboardApi'
+import { dashboardApi } from '../../services/dashboardApi'
 import { queryApi } from '../../services/queryApi'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'

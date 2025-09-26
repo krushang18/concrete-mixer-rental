@@ -9,9 +9,9 @@ import { create } from 'zustand';
 import { serviceApi } from '../../services/serviceApi';
 import Pagination from '../../components/common/Pagination';
 import { 
-  Plus, Edit, Trash2, X, Save, ChevronDown, ChevronRight,
-  Settings, List, AlertCircle, Search, ArrowLeft,
-  RefreshCw, MoreVertical
+  Plus, Edit, Trash2, X, ChevronDown, ChevronRight,
+  Settings, AlertCircle, Search, ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 
 // Zustand store for state management

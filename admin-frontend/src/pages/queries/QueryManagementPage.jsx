@@ -21,8 +21,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Users,
-  Plus,
-  ArrowUpDown,
   X,
   Menu
 } from 'lucide-react';

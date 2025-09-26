@@ -1,12 +1,12 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { serviceApi, serviceUtils } from '../../services/serviceApi';
 import { 
   ArrowLeft, Calendar, MapPin, User, Clock, FileText, 
-  CheckCircle, Settings, Edit, Trash2, Download,
-  AlertCircle, Wrench, RefreshCw, Share, Copy
+  CheckCircle, Settings, Edit, Trash2,
+  AlertCircle, Wrench, RefreshCw
 } from 'lucide-react';
 
 const ServiceDetailView = () => {

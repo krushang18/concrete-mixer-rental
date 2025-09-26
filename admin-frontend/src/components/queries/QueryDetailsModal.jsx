@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -188,7 +188,7 @@ const CopyableText = ({ text, label, href, className = "" }) => {
 const StatusUpdateSection = ({ currentQuery, onStatusUpdate, isUpdating }) => {
   const { isStatusDropdownOpen, toggleStatusDropdown, closeStatusDropdown } = useModalStore();
   
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { formState: { errors } } = useForm({
     resolver: yupResolver(statusUpdateSchema),
     defaultValues: { status: currentQuery.status }
   });

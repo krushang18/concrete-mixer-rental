@@ -12,26 +12,18 @@ import {
   RefreshCw,
   AlertCircle,
   FileText,
-  Download,
-  Upload,
   Settings,
   ChevronDown,
   MoreVertical,
-  Eye,
   Edit,
   Trash2,
   Copy,
   Star,
   StarOff,
   Move,
-  CheckSquare,
-  Square,
   X,
   Menu,
-  Users,
-  Calendar,
   Clock,
-  ArrowUpDown
 } from 'lucide-react';
 import { termsConditionsApi, termsConditionsUtils } from '../../services/termsConditionsApi';
 import TermModal from './TermModal';

@@ -18,17 +18,13 @@ import {
   AlertCircle,
   ChevronDown,
   MoreVertical,
-  ArrowUpDown,
   CheckCircle,
   XCircle,
   IndianRupee,
-  TrendingUp,
-  Activity,
-  AlertTriangle,
   X,
   Menu
 } from 'lucide-react';
-import { machineApi, machineUtils } from '../../services/machineApi';
+import { machineApi} from '../../services/machineApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import MachineForm from './MachineForm';
 import Pagination from '../../components/common/Pagination';

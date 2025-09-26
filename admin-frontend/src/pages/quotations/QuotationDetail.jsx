@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,13 +8,10 @@ import {
   Download,
   Building2,
   Phone,
-  Mail,
-  MapPin,
   Calendar,
   User,
   FileText,
   Package,
-  IndianRupee,
   Truck,
   CheckCircle,
   Clock,

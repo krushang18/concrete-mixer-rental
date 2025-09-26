@@ -62,8 +62,7 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
     formState: { errors, isDirty },
     reset,
     setValue,
-    watch,
-    clearErrors
+    watch
   } = useForm({
     resolver: yupResolver(machineSchema),
     defaultValues: {

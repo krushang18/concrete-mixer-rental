@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { serviceApi, serviceValidation } from '../../services/serviceApi';
+import { serviceApi } from '../../services/serviceApi';
 import { machineApi } from '../../services/machineApi';
 import { 
   Save, ArrowLeft, Plus, Search, X, ChevronDown, ChevronUp,
-  AlertCircle, Calendar, MapPin, User, Clock, Check, FileText
+  AlertCircle, Check, FileText
 } from 'lucide-react';
 
 const ServiceForm = ({ serviceId = null, onBack }) => {

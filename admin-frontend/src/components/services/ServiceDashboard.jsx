@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Plus, Filter, Download, Eye, Edit, Trash2, 
   AlertCircle, CheckCircle, Clock, Search, RefreshCw,
-  BarChart3, TrendingUp, Users, Wrench, X, Menu,
+  BarChart3, Users, Wrench, X, Menu,
   MoreVertical, Settings, ChevronDown, MapPin, User, FileText
 } from 'lucide-react';
 import { serviceApi, serviceUtils } from '../../services/serviceApi';
