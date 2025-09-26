@@ -39,14 +39,14 @@ import EditServicePage from "./pages/services/EditServicePage";
 import CategoriesPage from "./pages/services/CategoriesPage";
 import { ServiceDetailPage } from "./components/services";
 import CompanySettings from "./pages/CompanySettings";
-// Create Query Client with optimized settings
+
+// Create Query Client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: (failureCount, error) => {
-        // Don't retry on 401 errors
         if (error?.response?.status === 401) return false;
         return failureCount < 3;
       },
@@ -59,20 +59,16 @@ const queryClient = new QueryClient({
   },
 });
 
-// Session Monitor Component
 const SessionMonitor = ({ children }) => {
   useSessionMonitor();
   return children;
 };
 
-// App Initialization Component
 const AppInitializer = ({ children }) => {
   const { _hasHydrated, setHasHydrated } = useAuthStore();
 
   useEffect(() => {
-    // Force hydration if not already done
     if (!_hasHydrated) {
-      // Small delay to ensure localStorage is read
       setTimeout(() => {
         setHasHydrated(true);
       }, 100);
@@ -107,36 +103,20 @@ function App() {
                 >
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
-
-                  {/* TODO: Add other protected routes */}
                   <Route path="queries" element={<QueryManagementPage />} />
-
                   <Route path="machines" element={<Machines />} />
                   <Route path="machines/:id" element={<MachineDetail />} />
-
-                  {/* Main customer list page */}
-                  <Route path="/customers" element={<Customers />} />
-
-                  {/* Create new customer */}
-                  <Route path="/customers/new" element={<CustomerForm />} />
-
-                  {/* View customer details */}
-                  <Route path="/customers/:id" element={<CustomerDetail />} />
-
-                  {/* Edit existing customer */}
+                  <Route path="customers" element={<Customers />} />
+                  <Route path="customers/new" element={<CustomerForm />} />
+                  <Route path="customers/:id" element={<CustomerDetail />} />
+                  <Route path="customers/:id/edit" element={<CustomerForm />} />
+                  <Route path="quotations" element={<QuotationList />} />
+                  <Route path="quotations/new" element={<QuotationForm />} />
+                  <Route path="quotations/:id" element={<QuotationDetail />} />
                   <Route
-                    path="/customers/:id/edit"
-                    element={<CustomerForm />}
-                  />
-
-                  <Route path="/quotations" element={<QuotationList />} />
-                  <Route path="/quotations/new" element={<QuotationForm />} />
-                  <Route path="/quotations/:id" element={<QuotationDetail />} />
-                  <Route
-                    path="/quotations/:id/edit"
+                    path="quotations/:id/edit"
                     element={<QuotationForm />}
                   />
-
                   <Route
                     path="documents"
                     element={
@@ -146,28 +126,25 @@ function App() {
                     }
                   />
                   <Route
-                    path="/terms-and-conditions"
+                    path="terms-and-conditions"
                     element={<TermsConditionsPage />}
                   />
-
-                  <Route path="/services" element={<ServicesPage />} />
-                  <Route path="/services/new" element={<AddServicePage />} />
+                  <Route path="services" element={<ServicesPage />} />
+                  <Route path="services/new" element={<AddServicePage />} />
                   <Route
-                    path="/services/:id/edit"
+                    path="services/:id/edit"
                     element={<EditServicePage />}
                   />
                   <Route
-                    path="/services/categories"
+                    path="services/categories"
                     element={<CategoriesPage />}
                   />
                   <Route
-                    path="/services/:serviceId"
+                    path="services/:serviceId"
                     element={<ServiceDetailPage />}
                   />
-
                   <Route path="settings" element={<CompanySettings />} />
                 </Route>
-
                 {/* Catch all route */}
                 <Route
                   path="*"
@@ -179,7 +156,6 @@ function App() {
         </AppInitializer>
       </Router>
 
-      {/* Toast Notifications */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -205,7 +181,6 @@ function App() {
         }}
       />
 
-      {/* React Query Dev Tools */}
       {process.env.NODE_ENV === "development" && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}

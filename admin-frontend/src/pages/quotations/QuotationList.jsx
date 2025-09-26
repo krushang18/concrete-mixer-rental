@@ -775,13 +775,13 @@ const QuotationList = () => {
                 <RefreshCcw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
                 Refresh
               </button>
-              <button
+              {/* <button
                 onClick={handleExport}
                 className="flex items-center px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export
-              </button>
+              </button> */}
               <Link
                 to="/quotations/new"
                 className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"

@@ -52,7 +52,7 @@ apiClient.interceptors.response.use(
 
       // Updated redirect path for admin panel
       if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+        window.location.href = "/admin/login";
       }
     } else if (response?.status === 429) {
       toast.error("Too many requests. Please wait a moment.");

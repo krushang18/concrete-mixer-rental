@@ -1,8 +1,8 @@
 {
   "name": "admin-frontend",
-  "homepage": "/admin",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/admin",
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/forms": "^0.5.10",
