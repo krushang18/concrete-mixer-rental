@@ -145,12 +145,11 @@ jobs:
               npm install --production
               
               if [ ! -f ".env.production" ]; then
-                cat > .env.production << 'EOF'
-                REACT_APP_API_BASE_URL=https://fioriforrent.com/api
-                REACT_APP_ENV=production
-                REACT_APP_APP_NAME=Concrete Mixer Rental Admin
-                REACT_APP_VERSION=2.0.0
-                EOF
+                echo "Creating .env.production file..."
+                echo "REACT_APP_API_BASE_URL=https://fioriforrent.com/api" > .env.production
+                echo "REACT_APP_ENV=production" >> .env.production
+                echo "REACT_APP_APP_NAME=Concrete Mixer Rental Admin" >> .env.production
+                echo "REACT_APP_VERSION=2.0.0" >> .env.production
               fi
               
               CI=false npm run build
