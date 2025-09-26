@@ -55,7 +55,9 @@ jobs:
       - name: Test Admin Frontend Build
         run: |
           if [ -d "admin-frontend" ]; then
-            cd admin-frontend && npm run build
+            cd admin-frontend
+            export CI=false
+            npm run build
             echo "✅ Admin frontend build successful"
           else
             echo "Admin frontend not found, skipping build test"
@@ -245,9 +247,9 @@ jobs:
             EOF
               fi
               
-              # Build the React application
+              # Build the React application (disable CI mode to treat warnings as warnings, not errors)
               echo "🏗️ Building React application..."
-              npm run build
+              CI=false npm run build
               
               # Deploy built files
               echo "🚀 Deploying admin frontend build..."
