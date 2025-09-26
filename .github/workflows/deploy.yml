@@ -1,4 +1,4 @@
-name: Deploy Concrete Mixer Rental Phase 3 - Complete CI/CD
+name: Deploy Concrete Mixer Rental - Complete Pipeline
 
 on:
   push:
@@ -13,62 +13,36 @@ env:
 
 jobs:
   test:
-    name: Test Backend & Frontend
+    name: Test Applications
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Backend Testing
-      - name: Setup Node.js for Backend
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install Backend Dependencies
-        run: cd backend && npm ci
-
-      - name: Run Backend Tests
-        run: cd backend && npm test || echo "No backend tests configured yet"
-
-      - name: Backend Security Audit
-        run: cd backend && npm audit --audit-level high || echo "Security vulnerabilities found but continuing deployment"
-
-      # Admin Frontend Testing
-      - name: Setup Node.js for Admin Frontend
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: admin-frontend/package-lock.json
-
-      - name: Install Admin Frontend Dependencies
+      - name: Test Backend
         run: |
-          if [ -d "admin-frontend" ]; then
-            cd admin-frontend && npm ci
-          else
-            echo "Admin frontend not found, skipping"
-          fi
+          cd backend
+          npm ci
+          npm test || echo "No tests configured"
+          npm audit --audit-level high || echo "Security issues found but continuing"
 
-      - name: Test Admin Frontend Build
+      - name: Test Admin Frontend
         run: |
           if [ -d "admin-frontend" ]; then
             cd admin-frontend
-            export CI=false
-            npm run build
-            echo "✅ Admin frontend build successful"
+            npm ci
+            CI=false npm run build
+            npm audit --audit-level high || echo "Security issues found but continuing"
+            echo "Admin frontend build successful"
           else
-            echo "Admin frontend not found, skipping build test"
-          fi
-
-      - name: Admin Frontend Security Audit
-        run: |
-          if [ -d "admin-frontend" ]; then
-            cd admin-frontend && npm audit --audit-level high || echo "Admin frontend security vulnerabilities found but continuing"
-          else
-            echo "Admin frontend not found, skipping security audit"
+            echo "Admin frontend not found, skipping"
           fi
 
   deploy:
@@ -78,322 +52,197 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: Deploy to Production Server
+      - name: Execute Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 300
-          command_timeout: 60
+          timeout: 300s
+          command_timeout: 600s
           script: |
-            set -e  # Exit on any error
+            set -e
 
-            echo "🚀 Starting Phase 3 Complete CI/CD Deployment..."
-            echo "📅 Deployment Time: $(date)"
-            echo "🔧 Target: Production Environment"
+            echo "Starting deployment at $(date)"
 
-            # =================================================================
-            # PHASE 1: SYSTEM PREPARATION
-            # =================================================================
-
-            echo ""
-            echo "📋 Phase 1: System Preparation"
-            echo "================================"
-
-            # Verify sudo access
-            if ! sudo -n true 2>/dev/null; then
-              echo "❌ ERROR: Sudo access not configured for passwordless operation"
-              echo "💡 SOLUTION: Run 'sudo visudo' and add: krushang ALL=(ALL) NOPASSWD: ALL"
-              exit 1
+            # Check sudo access
+            if sudo -n true 2>/dev/null; then
+              SUDO_AVAILABLE=true
+              echo "Sudo access available"
+            else
+              SUDO_AVAILABLE=false
+              echo "Warning: No passwordless sudo configured"
+              echo "To fix: sudo visudo, add: ${{ secrets.VPS_USERNAME }} ALL=(ALL) NOPASSWD: ALL"
             fi
-            echo "✅ Sudo access confirmed"
 
-            # Check PM2 status
-            if ! command -v pm2 &> /dev/null; then
-              echo "❌ ERROR: PM2 not installed"
-              exit 1
+            # Stop application
+            if [ "$SUDO_AVAILABLE" = "true" ]; then
+              sudo pm2 stop ${{ env.PM2_APP_NAME }} || echo "App not running"
+            else
+              pm2 stop ${{ env.PM2_APP_NAME }} || echo "App not running"
             fi
-            echo "✅ PM2 available"
 
-            # Check Node.js version
-            NODE_VERSION=$(node --version)
-            echo "✅ Node.js version: $NODE_VERSION"
-
-            # Stop application gracefully
-            echo "⏸️ Stopping application..."
-            sudo pm2 stop ${{ env.PM2_APP_NAME }} || echo "⚠️ App not running or already stopped"
-
-            # =================================================================
-            # PHASE 2: CODE DEPLOYMENT
-            # =================================================================
-
-            echo ""
-            echo "📥 Phase 2: Code Deployment"
-            echo "=========================="
-
-            # Navigate to project directory
+            # Navigate and setup git
             cd ${{ env.DEPLOY_PATH }}
-            echo "📂 Working directory: $(pwd)"
 
-            # Fix permissions for git operations
-            echo "🔧 Fixing permissions..."
-            sudo chown -R krushang:krushang ${{ env.DEPLOY_PATH }}/
+            if [ "$SUDO_AVAILABLE" = "true" ]; then
+              sudo chown -R ${{ secrets.VPS_USERNAME }}:${{ secrets.VPS_USERNAME }} .
+            fi
 
-            # Configure git (safe directory)
             git config --global --add safe.directory ${{ env.DEPLOY_PATH }}
             git config user.name "GitHub Actions"
             git config user.email "actions@github.com"
 
-            # Clean any local changes
-            echo "🧹 Cleaning local changes..."
+            # Clean and pull latest code
             git reset --hard HEAD
             git clean -fd
-
-            # Pull latest code
-            echo "📥 Pulling latest code from main branch..."
-            git fetch origin
-            git checkout main
             git pull origin main
 
-            COMMIT_HASH=$(git rev-parse --short HEAD)
-            echo "✅ Latest commit: $COMMIT_HASH"
+            COMMIT=$(git rev-parse --short HEAD)
+            echo "Deployed commit: $COMMIT"
 
-            # =================================================================
-            # PHASE 3: BACKEND DEPLOYMENT
-            # =================================================================
-
-            echo ""
-            echo "⚙️ Phase 3: Backend Deployment"
-            echo "=============================="
-
-            # Backend dependencies
-            echo "📦 Installing backend dependencies..."
+            # Deploy backend
+            echo "Deploying backend..."
             cd backend
-
-            # Clean install for production
-            rm -rf node_modules/ package-lock.json
-            npm install --production --no-optional
-            echo "✅ Backend dependencies installed"
-
-            # Create required directories
-            echo "📁 Creating upload directories..."
+            rm -rf node_modules package-lock.json
+            npm install --production
             mkdir -p uploads/{company,quotations,signatures,temp}
             chmod -R 755 uploads/
-            echo "✅ Upload directories created"
-
             cd ..
 
-            # =================================================================
-            # PHASE 4: CUSTOMER SITE DEPLOYMENT
-            # =================================================================
-
-            echo ""
-            echo "🌐 Phase 4: Customer Site Deployment"
-            echo "===================================="
-
+            # Deploy customer site
             if [ -d "customer-site" ]; then
-              echo "📄 Deploying customer website files..."
-              
-              # Remove old HTML files
-              sudo rm -f ${{ env.DEPLOY_PATH }}/*.html
-              
-              # Copy new HTML files
-              sudo cp customer-site/*.html ${{ env.DEPLOY_PATH }}/ 2>/dev/null || echo "⚠️ No HTML files found"
-              
-              # Copy SEO files
-              sudo cp customer-site/robots.txt ${{ env.DEPLOY_PATH }}/ 2>/dev/null || echo "⚠️ No robots.txt found"
-              sudo cp customer-site/sitemap.xml ${{ env.DEPLOY_PATH }}/ 2>/dev/null || echo "⚠️ No sitemap.xml found"
-              
-              # Copy assets directory
-              if [ -d "customer-site/assets" ]; then
-                echo "📁 Copying customer site assets..."
-                sudo mkdir -p ${{ env.DEPLOY_PATH }}/assets/
-                sudo cp -r customer-site/assets/* ${{ env.DEPLOY_PATH }}/assets/ 2>/dev/null || echo "⚠️ No assets to copy"
-                echo "✅ Customer assets deployed"
+              echo "Deploying customer site..."
+              if [ "$SUDO_AVAILABLE" = "true" ]; then
+                sudo rm -f *.html
+                sudo cp customer-site/*.html . || echo "No HTML files"
+                sudo cp customer-site/robots.txt . || echo "No robots.txt"
+                sudo cp customer-site/sitemap.xml . || echo "No sitemap.xml"
+                
+                if [ -d "customer-site/assets" ]; then
+                  sudo mkdir -p assets
+                  sudo cp -r customer-site/assets/* assets/ || echo "No assets"
+                fi
+              else
+                cp customer-site/*.html . || echo "Cannot copy HTML files"
+                cp customer-site/robots.txt . || echo "Cannot copy robots.txt"
+                cp customer-site/sitemap.xml . || echo "Cannot copy sitemap.xml"
+                
+                if [ -d "customer-site/assets" ]; then
+                  mkdir -p assets
+                  cp -r customer-site/assets/* assets/ || echo "Cannot copy assets"
+                fi
               fi
-              
-              echo "✅ Customer site deployed successfully"
-            else
-              echo "⚠️ Customer site directory not found, skipping"
+              echo "Customer site deployed"
             fi
 
-            # =================================================================
-            # PHASE 5: ADMIN FRONTEND DEPLOYMENT
-            # =================================================================
-
-            echo ""
-            echo "👩‍💼 Phase 5: Admin Frontend Deployment"
-            echo "======================================"
-
+            # Deploy admin frontend
             if [ -d "admin-frontend" ]; then
-              echo "🏗️ Building admin frontend..."
+              echo "Building admin frontend..."
               cd admin-frontend
-              
-              # Install dependencies
-              echo "📦 Installing admin frontend dependencies..."
-              rm -rf node_modules/ package-lock.json
+              rm -rf node_modules package-lock.json
               npm install --production
               
-              # Create production environment file if not exists
               if [ ! -f ".env.production" ]; then
-                echo "📝 Creating .env.production file..."
-                cat > .env.production << EOF
-            REACT_APP_API_BASE_URL=https://fioriforrent.com/api
-            REACT_APP_ENV=production
-            REACT_APP_APP_NAME=Concrete Mixer Rental Admin
-            REACT_APP_VERSION=2.0.0
-            EOF
+                cat > .env.production << 'EOF'
+                REACT_APP_API_BASE_URL=https://fioriforrent.com/api
+                REACT_APP_ENV=production
+                REACT_APP_APP_NAME=Concrete Mixer Rental Admin
+                REACT_APP_VERSION=2.0.0
+                EOF
               fi
               
-              # Build the React application (disable CI mode to treat warnings as warnings, not errors)
-              echo "🏗️ Building React application..."
               CI=false npm run build
               
-              # Deploy built files
-              echo "🚀 Deploying admin frontend build..."
-              sudo mkdir -p ${{ env.DEPLOY_PATH }}/admin-frontend/
-              sudo cp -r build/* ${{ env.DEPLOY_PATH }}/admin-frontend/ 2>/dev/null || echo "⚠️ No build files to copy"
+              if [ "$SUDO_AVAILABLE" = "true" ]; then
+                sudo mkdir -p ${{ env.DEPLOY_PATH }}/admin-frontend
+                sudo cp -r build/* ${{ env.DEPLOY_PATH }}/admin-frontend/ || echo "No build files"
+              else
+                mkdir -p ${{ env.DEPLOY_PATH }}/admin-frontend
+                cp -r build/* ${{ env.DEPLOY_PATH }}/admin-frontend/ || echo "Cannot copy build files"
+              fi
               
               cd ..
-              echo "✅ Admin frontend deployed successfully"
-            else
-              echo "⚠️ Admin frontend directory not found, skipping"
+              echo "Admin frontend deployed"
             fi
 
-            # =================================================================
-            # PHASE 6: PERMISSIONS & SECURITY
-            # =================================================================
+            # Set permissions
+            if [ "$SUDO_AVAILABLE" = "true" ]; then
+              sudo chown -R www-data:www-data *.html assets/ admin-frontend/ 2>/dev/null || true
+              sudo chown -R ${{ secrets.VPS_USERNAME }}:${{ secrets.VPS_USERNAME }} backend/ .git/
+            fi
 
-            echo ""
-            echo "🔐 Phase 6: Setting Permissions"
-            echo "=============================="
+            chmod -R 755 backend/uploads/ 2>/dev/null || true
 
-            # Set web server permissions for static files
-            sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }}/*.html 2>/dev/null || echo "⚠️ No HTML files to set permissions"
-            sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }}/assets/ 2>/dev/null || echo "⚠️ No assets directory"
-            sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }}/admin-frontend/ 2>/dev/null || echo "⚠️ No admin frontend directory"
+            # Start application
+            if [ "$SUDO_AVAILABLE" = "true" ]; then
+              sudo pm2 start ${{ env.PM2_APP_NAME }}
+            else
+              pm2 start ${{ env.PM2_APP_NAME }}
+            fi
 
-            # Set application permissions
-            sudo chown -R krushang:krushang ${{ env.DEPLOY_PATH }}/backend/
-            sudo chown -R krushang:krushang ${{ env.DEPLOY_PATH }}/.git/
-
-            # Set specific permissions for uploads
-            chmod -R 755 ${{ env.DEPLOY_PATH }}/backend/uploads/ 2>/dev/null || echo "⚠️ No uploads directory"
-
-            echo "✅ Permissions set successfully"
-
-            # =================================================================
-            # PHASE 7: APPLICATION STARTUP
-            # =================================================================
-
-            echo ""
-            echo "🔄 Phase 7: Application Startup"
-            echo "=============================="
-
-            # Start application with PM2
-            echo "🚀 Starting application..."
-            sudo pm2 start ${{ env.PM2_APP_NAME }}
-
-            # Wait for application to fully start
-            echo "⏳ Waiting for application startup (15 seconds)..."
+            # Wait and verify
             sleep 15
 
-            # =================================================================
-            # PHASE 8: HEALTH CHECKS & VERIFICATION
-            # =================================================================
-
-            echo ""
-            echo "🏥 Phase 8: Health Checks"
-            echo "======================="
-
-            # PM2 Status Check
-            if sudo pm2 list | grep -q "${{ env.PM2_APP_NAME }}.*online"; then
-              echo "✅ PM2 Process Status: ONLINE"
+            # Health checks
+            if [ "$SUDO_AVAILABLE" = "true" ]; then
+              PM2_STATUS=$(sudo pm2 list | grep "${{ env.PM2_APP_NAME }}" || echo "not found")
             else
-              echo "❌ PM2 Process Status: FAILED"
-              echo "📋 PM2 Logs (last 20 lines):"
-              sudo pm2 logs ${{ env.PM2_APP_NAME }} --lines 20 || true
+              PM2_STATUS=$(pm2 list | grep "${{ env.PM2_APP_NAME }}" || echo "not found")
+            fi
+
+            if echo "$PM2_STATUS" | grep -q "online"; then
+              echo "PM2 process is online"
+            else
+              echo "PM2 process failed to start"
               exit 1
             fi
 
-            # Backend Health Check
-            echo "🔍 Testing backend health endpoint..."
             if curl -f -m 10 http://127.0.0.1:3000/health > /dev/null 2>&1; then
-              echo "✅ Backend Health Check: PASSED"
+              echo "Backend health check passed"
             else
-              echo "❌ Backend Health Check: FAILED"
-              echo "📋 Application Logs:"
-              sudo pm2 logs ${{ env.PM2_APP_NAME }} --lines 10 || true
+              echo "Backend health check failed"
               exit 1
             fi
 
-            # Customer Website Check
-            echo "🔍 Testing customer website..."
+            # Test external access
             if curl -f -m 10 https://fioriforrent.com/ > /dev/null 2>&1; then
-              echo "✅ Customer Website: ACCESSIBLE"
+              echo "Customer website accessible"
             else
-              echo "⚠️ Customer Website: May have issues (SSL/DNS related)"
+              echo "Warning: Customer website may have issues"
             fi
 
-            # Admin Panel Check
-            echo "🔍 Testing admin panel..."
             if curl -f -m 10 https://fioriforrent.com/admin/ > /dev/null 2>&1; then
-              echo "✅ Admin Panel: ACCESSIBLE"
+              echo "Admin panel accessible"
             else
-              echo "⚠️ Admin Panel: May have issues (check Nginx config)"
+              echo "Warning: Admin panel may have issues"
             fi
 
-            # =================================================================
-            # PHASE 9: DEPLOYMENT SUMMARY
-            # =================================================================
+            echo "Deployment completed successfully at $(date)"
+            echo "Commit: $COMMIT"
 
-            echo ""
-            echo "🎉 Phase 9: Deployment Summary"
-            echo "============================"
+            if [ "$SUDO_AVAILABLE" = "false" ]; then
+              echo ""
+              echo "Note: For optimal functionality, configure passwordless sudo"
+            fi
 
-            echo "✅ DEPLOYMENT COMPLETED SUCCESSFULLY!"
-            echo ""
-            echo "📊 Deployment Summary:"
-            echo "   🔧 System Setup: ✅"
-            echo "   📥 Code Updated: ✅ (commit: $COMMIT_HASH)"
-            echo "   ⚙️ Backend: ✅"
-            echo "   🌐 Customer Site: ✅"
-            echo "   👩‍💼 Admin Panel: ✅"
-            echo "   🔐 Permissions: ✅"
-            echo "   🚀 App Started: ✅"
-            echo "   🏥 Health Checks: ✅"
-            echo ""
-            echo "🌐 Live URLs:"
-            echo "   📱 Customer Site: https://fioriforrent.com/"
-            echo "   👩‍💼 Admin Panel: https://fioriforrent.com/admin/"
-            echo "   🔌 API Health: https://fioriforrent.com/api/health"
-            echo ""
-            echo "📈 System Status:"
-            sudo pm2 list | grep ${{ env.PM2_APP_NAME }} || echo "   📊 PM2 Status: Not available"
-            echo ""
-            echo "🕒 Deployment completed at: $(date)"
-            echo "🎯 Ready for production use!"
-
-  # Optional: Notify on deployment status
   notify:
-    name: Deployment Notification
+    name: Notify Result
     needs: [deploy]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
-      - name: Deployment Success Notification
+      - name: Success Notification
         if: needs.deploy.result == 'success'
         run: |
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 Website: https://fioriforrent.com/"
-          echo "👩‍💼 Admin: https://fioriforrent.com/admin/"
+          echo "Deployment successful"
+          echo "Customer site: https://fioriforrent.com/"
+          echo "Admin panel: https://fioriforrent.com/admin/"
 
-      - name: Deployment Failure Notification
+      - name: Failure Notification
         if: needs.deploy.result == 'failure'
         run: |
-          echo "❌ Deployment failed!"
-          echo "🔍 Check the deployment logs for details."
+          echo "Deployment failed - check logs"
           exit 1
