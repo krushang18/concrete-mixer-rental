@@ -8,18 +8,18 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
-  Calendar,
-  Plus,
   ArrowRight,
   RefreshCw,
   Activity,
   BarChart3,
   XCircle,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  Target
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import { dashboardApi } from '../../services/dashboardApi'
-import { queryApi } from '../../services/queryApi'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 
@@ -32,7 +32,7 @@ const Dashboard = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState('30d')
 
-  // Fetch dashboard data
+  // Single API call to get all required data
   const fetchDashboardData = async (showRefreshingState = false) => {
     try {
       if (showRefreshingState) {
@@ -43,29 +43,9 @@ const Dashboard = () => {
       
       setError(null)
 
-      // Fetch all dashboard data in parallel using available API functions
-      const [statsResponse, alerts, businessSummary, recentQueries] = await Promise.all([
-        dashboardApi.getStats(),
-        dashboardApi.getAlerts(),
-        dashboardApi.getBusinessSummary(selectedPeriod),
-        queryApi.getQueries({ limit: 10, sortBy: 'created_at', sortOrder: 'desc' })
-      ])
-
-      const statsData = statsResponse.data
-
-      setDashboardData({
-        overview: statsData.overview || {},
-        queries: statsData.queries || {},
-        machines: statsData.machines || {},
-        customers: statsData.customers || {},
-        quotations: statsData.quotations || {},
-        documents: statsData.documents || {},
-        services: statsData.services || {},
-        recentActivity: recentQueries.data || [],
-        alerts: alerts.data || [],
-        businessSummary: businessSummary.data || {},
-        lastUpdated: statsData.lastUpdated || new Date().toISOString()
-      })
+      // Single optimized API call
+      const response = await dashboardApi.getDashboardOverview(selectedPeriod)
+      setDashboardData(response.data)
 
     } catch (error) {
       console.error('Dashboard fetch error:', error)
@@ -84,7 +64,7 @@ const Dashboard = () => {
 
   // Refetch data when period changes
   useEffect(() => {
-    if (selectedPeriod) {
+    if (selectedPeriod && dashboardData) {
       fetchDashboardData(true)
     }
   }, [selectedPeriod])
@@ -94,63 +74,13 @@ const Dashboard = () => {
     fetchDashboardData(true)
   }
 
-  // Period change handler
-  const handlePeriodChange = (period) => {
-    setSelectedPeriod(period)
-    // Refetch data with new period
-    fetchDashboardData(true)
-  }
-
-  // Generate sample alerts if none exist
-  const generateSampleAlerts = (statsData) => {
-    const alerts = []
-    
-    // Check for pending queries
-    if (statsData.queries?.new > 5) {
-      alerts.push({
-        id: 'pending_queries',
-        type: 'info',
-        priority: 'medium',
-        message: `${statsData.queries.new} new queries require attention`,
-        action: 'View Queries'
-      })
-    }
-
-    // Check for machine availability
-    if (statsData.machines?.total > 0) {
-      const availability = (statsData.machines.active / statsData.machines.total) * 100
-      if (availability < 70) {
-        alerts.push({
-          id: 'low_availability',
-          type: 'warning',
-          priority: 'high',
-          message: `Only ${availability.toFixed(1)}% of machines are active`,
-          action: 'Check Machines'
-        })
-      }
-    }
-
-    // Check for quotations pending
-    if (statsData.quotations?.pending > 3) {
-      alerts.push({
-        id: 'pending_quotations',
-        type: 'warning',
-        priority: 'medium',
-        message: `${statsData.quotations.pending} quotations pending customer response`,
-        action: 'Follow Up'
-      })
-    }
-
-    return alerts
-  }
-
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600 text-sm sm:text-base">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -159,14 +89,14 @@ const Dashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="text-center max-w-md mx-auto">
+          <XCircle className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">{error}</p>
           <button 
             onClick={() => fetchDashboardData()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
             Try Again
           </button>
@@ -175,8 +105,17 @@ const Dashboard = () => {
     )
   }
 
+  const { overview, cards, performance, insights, conversionStats, recentActivity, alerts } = dashboardData
+  console.log("----------------------------------------------------------------");
+  console.log("conversionStats: "+JSON.stringify(conversionStats));
+  console.log("----------------------------------------------------------------");
+  
+  
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile-first container */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        
       {/* Welcome Header - Mobile Optimized */}
       <div className="bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 rounded-lg sm:rounded-xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden">
         <div className="relative z-10">
@@ -212,296 +151,264 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 -mr-8 sm:-mr-16 -mt-8 sm:-mt-16 w-16 h-16 sm:w-32 sm:h-32 lg:w-48 lg:h-48 bg-white bg-opacity-10 rounded-full"></div>
-        <div className="absolute bottom-0 right-0 -mr-4 sm:-mr-8 -mb-4 sm:-mb-8 w-12 h-12 sm:w-24 sm:h-24 lg:w-32 lg:h-32 bg-white bg-opacity-5 rounded-full"></div>
-      </div>
+          
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 sm:w-32 sm:h-32 bg-white bg-opacity-10 rounded-full"></div>
+          <div className="absolute bottom-0 right-0 -mr-4 -mb-4 w-16 h-16 sm:w-24 sm:h-24 bg-white bg-opacity-5 rounded-full"></div>
+        </div>
 
-      {/* Stats Grid - Responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        <StatCard
-          title="Total Queries"
-          value={dashboardData?.overview?.totalQueries || 0}
-          change={`+${dashboardData?.queries?.today || 0} today`}
-          changeType={dashboardData?.queries?.today > 0 ? 'positive' : 'neutral'}
-          icon={MessageSquare}
-          color="blue"
-          onClick={() => navigate('/queries')}
-        />
-        <StatCard
-          title="Active Machines"
-          value={dashboardData?.overview?.totalMachines || 0}
-          change={`${dashboardData?.machines?.active || 0} active`}
-          changeType="positive"
-          icon={Truck}
-          color="green"
-          onClick={() => navigate('/machines')}
-        />
-        <StatCard
-          title="Quotations"
-          value={dashboardData?.overview?.totalQuotations || 0}
-          change={`${dashboardData?.quotations?.pending || 0} pending`}
-          changeType={dashboardData?.quotations?.pending > 0 ? 'warning' : 'neutral'}
-          icon={FileText}
-          color="purple"
-          onClick={() => navigate('/quotations')}
-        />
-        <StatCard
-          title="Customers"
-          value={dashboardData?.overview?.totalCustomers || 0}
-          change={`+${dashboardData?.customers?.new || 0} this month`}
-          changeType={dashboardData?.customers?.new > 0 ? 'positive' : 'neutral'}
-          icon={Users}
-          color="orange"
-          onClick={() => navigate('/customers')}
-        />
-      </div>
+        {/* Stats Grid - Original Colors & Improved Active Machines */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            title="Total Queries"
+            value={overview?.totalQueries || 0}
+            change={`+${cards?.queries?.today || 0} today`}
+            changeType={cards?.queries?.today > 0 ? 'positive' : 'neutral'}
+            icon={MessageSquare}
+            color="blue"
+            onClick={() => navigate('/queries')}
+          />
+          <StatCard
+            title="Machines"
+            value={cards?.machines?.total || 0}
+            change={`${cards?.machines?.active || 0} Active`}
+            changeType="positive"
+            icon={Truck}
+            color="green"
+            onClick={() => navigate('/machines')}
+          />
+          <StatCard
+            title="Quotations"
+            value={overview?.totalQuotations || 0}
+            change={`${cards?.quotations?.pending || 0} Drafted`}
+            changeType={cards?.quotations?.pending > 0 ? 'warning' : 'neutral'}
+            icon={FileText}
+            color="purple"
+            onClick={() => navigate('/quotations')}
+          />
+          <StatCard
+            title="Customers"
+            value={overview?.totalCustomers || 0}
+            change={`+${cards?.customers?.newPeriod || 0} this period`}
+            changeType={cards?.customers?.newPeriod > 0 ? 'positive' : 'neutral'}
+            icon={Users}
+            color="orange"
+            onClick={() => navigate('/customers')}
+          />
+        </div>
 
-      {/* Main Content Grid - Mobile Optimized */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        
-        {/* Recent Activity - Takes full width on mobile, 2 cols on desktop */}
-        <div className="lg:col-span-2 order-1 lg:order-1">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          
+          {/* Recent Activity - Show only 5 queries */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                  <Activity className="w-5 h-5 mr-2 text-blue-600" />
+                  Recent Activity
+                </h2>
+                <button 
+                  onClick={() => navigate('/queries')}
+                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center group"
+                >
+                  View All
+                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {recentActivity?.length > 0 ? (
+                  recentActivity.slice(0, 5).map((query, index) => (
+                    <QueryActivityItem key={query.id || index} query={query} />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm sm:text-base">No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts - Enhanced with more info */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center mb-4 sm:mb-6">
+                <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
+                Alerts
+                {alerts?.length > 0 && (
+                  <span className="ml-2 bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">
+                    {alerts.length}
+                  </span>
+                )}
+              </h2>
+              
+              <div className="space-y-3">
+                {alerts?.length > 0 ? (
+                  alerts.map((alert, index) => (
+                    <AlertItem key={index} alert={alert} />
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-400" />
+                    <p className="text-sm">All systems running smoothly</p>
+                    <p className="text-xs text-gray-400 mt-1">No urgent alerts</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Alert Info */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-700 font-medium">Alert Types Monitored:</p>
+                <ul className="text-xs text-blue-600 mt-1 space-y-1">
+                  <li>• Document expiry (within 7 days)</li>
+                  <li>• Insurance expiration</li>
+                  <li>• PUC certificate renewal</li>
+                  <li>• RC Book renewal</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance & Insights - Original styling */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          
+          {/* Performance Overview - Your exact requirements */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-primary-600" />
-                Recent Activity
+                <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
+                Performance Overview
               </h2>
-              <button 
-                onClick={() => navigate('/queries')}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center group"
-              >
-                View All
-                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
-              </button>
             </div>
             
-            <div className="space-y-3 sm:space-y-4">
-              {dashboardData?.recentActivity?.length > 0 ? (
-                dashboardData.recentActivity.slice(0, 6).map((query, index) => (
-                  <QueryActivityItem key={query.id || index} query={query} />
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No recent activity</p>
-                </div>
-              )}
+            <div className="space-y-4">
+              <MetricCard
+                label={performance?.queryResolutionRate?.label || "Query Resolution Rate"}
+                value={`${performance?.queryResolutionRate?.value || 0}%`}
+                description={performance?.queryResolutionRate?.description || "Query completion rate"}
+                trend={performance?.queryResolutionRate?.value >= 80 ? "up" : "down"}
+              />
+              <MetricCard
+                label={performance?.newQueriesThisWeek?.label || "New Queries This Week"}
+                value={performance?.newQueriesThisWeek?.value || 0}
+                description={performance?.newQueriesThisWeek?.description || "Weekly inquiry volume"}
+                trend="neutral"
+              />
             </div>
           </div>
-        </div>
 
-        {/* Quick Actions & Alerts - Single column on mobile */}
-        <div className="space-y-4 sm:space-y-6 order-2 lg:order-2">
-          
-          {/* Quick Actions */}
+          {/* Business Insights - Your exact requirements */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Quick Actions</h2>
-              <Plus className="w-5 h-5 text-gray-400" />
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
+                Business Insights
+              </h2>
             </div>
-            <div className="space-y-3">
-              <QuickActionButton
-                icon={FileText}
-                label="Create Quotation"
-                description="Generate new quote"
-                onClick={() => navigate('/quotations')}
+            
+            <div className="space-y-4">
+              <InsightCard
+                title={insights?.customerGrowth?.title || "Customer Growth"}
+                value={insights?.customerGrowth?.value || 0}
+                description={insights?.customerGrowth?.description || "New customer acquisitions"}
+                trend={insights?.customerGrowth?.trend || "neutral"}
               />
-              <QuickActionButton
-                icon={Truck}
-                label="Add Machine"
-                description="Register equipment"
-                onClick={() => navigate('/machines')}
-              />
-              <QuickActionButton
-                icon={Users}
-                label="Add Customer"
-                description="New client entry"
-                onClick={() => navigate('/customers')}
-              />
-              <QuickActionButton
-                icon={Calendar}
-                label="Schedule Service"
-                description="Book maintenance"
-                onClick={() => navigate('/services')}
+              <InsightCard
+                title={insights?.quotationsThisMonth?.title || "Quotations Generated This Month"}
+                value={insights?.quotationsThisMonth?.value || 0}
+                description={insights?.quotationsThisMonth?.description || "Monthly quotation volume"}
+                trend={insights?.quotationsThisMonth?.trend || "neutral"}
               />
             </div>
           </div>
-
-          {/* System Alerts */}
-          {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">System Alerts</h2>
-              <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                {dashboardData?.alerts?.length || 0} alerts
-              </span>
-            </div>
-            <div className="space-y-3 sm:space-y-4">
-              {dashboardData?.alerts?.length > 0 ? (
-                dashboardData.alerts.slice(0, 4).map((alert, index) => (
-                  <AlertItem key={index} alert={alert} />
-                ))
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-400" />
-                  <p className="text-sm">No active alerts</p>
-                </div>
-              )}
-            </div>
-          </div> */}
         </div>
-      </div>
 
-      {/* Performance Overview - Full width card on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        
-        {/* Performance Metrics */}
+        {/* Conversion Rate Stats - New section for quotation → delivery tracking */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-primary-600" />
-              Performance Overview
-            </h2>
-            <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              View Details
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <MetricCard
-              label="Query Resolution"
-              value={`${dashboardData?.queries?.completed || 0}%`}
-              trend="up"
-              description="Queries completed"
-            />
-            <MetricCard
-              label="Machine Utilization"
-              value={`${Math.round(((dashboardData?.machines?.active || 0) / Math.max(dashboardData?.overview?.totalMachines, 1)) * 100)}%`}
-              trend="up"
-              description="Machines active"
-            />
-            <MetricCard
-              label="New Queries"
-              value={dashboardData?.queries?.this_week || 0}
-              trend="neutral"
-              description="This week"
-            />
-            <MetricCard
-              label="Pending Items"
-              value={(dashboardData?.queries?.new || 0) + (dashboardData?.quotations?.pending || 0)}
-              trend="down"
-              description="Need attention"
-            />
-          </div>
-        </div>
-
-        {/* Business Insights */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
-              Business Insights
+              <Target className="w-5 h-5 mr-2 text-purple-600" />
+              Conversion Tracking
             </h2>
           </div>
           
-          <div className="space-y-4">
-            <InsightCard
-              title="Customer Growth"
-              description={`${dashboardData?.customers?.new || 0} new customers this month`}
-              trend="positive"
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<ConversionCard
+  label="Quotation → Success Rate"
+  value={`${conversionStats?.quotationToDelivery?.value || 0}%`}
+  description={conversionStats?.quotationToSuccess?.description || "Overall success rate"}
+/>
+            <ConversionCard
+              label="Total Quotations"
+              value={conversionStats?.quotationToDelivery?.total || 0}
+              description="All quotations created"
             />
-            <InsightCard
-              title="Query Volume"
-              description={`${dashboardData?.queries?.this_week || 0} queries this week`}
-              trend="neutral"
-            />
-            <InsightCard
-              title="Machine Availability"
-              description={`${dashboardData?.machines?.active || 0}/${dashboardData?.overview?.totalMachines || 0} machines active`}
-              trend="positive"
-            />
+<ConversionCard
+  label="Successful Orders"
+  value={conversionStats?.quotationToDelivery?.successful || 0}
+  description="Delivered + Completed"
+/>
           </div>
         </div>
-      </div>
 
-      {/* Last Updated */}
-      <div className="text-center text-xs sm:text-sm text-gray-500">
-        Last updated: {dashboardData?.lastUpdated ? new Date(dashboardData.lastUpdated).toLocaleString() : 'Unknown'}
+        {/* Last Updated */}
+        <div className="text-center text-xs text-gray-500">
+          Last updated: {dashboardData?.lastUpdated ? new Date(dashboardData.lastUpdated).toLocaleString() : 'Unknown'}
+        </div>
       </div>
     </div>
   )
 }
 
-// Enhanced Stat Card Component - Mobile Optimized
+// Enhanced Stat Card Component - Original Colors
 const StatCard = ({ title, value, change, changeType, icon: Icon, color, onClick }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
+    green: 'bg-green-50 text-green-600', 
     purple: 'bg-purple-50 text-purple-600',
     orange: 'bg-orange-50 text-orange-600'
   }
 
   const changeTypeClasses = {
     positive: 'text-green-600',
-    negative: 'text-red-600',
-    warning: 'text-yellow-600',
+    negative: 'text-red-600', 
+    warning: 'text-orange-600',
     neutral: 'text-gray-600'
   }
 
   return (
     <div 
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6 hover:shadow-md transition-all duration-200 cursor-pointer"
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
       onClick={onClick}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
-          <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          <p className={clsx("text-xs sm:text-sm mt-1 font-medium", changeTypeClasses[changeType])}>
+          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate mb-1">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900 mb-1">{value}</p>
+          <p className={clsx("text-xs font-medium truncate", changeTypeClasses[changeType])}>
             {change}
           </p>
         </div>
-        <div className={clsx("p-2 sm:p-3 rounded-lg flex-shrink-0", colorClasses[color])}>
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
+        <div className={clsx("p-2 rounded-lg flex-shrink-0 ml-2", colorClasses[color])}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
     </div>
   )
 }
 
-// Quick Action Button Component - Mobile Optimized
-const QuickActionButton = ({ icon: Icon, label, description, onClick }) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center p-3 sm:p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-primary-300 hover:shadow-sm transition-all duration-200 group"
-  >
-    <div className="flex items-center flex-1 min-w-0">
-      <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-primary-500 mr-3 flex-shrink-0 transition-colors duration-200" />
-      <div className="min-w-0 flex-1">
-        <span className="text-sm sm:text-base font-medium text-gray-700 group-hover:text-gray-900 block truncate">
-          {label}
-        </span>
-        {description && (
-          <span className="text-xs sm:text-sm text-gray-500 block truncate">
-            {description}
-          </span>
-        )}
-      </div>
-    </div>
-    <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all duration-200 flex-shrink-0" />
-  </button>
-)
-
-// Query Activity Item Component - Using actual query data
+// Query Activity Item Component
 const QueryActivityItem = ({ query }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'new': return 'text-blue-500 bg-blue-50'
-      case 'in_progress': return 'text-yellow-500 bg-yellow-50'
-      case 'completed': return 'text-green-500 bg-green-50'
-      default: return 'text-gray-500 bg-gray-50'
+      case 'new': return 'text-blue-600 bg-blue-50'
+      case 'in_progress': return 'text-yellow-600 bg-yellow-50'
+      case 'completed': return 'text-green-600 bg-green-50'
+      default: return 'text-gray-600 bg-gray-50'
     }
   }
 
@@ -521,7 +428,7 @@ const QueryActivityItem = ({ query }) => {
   return (
     <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
       <div className={clsx("p-2 rounded-lg flex-shrink-0", getStatusColor(query.status))}>
-        <MessageSquare className="w-4 h-4" />
+        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 leading-tight truncate">
@@ -546,125 +453,78 @@ const QueryActivityItem = ({ query }) => {
   )
 }
 
-// Activity Item Component - Mobile Optimized
-const ActivityItem = ({ activity }) => {
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'query': return MessageSquare
-      case 'quotation': return FileText
-      case 'machine': return Truck
-      case 'customer': return Users
-      default: return Activity
-    }
-  }
-
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'query': return 'text-blue-500 bg-blue-50'
-      case 'quotation': return 'text-green-500 bg-green-50'
-      case 'machine': return 'text-purple-500 bg-purple-50'
-      case 'customer': return 'text-orange-500 bg-orange-50'
-      default: return 'text-gray-500 bg-gray-50'
-    }
-  }
-
-  const ActivityIcon = getActivityIcon(activity.type)
-
-  return (
-    <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-      <div className={clsx("p-2 rounded-lg flex-shrink-0", getActivityColor(activity.type))}>
-        <ActivityIcon className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 leading-tight">
-          {activity.description || activity.title}
-        </p>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-xs text-gray-500">
-            {activity.timestamp ? new Date(activity.timestamp).toLocaleDateString() : 'Recent'}
-          </p>
-          {activity.status && (
-            <span className={clsx(
-              "text-xs px-2 py-1 rounded-full font-medium",
-              activity.status === 'completed' ? 'bg-green-100 text-green-700' :
-              activity.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-gray-100 text-gray-700'
-            )}>
-              {activity.status}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Alert Item Component - Mobile Optimized
+// Alert Item Component
 const AlertItem = ({ alert }) => {
-  const priorityColors = {
-    high: 'text-red-600 bg-red-50 border-red-200',
-    medium: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-    low: 'text-gray-600 bg-gray-50 border-gray-200'
+  const severityColors = {
+    critical: 'text-red-600 bg-red-50 border-red-200',
+    warning: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    info: 'text-blue-600 bg-blue-50 border-blue-200'
   }
 
   const iconColors = {
-    high: 'text-red-500',
-    medium: 'text-yellow-500',
-    low: 'text-gray-500'
+    critical: 'text-red-500',
+    warning: 'text-yellow-500',
+    info: 'text-blue-500'
   }
 
   return (
     <div className={clsx(
-      "flex items-start p-3 sm:p-4 border rounded-lg transition-all duration-200 hover:shadow-sm",
-      priorityColors[alert.priority] || priorityColors.low
+      "flex items-start p-3 border rounded-lg transition-all duration-200",
+      severityColors[alert.severity] || severityColors.info
     )}>
       <AlertCircle className={clsx(
-        "w-4 h-4 sm:w-5 sm:h-5 mr-3 mt-0.5 flex-shrink-0",
-        iconColors[alert.priority] || iconColors.low
+        "w-4 h-4 mr-3 mt-0.5 flex-shrink-0",
+        iconColors[alert.severity] || iconColors.info
       )} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 leading-tight">
-          {alert.message || alert.title}
+          {alert.title}
         </p>
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-gray-500 capitalize">
-            {alert.priority || 'medium'} priority • {alert.type || 'general'}
-          </p>
-          {alert.action && (
-            <button className="text-xs sm:text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors duration-200">
-              {alert.action}
-            </button>
-          )}
-        </div>
+        <p className="text-xs text-gray-600 mt-1">
+          {alert.message}
+        </p>
       </div>
     </div>
   )
 }
 
 // Metric Card Component
-const MetricCard = ({ label, value, trend, description }) => (
-  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+const MetricCard = ({ label, value, description, trend }) => (
+  <div className="p-4 bg-gray-50 rounded-lg">
     <div className="flex items-center justify-between mb-2">
-      <span className="text-xs sm:text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-gray-600 font-medium">{label}</span>
       {trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
       {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
+      {trend === 'neutral' && <Activity className="w-4 h-4 text-gray-500" />}
     </div>
-    <p className="text-lg sm:text-xl font-bold text-gray-900">{value}</p>
+    <p className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{value}</p>
     <p className="text-xs text-gray-500">{description}</p>
   </div>
 )
 
 // Insight Card Component
-const InsightCard = ({ title, description, trend }) => (
-  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
-    <div className="flex-1">
+const InsightCard = ({ title, value, description, trend }) => (
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+    <div className="flex-1 min-w-0">
       <h4 className="text-sm font-medium text-gray-900">{title}</h4>
-      <p className="text-xs sm:text-sm text-gray-600 mt-1">{description}</p>
+      <p className="text-lg font-bold text-gray-900 mt-1">{value}</p>
+      <p className="text-xs text-gray-600 mt-1">{description}</p>
     </div>
-    <div className="ml-3">
+    <div className="ml-3 flex-shrink-0">
       {trend === 'positive' && <TrendingUp className="w-5 h-5 text-green-500" />}
       {trend === 'negative' && <TrendingDown className="w-5 h-5 text-red-500" />}
       {trend === 'neutral' && <Activity className="w-5 h-5 text-gray-500" />}
+    </div>
+  </div>
+)
+
+// Conversion Card Component - New for tracking quotation to delivery
+const ConversionCard = ({ label, value, description }) => (
+  <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+    <div className="text-center">
+      <p className="text-sm font-medium text-purple-700 mb-2">{label}</p>
+      <p className="text-2xl font-bold text-purple-900">{value}</p>
+      <p className="text-xs text-purple-600 mt-1">{description}</p>
     </div>
   </div>
 )

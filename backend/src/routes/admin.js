@@ -217,12 +217,12 @@ router.put(
 // DASHBOARD ROUTES
 // =============================================================================
 
-router.get("/dashboard/stats", DashboardController.getStats);
-router.get("/dashboard/charts", DashboardController.getChartData);
-router.get("/dashboard/performance", DashboardController.getPerformanceMetrics);
-router.get("/dashboard/alerts", DashboardController.getAlerts);
-router.get("/dashboard/summary", DashboardController.getBusinessSummary);
-
+// router.get("/dashboard/charts", DashboardController.getChartData);
+// router.get("/dashboard/performance", DashboardController.getPerformanceMetrics);
+// router.get("/dashboard/stats", DashboardController.getStats);
+// router.get("/dashboard/alerts", DashboardController.getAlerts);
+// router.get("/dashboard/summary", DashboardController.getBusinessSummary);
+router.get("/dashboard/overview", DashboardController.getDashboardOverview);
 // =============================================================================
 // QUERY MANAGEMENT ROUTES - Only existing methods
 // =============================================================================

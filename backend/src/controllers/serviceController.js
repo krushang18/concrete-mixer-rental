@@ -119,13 +119,6 @@ class ServiceController {
 
   static async create(req, res) {
     try {
-      console.log(
-        "---------------------------------------------------------------------------------------"
-      );
-      console.log("req.body" + JSON.stringify(req.body));
-      console.log(
-        "---------------------------------------------------------------------------------------"
-      );
       const serviceId = await Service.create(req.body);
 
       res.json({

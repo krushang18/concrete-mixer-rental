@@ -128,7 +128,7 @@ const CustomerStatsCards = ({ customersData, stats }) => {
     },
     {
       title: 'With GST',
-      value: calculatedStats.customersWithGST || 0,
+      value: ((calculatedStats.customersWithGST / calculatedStats.totalCustomers) * 100).toFixed(2) || 0,
       icon: FileText,
       color: 'text-green-600',
       bgColor: 'bg-green-50',

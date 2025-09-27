@@ -189,18 +189,19 @@ const MachineStatsCards = ({ machinesData, stats }) => {
       bgColor: 'bg-red-50',
       subtitle: 'Not available',
       trend: calculatedStats.total > 0 ? `${100 - activityRate}% inactive` : null
-    },
-    {
-      title: 'Avg Rate',
-      value: hasValidPricing ? `₹${Math.round(calculatedStats.avgPrice).toLocaleString('en-IN')}` : '₹0',
-      icon: IndianRupee,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      subtitle: 'Daily rate',
-      trend: hasValidPricing && calculatedStats.minPrice > 0 && calculatedStats.maxPrice > 0 
-        ? `₹${Math.round(calculatedStats.minPrice).toLocaleString('en-IN')} - ₹${Math.round(calculatedStats.maxPrice).toLocaleString('en-IN')}`
-        : null
     }
+    // ,
+    // {
+    //   title: 'Avg Rate',
+    //   value: hasValidPricing ? `₹${Math.round(calculatedStats.avgPrice).toLocaleString('en-IN')}` : '₹0',
+    //   icon: IndianRupee,
+    //   color: 'text-yellow-600',
+    //   bgColor: 'bg-yellow-50',
+    //   subtitle: 'Daily rate',
+    //   trend: hasValidPricing && calculatedStats.minPrice > 0 && calculatedStats.maxPrice > 0 
+    //     ? `₹${Math.round(calculatedStats.minPrice).toLocaleString('en-IN')} - ₹${Math.round(calculatedStats.maxPrice).toLocaleString('en-IN')}`
+    //     : null
+    // }
   ];
 
   return (
