@@ -22,8 +22,7 @@ import {
   StarOff,
   Move,
   X,
-  Menu,
-  Clock,
+  Menu
 } from 'lucide-react';
 import { termsConditionsApi, termsConditionsUtils } from '../../services/termsConditionsApi';
 import TermModal from './TermModal';
@@ -127,14 +126,15 @@ const TermsStatsCards = ({ termsData, stats }) => {
       color: 'text-purple-600', 
       bgColor: 'bg-purple-50', 
       icon: Settings 
-    },
-    { 
-      title: 'Recent', 
-      value: calculatedStats.recentCount || 0, 
-      color: 'text-orange-600', 
-      bgColor: 'bg-orange-50', 
-      icon: Clock 
     }
+    // ,
+    // { 
+    //   title: 'Recent', 
+    //   value: calculatedStats.recentCount || 0, 
+    //   color: 'text-orange-600', 
+    //   bgColor: 'bg-orange-50', 
+    //   icon: Clock 
+    // }
   ];
   
   return (

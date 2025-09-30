@@ -27,6 +27,7 @@ import {
   Building2,
   Phone,
   IndianRupee,
+  CalendarSync, 
   X,
   Users,
   Menu
@@ -186,7 +187,7 @@ const QuotationStatsCards = ({ quotationsData, stats }) => {
     { title: 'Total', value: calculatedStats.totalQuotations || 0, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Users },
     { title: 'Pending', value: calculatedStats.pendingQuotations || 0, color: 'text-yellow-600', bgColor: 'bg-yellow-50', icon: Clock },
     { title: 'Accepted', value: calculatedStats.acceptedQuotations || 0, color: 'text-green-600', bgColor: 'bg-green-50', icon: CheckCircle },
-    { title: 'Revenue', value: formatCurrency(calculatedStats.totalRevenue || 0), color: 'text-purple-600', bgColor: 'bg-purple-50', icon: IndianRupee }
+    { title: 'Conversion Rate', value: calculatedStats.conversion_rate || 0, color: 'text-purple-600', bgColor: 'bg-purple-50', icon: CalendarSync }
   ];
 
   return (
