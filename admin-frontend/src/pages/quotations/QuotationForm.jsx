@@ -309,10 +309,13 @@ const QuotationForm = () => {
     },
     onSuccess: async (response) => {
         // Trigger auto-download if it's a new quotation
-        if (!isEdit && response?.success && response?.data?.id) {
+        // Backend returns data: { quotation: { id: ... } }
+        const newQuotationId = response?.data?.quotation?.id;
+        
+        if (!isEdit && response?.success && newQuotationId) {
             try {
                 toast.loading("Generating PDF...", { id: "pdf-gen" });
-                await quotationApi.generatePDF(response.data.id);
+                await quotationApi.generatePDF(newQuotationId);
                 toast.dismiss("pdf-gen");
             } catch (error) {
                 console.error("Auto-download failed:", error);
