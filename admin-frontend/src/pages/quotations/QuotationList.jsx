@@ -276,7 +276,7 @@ const QuotationFilters = ({ onApplyFilters, onReset }) => {
 };
 
 // Mobile-first Quotation Card Component
-const QuotationCard = ({ quotation, onDelete }) => {
+const QuotationCard = ({ quotation, onDelete, onDownload }) => {
   return (
     <div className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow duration-200">
       <div className="flex items-start justify-between">
@@ -341,13 +341,13 @@ const QuotationCard = ({ quotation, onDelete }) => {
           <Eye className="w-4 h-4 mr-1" />
           View
         </Link>
-        <Link
-          to={`/quotations/${quotation.id}/edit`}
+        <button
+          onClick={() => onDownload(quotation.id)}
           className="flex-1 bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm flex items-center justify-center"
         >
-          <Edit2 className="w-4 h-4 mr-1" />
-          Edit
-        </Link>
+          <Download className="w-4 h-4 mr-1" />
+          PDF
+        </button>
         <button
           onClick={() => onDelete(quotation.id)}
           className="flex-1 bg-red-100 text-red-700 py-1.5 px-3 rounded-lg hover:bg-red-200 transition-colors text-sm flex items-center justify-center"
@@ -359,6 +359,8 @@ const QuotationCard = ({ quotation, onDelete }) => {
     </div>
   );
 };
+
+
 
 // Main QuotationList Component - Mobile First
 const QuotationList = () => {
@@ -776,6 +778,7 @@ const QuotationList = () => {
                       key={quotation.id}
                       quotation={quotation}
                       onDelete={(id) => setDeleteDialog({ open: true, id })}
+                      onDownload={handleDownload}
                     />
                   ))}
                 </div>

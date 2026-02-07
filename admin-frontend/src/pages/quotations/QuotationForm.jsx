@@ -308,20 +308,27 @@ const QuotationForm = () => {
         return quotationApi.create(payload);
     },
     onSuccess: async (response) => {
+        console.log("Create onSuccess response:", response); // DEBUG
+        
         // Trigger auto-download if it's a new quotation
         // Backend returns data: { quotation: { id: ... } }
         const newQuotationId = response?.data?.quotation?.id;
+        console.log("New Quotation ID:", newQuotationId); // DEBUG
         
         if (!isEdit && response?.success && newQuotationId) {
+            console.log("Triggering auto-download...", newQuotationId); // DEBUG
             try {
                 toast.loading("Generating PDF...", { id: "pdf-gen" });
                 await quotationApi.generatePDF(newQuotationId);
                 toast.dismiss("pdf-gen");
+                console.log("Auto-download trigger completed"); // DEBUG
             } catch (error) {
                 console.error("Auto-download failed:", error);
                 toast.dismiss("pdf-gen");
                 // API helper already toasts error, so we just proceed
             }
+        } else {
+            console.log("Auto-download skipped. isEdit:", isEdit, "success:", response?.success); // DEBUG
         }
 
         queryClient.invalidateQueries(['quotations']);
