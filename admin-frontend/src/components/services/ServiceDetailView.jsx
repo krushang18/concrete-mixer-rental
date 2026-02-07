@@ -8,11 +8,14 @@ import {
   CheckCircle, Settings, Edit, Trash2,
   AlertCircle, Wrench, RefreshCw
 } from 'lucide-react';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { useState } from 'react';
 
 const ServiceDetailView = () => {
   const navigate = useNavigate();
   const { serviceId } = useParams();
   const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   
   // Optimized service detail query with better caching
   const { data: serviceData, isLoading, error, refetch } = useQuery({
@@ -64,9 +67,11 @@ const ServiceDetailView = () => {
   }, [navigate, serviceId]);
 
   const handleDelete = useCallback(() => {
-    if (window.confirm('Are you sure you want to delete this service record? This action cannot be undone.')) {
-      deleteMutation.mutate(serviceId);
-    }
+    setConfirmOpen(true);
+  }, []);
+
+  const onConfirmDelete = useCallback(() => {
+    deleteMutation.mutate(serviceId);
   }, [deleteMutation, serviceId]);
 
   const handleExport = useCallback(() => {
@@ -529,6 +534,18 @@ const ServiceDetailView = () => {
           </div>
         </div>
       </div>
+      
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={onConfirmDelete}
+        title="Delete Service Record"
+        message="Are you sure you want to delete this service record? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        loading={deleteMutation.isPending}
+      />
     </div>
   );
 };

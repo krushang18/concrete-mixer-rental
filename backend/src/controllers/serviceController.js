@@ -1,5 +1,4 @@
 const Service = require("../models/Service");
-const { validationResult } = require("express-validator");
 const { executeQuery } = require("../config/database");
 
 class ServiceController {
@@ -181,36 +180,7 @@ class ServiceController {
 
   static async getServiceCategories(req, res) {
     try {
-      const categoriesQuery = `
-        SELECT id, name, description, has_sub_services, is_active, display_order
-        FROM service_categories 
-        WHERE is_active = 1 
-        ORDER BY display_order ASC, name ASC
-      `;
-
-      const categories = await executeQuery(categoriesQuery);
-
-      // Get sub-services for each category
-      const categoriesWithSubServices = await Promise.all(
-        categories.map(async (category) => {
-          const subServicesQuery = `
-            SELECT id, name, description, is_active
-            FROM service_sub_items 
-            WHERE category_id = ? AND is_active = 1
-            ORDER BY display_order ASC, name ASC
-          `;
-
-          const subServices = await executeQuery(subServicesQuery, [
-            category.id,
-          ]);
-
-          return {
-            ...category,
-            sub_services: subServices,
-          };
-        })
-      );
-
+      const categoriesWithSubServices = await Service.getServiceCategories();
       res.json({
         success: true,
         message: "Service categories retrieved successfully",
@@ -221,53 +191,7 @@ class ServiceController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve service categories",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
-  }
-
-  // Get service statistics
-  static async getStats(req, res, next) {
-    try {
-      // Fixed SQL syntax - use DAY instead of DAYS
-      const statsQuery = `
-      SELECT 
-        COUNT(*) as totalServices,
-        COUNT(CASE WHEN DATE(service_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as thisMonth,
-        COUNT(DISTINCT operator) as activeOperators
-      FROM service_records
-      WHERE service_date >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
-    `;
-
-      console.log("Executing stats query:", statsQuery);
-
-      const result = await executeQuery(statsQuery, []);
-      const stats = result[0] || {};
-
-      console.log("Stats result:", stats);
-
-      res.json({
-        success: true,
-        message: "Service statistics retrieved successfully",
-        data: {
-          totalServices: stats.totalServices || 0,
-          thisMonth: stats.thisMonth || 0,
-          activeOperators: stats.activeOperators || 0,
-          overdueServices: 0,
-          averageServiceInterval: 0,
-          topOperator: "N/A",
-          completionRate: 100,
-          monthlyChange: 0,
-        },
-      });
-    } catch (error) {
-      console.error("Error in ServiceController.getStats:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve service statistics",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -275,15 +199,7 @@ class ServiceController {
   static async getSubServices(req, res) {
     try {
       const { categoryId } = req.params;
-
-      const query = `
-      SELECT id, name, description
-      FROM service_sub_items 
-      WHERE category_id = ? AND is_active = 1
-      ORDER BY display_order ASC, name ASC
-    `;
-
-      const subServices = await executeQuery(query, [categoryId]);
+      const subServices = await Service.getSubServices(categoryId);
 
       res.json({
         success: true,
@@ -295,8 +211,7 @@ class ServiceController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve sub-services",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -306,26 +221,14 @@ class ServiceController {
     try {
       const { id } = req.params;
       const { name, description } = req.body;
-
-      const query = `
-      UPDATE service_categories 
-      SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `;
-
-      await executeQuery(query, [name, description, id]);
-
-      res.json({
-        success: true,
-        message: "Service category updated successfully",
-      });
+      const result = await Service.updateServiceCategory(id, name, description);
+      res.json(result);
     } catch (error) {
       console.error("Error in ServiceController.updateServiceCategory:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update service category",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -334,34 +237,19 @@ class ServiceController {
   static async deleteServiceCategory(req, res) {
     try {
       const { id } = req.params;
-
-      // Check if category has sub-services
-      const subServicesCheck = await executeQuery(
-        "SELECT COUNT(*) as count FROM service_sub_items WHERE category_id = ?",
-        [id]
-      );
-
-      if (subServicesCheck[0].count > 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Cannot delete category with existing sub-services",
-        });
+      const result = await Service.deleteServiceCategory(id);
+      
+      if (result.success) {
+         res.json(result);
+      } else {
+         res.status(400).json(result);
       }
-
-      const query = "DELETE FROM service_categories WHERE id = ?";
-      await executeQuery(query, [id]);
-
-      res.json({
-        success: true,
-        message: "Service category deleted successfully",
-      });
     } catch (error) {
       console.error("Error in ServiceController.deleteServiceCategory:", error);
       res.status(500).json({
         success: false,
         message: "Failed to delete service category",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -371,26 +259,14 @@ class ServiceController {
     try {
       const { id } = req.params;
       const { category_id, name, description } = req.body;
-
-      const query = `
-      UPDATE service_sub_items 
-      SET category_id = ?, name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `;
-
-      await executeQuery(query, [category_id, name, description, id]);
-
-      res.json({
-        success: true,
-        message: "Sub-service updated successfully",
-      });
+      const result = await Service.updateSubServiceItem(id, category_id, name, description);
+      res.json(result);
     } catch (error) {
       console.error("Error in ServiceController.updateSubServiceItem:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update sub-service",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -399,49 +275,15 @@ class ServiceController {
   static async deleteSubServiceItem(req, res) {
     try {
       const { id } = req.params;
-
-      const query = "DELETE FROM service_sub_items WHERE id = ?";
-      await executeQuery(query, [id]);
-
-      res.json({
-        success: true,
-        message: "Sub-service deleted successfully",
-      });
+      const result = await Service.deleteSubServiceItem(id);
+      res.json(result);
     } catch (error) {
       console.error("Error in ServiceController.deleteSubServiceItem:", error);
       res.status(500).json({
         success: false,
         message: "Failed to delete sub-service",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
-    }
-  }
-
-  // Separate method for internal calls (if needed by DashboardController)
-  static async getStatsData() {
-    try {
-      const stats = await Service.getStats();
-      return {
-        totalServiceRecords: parseInt(stats.total_service_records) || 0,
-        todayServices: parseInt(stats.today_services) || 0,
-        weekServices: parseInt(stats.week_services) || 0,
-        monthServices: parseInt(stats.month_services) || 0,
-        machinesServiced: parseInt(stats.machines_serviced) || 0,
-        averageEngineHours: Math.round(parseFloat(stats.avg_engine_hours)) || 0,
-        lastUpdated: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error("Error getting service stats data:", error);
-      return {
-        totalServiceRecords: 0,
-        todayServices: 0,
-        weekServices: 0,
-        monthServices: 0,
-        machinesServiced: 0,
-        averageEngineHours: 0,
-        error: "Failed to load service statistics",
-      };
     }
   }
 
@@ -484,27 +326,18 @@ class ServiceController {
   // Create service category
   static async createServiceCategory(req, res) {
     try {
-      const { name, description } = req.body;
-
-      const query = `
-        INSERT INTO service_categories (name, description, is_active, display_order)
-        VALUES (?, ?, 1, (SELECT COALESCE(MAX(display_order), 0) + 1 FROM service_categories sc))
-      `;
-
-      const result = await executeQuery(query, [name, description || null]);
-
+      const result = await Service.createServiceCategory(req.body);
       res.json({
         success: true,
-        message: "Service category created successfully",
-        data: { id: result.insertId },
+        message: result.message,
+        data: { id: result.id },
       });
     } catch (error) {
       console.error("Error in ServiceController.createServiceCategory:", error);
       res.status(500).json({
         success: false,
         message: "Failed to create service category",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -512,32 +345,18 @@ class ServiceController {
   // Create sub-service item
   static async createSubServiceItem(req, res) {
     try {
-      const { category_id, name, description } = req.body;
-
-      const query = `
-        INSERT INTO service_sub_items (category_id, name, description, is_active, display_order)
-        VALUES (?, ?, ?, 1, (SELECT COALESCE(MAX(display_order), 0) + 1 FROM service_sub_items ssi WHERE ssi.category_id = ?))
-      `;
-
-      const result = await executeQuery(query, [
-        parseInt(category_id),
-        name,
-        description || null,
-        parseInt(category_id),
-      ]);
-
+      const result = await Service.createSubServiceItem(req.body);
       res.json({
         success: true,
-        message: "Sub-service item created successfully",
-        data: { id: result.insertId },
+        message: result.message,
+        data: { id: result.id },
       });
     } catch (error) {
       console.error("Error in ServiceController.createSubServiceItem:", error);
       res.status(500).json({
         success: false,
         message: "Failed to create sub-service item",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }

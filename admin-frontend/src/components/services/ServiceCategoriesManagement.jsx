@@ -13,13 +13,14 @@ import {
   Settings, AlertCircle, Search, ArrowLeft,
   RefreshCw
 } from 'lucide-react';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 // Zustand store for state management
 const useCategoriesStore = create((set, get) => ({
   // UI State
   expandedCategories: new Set(),
   searchTerm: '',
-  selectedCategories: [],
+  // selectedCategories removed
   
   // Modal States
   showCategoryModal: false,
@@ -28,6 +29,16 @@ const useCategoriesStore = create((set, get) => ({
   editingSubService: null,
   selectedCategoryForSub: null,
   
+  // Delete Confirmation State
+  deleteConfirm: {
+    isOpen: false,
+    type: null, // 'category' or 'subService'
+    id: null,
+    title: '',
+    message: ''
+  },
+  
+  // Pagination
   // Pagination
   currentPage: 1,
   itemsPerPage: 10,
@@ -52,16 +63,7 @@ const useCategoriesStore = create((set, get) => ({
   }),
   
   setSearchTerm: (term) => set({ searchTerm: term, currentPage: 1 }),
-  
-  toggleCategorySelection: (categoryId) => set((state) => ({
-    selectedCategories: state.selectedCategories.includes(categoryId)
-      ? state.selectedCategories.filter(id => id !== categoryId)
-      : [...state.selectedCategories, categoryId]
-  })),
-  
-  selectAllCategories: (categoryIds) => set({ selectedCategories: categoryIds }),
-  clearSelection: () => set({ selectedCategories: [] }),
-  
+
   openCategoryModal: (category = null) => set({ 
     editingCategory: category, 
     showCategoryModal: true 
@@ -71,6 +73,7 @@ const useCategoriesStore = create((set, get) => ({
     showCategoryModal: false, 
     editingCategory: null 
   }),
+
   
   openSubServiceModal: (categoryId, subService = null) => set({
     selectedCategoryForSub: categoryId,
@@ -96,9 +99,38 @@ const useCategoriesStore = create((set, get) => ({
     showCategoryModal: false,
     showSubServiceModal: false,
     editingCategory: null,
+    showSubServiceModal: false,
+    editingCategory: null,
     editingSubService: null,
-    selectedCategoryForSub: null
-  })
+    selectedCategoryForSub: null,
+    deleteConfirm: {
+      isOpen: false,
+      type: null,
+      id: null,
+      title: '',
+      message: ''
+    }
+  }),
+
+  // Delete Confirmation Actions
+  openDeleteConfirm: (type, id, title, message) => set({
+    deleteConfirm: {
+      isOpen: true,
+      type,
+      id,
+      title,
+      message
+    }
+  }),
+
+  closeDeleteConfirm: () => set((state) => ({
+    deleteConfirm: {
+      ...state.deleteConfirm,
+      isOpen: false,
+      type: null,
+      id: null
+    }
+  }))
 }));
 
 // Validation schemas
@@ -142,40 +174,10 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-// Simple Stats Cards
-const CategoryStatsCards = ({ categoriesData }) => {
-  const stats = useMemo(() => {
-    if (!Array.isArray(categoriesData)) return { total: 0, totalServices: 0 };
-    
-    const total = categoriesData.length;
-    const totalServices = categoriesData.reduce((sum, cat) => sum + (cat.sub_services?.length || 0), 0);
-    
-    return { total, totalServices };
-  }, [categoriesData]);
-
-  return (
-    <div className="flex gap-4 mb-6">
-      <div className="bg-blue-50 rounded-lg p-4 flex-1">
-        <div className="text-sm text-gray-600">Categories</div>
-        <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-      </div>
-      <div className="bg-green-50 rounded-lg p-4 flex-1">
-        <div className="text-sm text-gray-600">Total Services</div>
-        <div className="text-2xl font-bold text-green-600">{stats.totalServices}</div>
-      </div>
-    </div>
-  );
-};
-
 // Minimal Action Toolbar
 const ActionToolbar = ({ 
-  selectedCategories, 
   onExpandAll, 
   onCollapseAll, 
-  onSelectAll, 
-  onClearSelection,
-  onBulkDelete,
-  totalCategories 
 }) => {
   return (
     <div className="bg-white rounded-lg border p-3 mb-4">
@@ -194,30 +196,12 @@ const ActionToolbar = ({
             Collapse All
           </button>
         </div>
-        
-        {selectedCategories.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-blue-600">{selectedCategories.length} selected</span>
-            <button
-              onClick={onClearSelection}
-              className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
-            >
-              Clear
-            </button>
-            <button
-              onClick={onBulkDelete}
-              className="px-2 py-1 text-xs text-red-600 hover:text-red-800"
-            >
-              Delete
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-// Clean Category Card
+// Premium Category Card - Final Polish
 const CategoryCard = ({ 
   category, 
   onToggle, 
@@ -226,107 +210,143 @@ const CategoryCard = ({
   onAddSubService, 
   onEditSubService, 
   onDeleteSubService,
-  onToggleSelection,
-  isExpanded,
-  isSelected
+  isExpanded
 }) => {
   return (
-    <div className={`bg-white rounded-lg border transition-all duration-200 mb-3 overflow-hidden ${
-      isSelected ? 'border-blue-500 shadow-sm' : 'border-gray-200'
+    <div className={`bg-white rounded-xl border transition-all duration-300 mb-6 overflow-hidden group ${
+      isExpanded
+        ? 'border-blue-400 shadow-lg ring-1 ring-blue-100' 
+        : 'border-slate-200 hover:border-blue-300 hover:shadow-md'
     }`}>
-      {/* Category Header */}
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onToggleSelection(category.id)}
-              className="rounded border-gray-300 text-blue-600"
-            />
-            
-            <button
-              onClick={() => onToggle(category.id)}
-              className="flex items-center gap-2 text-left flex-1"
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              )}
+      {/* Category Header Area */}
+      <div className="p-5 bg-white">
+        <div className="flex items-start gap-4">
+          {/* Large Toggle Button */}
+          <button
+            onClick={() => onToggle(category.id)}
+            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600'
+            }`}
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-6 h-6" />
+            ) : (
+              <ChevronRight className="w-6 h-6" />
+            )}
+          </button>
+
+          {/* Header Content - Flex Container */}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="flex flex-col gap-3">
               <div>
-                <h3 className="font-medium text-gray-900">{category.name}</h3>
-                <span className="text-xs text-gray-500">
-                  {category.sub_services?.length || 0} services
-                </span>
+                {/* Title */}
+                <h3 
+                  onClick={() => onToggle(category.id)}
+                  className="text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer mb-1"
+                >
+                  {category.name}
+                </h3>
+                
+                {/* Subtitle count */}
+                <div className="text-sm text-slate-500 font-medium">
+                  {category.sub_services?.length || 0} {category.sub_services?.length === 1 ? 'Service' : 'Services'}
+                </div>
               </div>
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onAddSubService(category.id)}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onEditCategory(category)}
-              className="p-1.5 text-gray-400 hover:bg-gray-100 rounded"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDeleteCategory(category.id)}
-              className="p-1.5 text-red-500 hover:bg-red-50 rounded"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+
+              {/* Action Icons Row - New Line Below Title */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onAddSubService(category.id)}
+                  className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
+                  title="Add Service"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+                
+                <button
+                  onClick={() => onEditCategory(category)}
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                  title="Edit Category"
+                >
+                  <Edit className="w-5 h-5" />
+                </button>
+                
+                <button
+                  onClick={() => onDeleteCategory(category.id)}
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                  title="Delete Category"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Description - Full Width Below Header */}
+        {category.description && (
+          <div className="mt-4 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+            {category.description}
+          </div>
+        )}
       </div>
 
-      {/* Sub-Services List */}
-      {isExpanded && (
-        <div className="border-t bg-gray-50 px-4 py-3">
-          {category.sub_services && category.sub_services.length > 0 ? (
-            <div className="space-y-2">
-              {category.sub_services.map((subService) => (
+      {/* Sub-Services Grid - Full Width (Outside Header Indentation) */}
+      <div className={`transition-all duration-300 ease-in-out ${
+        isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+      }`}>
+        <div className="px-5 pb-5">
+          <div className="grid grid-cols-1 gap-3">
+            {category.sub_services && category.sub_services.length > 0 ? (
+              category.sub_services.map((subService) => (
                 <div
                   key={subService.id}
-                  className="flex items-center justify-between py-2 px-3 bg-white rounded border"
+                  className="group/item flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-white hover:shadow-sm transition-all"
                 >
-                  <span className="text-sm text-gray-900">{subService.name}</span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex-1 min-w-0 mr-4">
+                    <h4 className="font-semibold text-gray-900 text-sm md:text-base">
+                      {subService.name}
+                    </h4>
+                    {subService.description && (
+                      <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                        {subService.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity">
                     <button
-                      onClick={() => onEditSubService(category.id, subService)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
+                      onClick={(e) => { e.stopPropagation(); onEditSubService(category.id, subService); }}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Edit Service"
                     >
-                      <Edit className="w-3 h-3" />
+                      <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDeleteSubService(subService.id)}
-                      className="p-1 text-red-500 hover:text-red-600"
+                      onClick={(e) => { e.stopPropagation(); onDeleteSubService(subService.id); }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete Service"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500 mb-2">No services yet</p>
-              <button
-                onClick={() => onAddSubService(category.id)}
-                className="text-xs text-blue-600 hover:text-blue-700"
-              >
-                Add first service
-              </button>
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="col-span-full text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <p className="text-sm text-slate-500 mb-2 font-medium">No services added yet</p>
+                <button
+                  onClick={() => onAddSubService(category.id)}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                >
+                  Add the first service
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -586,16 +606,16 @@ const ServiceCategoriesManagement = () => {
     expandAllCategories,
     collapseAllCategories,
     setSearchTerm,
-    toggleCategorySelection,
-    selectAllCategories,
-    clearSelection,
     openCategoryModal,
     closeCategoryModal,
     openSubServiceModal,
     closeSubServiceModal,
     setCurrentPage,
     setItemsPerPage,
-    resetStore
+    resetStore,
+    deleteConfirm,
+    openDeleteConfirm,
+    closeDeleteConfirm
   } = useCategoriesStore();
   
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -655,14 +675,12 @@ const ServiceCategoriesManagement = () => {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success(editingCategory ? 'Category updated successfully' : 'Category created successfully');
       closeCategoryModal();
     },
     onError: (error, variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      toast.error(error.response?.data?.message || 'Failed to save category');
     },
     onSettled: () => {
       queryClient.invalidateQueries(queryKey);
@@ -715,33 +733,19 @@ const ServiceCategoriesManagement = () => {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success(editingSubService ? 'Service updated successfully' : 'Service created successfully');
       closeSubServiceModal();
     },
     onError: (error, variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      toast.error(error.response?.data?.message || 'Failed to save service');
     },
     onSettled: () => {
       queryClient.invalidateQueries(queryKey);
     }
   });
 
-  const bulkDeleteMutation = useMutation({
-    mutationFn: (categoryIds) => 
-      Promise.all(categoryIds.map(id => serviceApi.deleteServiceCategory(id))),
-    onSuccess: (_, categoryIds) => {
-      toast.success(`${categoryIds.length} categories deleted successfully`);
-      clearSelection();
-      queryClient.invalidateQueries(queryKey);
-    },
-    onError: (error) => {
-      toast.error('Failed to delete some categories');
-      queryClient.invalidateQueries(queryKey);
-    }
-  });
+
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id) => serviceApi.deleteServiceCategory(id),
@@ -759,13 +763,12 @@ const ServiceCategoriesManagement = () => {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success('Category deleted successfully');
+      // Toast handled by API
     },
     onError: (error, variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      toast.error(error.response?.data?.message || 'Failed to delete category');
     },
     onSettled: () => {
       queryClient.invalidateQueries(queryKey);
@@ -791,13 +794,12 @@ const ServiceCategoriesManagement = () => {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success('Service deleted successfully');
+      // Toast handled by API
     },
     onError: (error, variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      toast.error(error.response?.data?.message || 'Failed to delete service');
     },
     onSettled: () => {
       queryClient.invalidateQueries(queryKey);
@@ -850,26 +852,34 @@ const ServiceCategoriesManagement = () => {
     });
   }, [subServiceMutation, editingSubService]);
 
-const handleDeleteCategory = useCallback((categoryId) => {
-    if (window.confirm('Are you sure you want to delete this category? This will also delete all its sub-services.')) {
-      deleteCategoryMutation.mutate(categoryId);
-    }
-  }, [deleteCategoryMutation]);
+  const handleDeleteCategory = useCallback((categoryId) => {
+    openDeleteConfirm(
+      'category', 
+      categoryId, 
+      'Delete Category', 
+      'Are you sure you want to delete this category? This will also delete all its sub-services.'
+    );
+  }, [openDeleteConfirm]);
 
   const handleDeleteSubService = useCallback((subServiceId) => {
-    if (window.confirm('Are you sure you want to delete this sub-service?')) {
-      deleteSubServiceMutation.mutate(subServiceId);
-    }
-  }, [deleteSubServiceMutation]);
+    openDeleteConfirm(
+      'subService', 
+      subServiceId, 
+      'Delete Service', 
+      'Are you sure you want to delete this sub-service?'
+    );
+  }, [openDeleteConfirm]);
 
-  const handleBulkDelete = useCallback(() => {
-    if (selectedCategories.length === 0) return;
-    
-    const confirmMessage = `Are you sure you want to delete ${selectedCategories.length} selected categories? This will also delete all their sub-services.`;
-    if (window.confirm(confirmMessage)) {
-      bulkDeleteMutation.mutate(selectedCategories);
+  const onConfirmDelete = useCallback(() => {
+    if (deleteConfirm.type === 'category') {
+      deleteCategoryMutation.mutate(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'subService') {
+      deleteSubServiceMutation.mutate(deleteConfirm.id);
     }
-  }, [selectedCategories, bulkDeleteMutation]);
+    closeDeleteConfirm();
+  }, [deleteConfirm, deleteCategoryMutation, deleteSubServiceMutation, closeDeleteConfirm]);
+
+
 
   const handleExpandAll = useCallback(() => {
     expandAllCategories(paginatedCategories.map(cat => cat.id));
@@ -879,23 +889,15 @@ const handleDeleteCategory = useCallback((categoryId) => {
     collapseAllCategories();
   }, [collapseAllCategories]);
 
-  const handleSelectAll = useCallback((action) => {
-    if (action === 'all') {
-      selectAllCategories(paginatedCategories.map(cat => cat.id));
-    } else {
-      clearSelection();
-    }
-  }, [selectAllCategories, clearSelection, paginatedCategories]);
+
 
   const handlePageChange = useCallback((newPage) => {
     setCurrentPage(newPage);
-    clearSelection();
-  }, [setCurrentPage, clearSelection]);
+  }, [setCurrentPage]);
 
   const handleLimitChange = useCallback((newLimit) => {
     setItemsPerPage(newLimit);
-    clearSelection();
-  }, [setItemsPerPage, clearSelection]);
+  }, [setItemsPerPage]);
 
   // Loading state
   if (isLoading && !categoriesData) {
@@ -985,10 +987,7 @@ const handleDeleteCategory = useCallback((categoryId) => {
             </button>
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <CategoryStatsCards categoriesData={categories} />
-
+        
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
@@ -1020,13 +1019,8 @@ const handleDeleteCategory = useCallback((categoryId) => {
         {/* Action Toolbar */}
         {paginatedCategories.length > 0 && (
           <ActionToolbar
-            selectedCategories={selectedCategories}
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
-            onSelectAll={handleSelectAll}
-            onClearSelection={clearSelection}
-            onBulkDelete={handleBulkDelete}
-            totalCategories={paginatedCategories.length}
           />
         )}
 
@@ -1075,9 +1069,7 @@ const handleDeleteCategory = useCallback((categoryId) => {
                   onAddSubService={openSubServiceModal}
                   onEditSubService={openSubServiceModal}
                   onDeleteSubService={handleDeleteSubService}
-                  onToggleSelection={toggleCategorySelection}
                   isExpanded={expandedCategories.has(category.id)}
-                  isSelected={selectedCategories.includes(category.id)}
                 />
               ))}
             </div>
@@ -1121,6 +1113,24 @@ const handleDeleteCategory = useCallback((categoryId) => {
           selectedCategoryId={selectedCategoryForSub}
           categories={categories}
           isLoading={subServiceMutation.isPending}
+          onClose={closeSubServiceModal}
+          onSubmit={handleSubServiceSubmit}
+          editingSubService={editingSubService}
+          selectedCategoryId={selectedCategoryForSub}
+          categories={categories}
+          isLoading={subServiceMutation.isPending}
+        />
+
+        <ConfirmDialog
+          open={deleteConfirm.isOpen}
+          onClose={closeDeleteConfirm}
+          onCancel={closeDeleteConfirm}
+          onConfirm={onConfirmDelete}
+          title={deleteConfirm.title}
+          message={deleteConfirm.message}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          loading={deleteCategoryMutation.isPending || deleteSubServiceMutation.isPending}
         />
       </div>
     </div>

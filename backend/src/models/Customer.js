@@ -1,96 +1,8 @@
 const { executeQuery } = require("../config/database");
 
 class Customer {
-  // Get all customers with filtering
-  static async getAll(filters = {}) {
-    try {
-      let query = `
-      SELECT 
-        c.id,
-        c.company_name,
-        c.contact_person,
-        c.email,
-        c.phone,
-        c.address,
-        c.site_location,
-        c.gst_number,
-        c.created_at,
-        c.updated_at,
-        COUNT(q.id) as total_quotations,
-        MAX(q.created_at) as last_quotation_date,
-        SUM(CASE WHEN q.quotation_status = 'accepted' THEN 1 ELSE 0 END) as accepted_quotations,
-        AVG(q.grand_total) as avg_quotation_amount
-      FROM customers c
-      LEFT JOIN quotations q ON c.id = q.customer_id
-    `;
-
-      const conditions = [];
-      const params = [];
-
-      // Apply filters
-      if (filters.search) {
-        conditions.push(
-          "(c.company_name LIKE ? OR c.contact_person LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)"
-        );
-        const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
-      }
-
-      if (filters.city) {
-        conditions.push("c.address LIKE ?");
-        params.push(`%${filters.city}%`);
-      }
-
-      if (filters.has_gst !== undefined) {
-        if (filters.has_gst) {
-          conditions.push('c.gst_number IS NOT NULL AND c.gst_number != ""');
-        } else {
-          conditions.push('(c.gst_number IS NULL OR c.gst_number = "")');
-        }
-      }
-
-      if (conditions.length > 0) {
-        query += " WHERE " + conditions.join(" AND ");
-      }
-
-      query += " GROUP BY c.id ORDER BY c.created_at DESC";
-
-      // ✅ SOLUTION: Build LIMIT directly into SQL string
-      if (filters.limit) {
-        const limitValue = parseInt(filters.limit);
-        if (!isNaN(limitValue) && limitValue > 0 && limitValue <= 1000) {
-          query += ` LIMIT ${limitValue}`;
-
-          if (filters.offset) {
-            const offsetValue = parseInt(filters.offset);
-            if (!isNaN(offsetValue) && offsetValue >= 0) {
-              query += ` OFFSET ${offsetValue}`;
-            }
-          }
-        } else {
-          query += ` LIMIT 50`;
-        }
-      } else {
-        query += ` LIMIT 50`;
-      }
-
-      console.log("📝 Final Customer SQL:", query);
-      console.log("📝 Parameters:", params);
-
-      const customers = await executeQuery(query, params);
-      console.log(
-        "✅ Customer query successful, rows returned:",
-        customers.length
-      );
-
-      return customers;
-    } catch (error) {
-      console.error("❌ Error getting all customers:", error);
-      throw error;
-    }
-  }
-
-  static async getAllWithPagination(filters = {}) {
+    // Get all customers with filtering and pagination
+    static async getAll(filters = {}) {
     try {
       // Build the base query for counting and selecting
       const baseQuery = `
@@ -104,10 +16,10 @@ class Customer {
       // Apply filters (same logic as before)
       if (filters.search) {
         conditions.push(
-          "(c.company_name LIKE ? OR c.contact_person LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)"
+          "(c.company_name LIKE ? OR c.contact_person LIKE ? OR c.phone LIKE ? OR c.email LIKE ? OR c.site_location LIKE ? OR c.address LIKE ?)"
         );
         const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
       if (filters.city) {
@@ -132,9 +44,6 @@ class Customer {
       ${baseQuery}
       ${whereClause}
     `;
-
-      console.log("📝 Count Query:", countQuery);
-      console.log("📝 Count Params:", params);
 
       const [countResult] = await executeQuery(countQuery, params);
       const total = countResult.total || 0;
@@ -195,34 +104,16 @@ class Customer {
 
       mainQuery += ` LIMIT ${limit} OFFSET ${offset}`;
 
-      console.log("📝 Main Customer SQL:", mainQuery);
-      console.log("📝 Parameters:", params);
-
       const customers = await executeQuery(mainQuery, params);
-
-      console.log(
-        `✅ Customer query successful - Total: ${total}, Returned: ${customers.length}`
-      );
 
       return {
         customers,
         total,
       };
     } catch (error) {
-      console.error("❌ Error getting customers with pagination:", error);
+      console.error("❌ Error getting all customers:", error);
       throw error;
     }
-  }
-
-  // Keep the old method for backward compatibility (if needed)
-  static async getAll(filters = {}) {
-    console.warn(
-      "⚠️ Customer.getAll() is deprecated. Use getAllWithPagination() instead."
-    );
-
-    // Convert to new method
-    const result = await this.getAllWithPagination(filters);
-    return result.customers;
   }
 
   // Get customer by ID
@@ -299,10 +190,10 @@ class Customer {
         };
       }
 
-      if (!cleanData.contact_person && !cleanData.company_name) {
+      if (!cleanData.company_name) {
         return {
           success: false,
-          message: "Either contact person or company name is required",
+          message: "Company name is required",
         };
       }
 
@@ -484,7 +375,7 @@ class Customer {
         COUNT(qi.id) as total_items,
         GROUP_CONCAT(
           DISTINCT CASE 
-            WHEN qi.item_type = 'machine' THEN CONCAT(m.name, ' (', qi.duration_type, ')')
+            WHEN qi.item_type = 'machine' THEN CONCAT(m.name, ' (', qi.duration_type, ') - ₹', CAST(qi.unit_price * qi.quantity AS UNSIGNED))
             ELSE NULL 
           END 
           SEPARATOR ', '
@@ -498,7 +389,7 @@ class Customer {
         ) as additional_charges
       FROM quotations q
       LEFT JOIN quotation_items qi ON q.id = qi.quotation_id
-      LEFT JOIN machines m ON qi.machine_id = m.id AND qi.item_type = 'machine'
+      LEFT JOIN quotation_machines m ON qi.quotation_machine_id = m.id AND qi.item_type = 'machine'
       WHERE q.customer_id = ?
       GROUP BY q.id
       ORDER BY q.created_at DESC
@@ -508,26 +399,6 @@ class Customer {
       return quotations;
     } catch (error) {
       console.error("Error getting customer quotation history:", error);
-      throw error;
-    }
-  }
-
-  // Get customer statistics
-  static async getStats() {
-    try {
-      const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total_customers,
-          COUNT(CASE WHEN gst_number IS NOT NULL AND gst_number != '' THEN 1 END) as customers_with_gst,
-          COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as new_today,
-          COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as new_this_week,
-          COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as new_this_month
-        FROM customers
-      `);
-
-      return stats[0];
-    } catch (error) {
-      console.error("Error getting customer stats:", error);
       throw error;
     }
   }
@@ -587,8 +458,8 @@ class Customer {
         throw new Error("Customer phone number is required");
       }
 
-      if (!cleanData.contact_person && !cleanData.company_name) {
-        throw new Error("Either contact person or company name is required");
+      if (!cleanData.company_name) {
+        throw new Error("Company name is required");
       }
 
       // Try to find existing customer by phone
@@ -679,66 +550,7 @@ class Customer {
     };
   }
 
-  // Bulk operations
-  static async bulkUpdate(updateData) {
-    try {
-      const { customer_ids, updates } = updateData;
 
-      if (
-        !customer_ids ||
-        !Array.isArray(customer_ids) ||
-        customer_ids.length === 0
-      ) {
-        return {
-          success: false,
-          message: "Customer IDs are required",
-        };
-      }
-
-      const allowedUpdates = ["gst_number", "address"];
-      const updateFields = [];
-      const params = [];
-
-      // Build update fields
-      for (const [key, value] of Object.entries(updates)) {
-        if (allowedUpdates.includes(key)) {
-          updateFields.push(`${key} = ?`);
-          params.push(value);
-        }
-      }
-
-      if (updateFields.length === 0) {
-        return {
-          success: false,
-          message: "No valid update fields provided",
-        };
-      }
-
-      // Add updated_at
-      updateFields.push("updated_at = NOW()");
-
-      // Add customer IDs for WHERE clause
-      const placeholders = customer_ids.map(() => "?").join(",");
-      params.push(...customer_ids);
-
-      const query = `
-        UPDATE customers 
-        SET ${updateFields.join(", ")}
-        WHERE id IN (${placeholders})
-      `;
-
-      const result = await executeQuery(query, params);
-
-      return {
-        success: true,
-        message: `${result.affectedRows} customers updated successfully`,
-        updatedCount: result.affectedRows,
-      };
-    } catch (error) {
-      console.error("Error bulk updating customers:", error);
-      throw error;
-    }
-  }
 }
 
 module.exports = Customer;

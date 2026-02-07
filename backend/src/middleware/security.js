@@ -22,25 +22,7 @@ const customerQueryLimiter = rateLimit({
   },
 });
 
-// Rate limiting for admin login attempts
-const adminLoginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 login attempts per windowMs
-  message: {
-    success: false,
-    message: "Too many login attempts. Please try again after 15 minutes.",
-    error: "LOGIN_RATE_LIMIT_EXCEEDED",
-  },
-  skipSuccessfulRequests: true,
-  handler: (req, res) => {
-    console.log(`Admin login rate limit exceeded for IP: ${req.ip}`);
-    res.status(429).json({
-      success: false,
-      message: "Too many login attempts. Please try again after 15 minutes.",
-      error: "LOGIN_RATE_LIMIT_EXCEEDED",
-    });
-  },
-});
+
 
 // General API rate limiting
 const generalApiLimiter = rateLimit({
@@ -85,6 +67,7 @@ const helmetConfig = helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -95,13 +78,16 @@ const helmetConfig = helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+    const defaultOrigins = [
       "http://localhost:3000",
-      "http://127.0.0.1:5500",
-      "http://localhost:8080",
+      "http://localhost:5000",
       "https://fioriforrent.com",
       "https://www.fioriforrent.com",
     ];
+
+    // Combine env vars and defaults, remove duplicates
+    const envOrigins = process.env.CORS_ORIGIN?.split(",") || [];
+    const allowedOrigins = [...new Set([...envOrigins, ...defaultOrigins])];
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
@@ -109,6 +95,8 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error(`[CORS CRITICAL] BLOCKED REQUEST. Origin: '${origin}'`);
+      console.error(`[CORS CRITICAL] Allowed List: ${JSON.stringify(allowedOrigins)}`);
       callback(new Error("Not allowed by CORS policy"));
     }
   },
@@ -177,62 +165,7 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
-// File upload security (for Phase 2)
-const validateFileUploadSecurity = (req, res, next) => {
-  if (!req.file && !req.files) {
-    return next();
-  }
 
-  const files = req.files || [req.file];
-
-  for (const file of files) {
-    // Check for suspicious file extensions
-    const suspiciousExtensions = [
-      ".exe",
-      ".bat",
-      ".cmd",
-      ".scr",
-      ".pif",
-      ".com",
-      ".js",
-      ".vbs",
-      ".jar",
-    ];
-    const fileExt = file.originalname
-      .toLowerCase()
-      .substring(file.originalname.lastIndexOf("."));
-
-    if (suspiciousExtensions.includes(fileExt)) {
-      return res.status(400).json({
-        success: false,
-        message: "File type not allowed for security reasons",
-        error: "SUSPICIOUS_FILE_TYPE",
-      });
-    }
-
-    // Check file content type matches extension
-    const allowedMimeTypes = {
-      ".jpg": ["image/jpeg"],
-      ".jpeg": ["image/jpeg"],
-      ".png": ["image/png"],
-      ".gif": ["image/gif"],
-      ".pdf": ["application/pdf"],
-    };
-
-    if (
-      allowedMimeTypes[fileExt] &&
-      !allowedMimeTypes[fileExt].includes(file.mimetype)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "File content does not match file extension",
-        error: "FILE_CONTENT_MISMATCH",
-      });
-    }
-  }
-
-  next();
-};
 
 // Error handling for security middleware
 const securityErrorHandler = (err, req, res, next) => {
@@ -257,12 +190,10 @@ const securityErrorHandler = (err, req, res, next) => {
 
 module.exports = {
   customerQueryLimiter,
-  adminLoginLimiter,
   generalApiLimiter,
   helmetConfig,
   corsOptions,
   logRequests,
   validateRequest,
-  validateFileUploadSecurity,
   securityErrorHandler,
 };

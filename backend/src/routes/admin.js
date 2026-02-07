@@ -42,13 +42,14 @@ const QueryController = require("../controllers/queryController");
 const MachineController = require("../controllers/machineController");
 const CustomerController = require("../controllers/customerController");
 const QuotationController = require("../controllers/quotationController");
+const QuotationMachineController = require("../controllers/quotationMachineController");
 const DocumentController = require("../controllers/documentController");
+console.log("DEBUG: DocumentController loaded in admin.js:", DocumentController);
+console.log("DEBUG: DocumentController.getAll:", DocumentController ? DocumentController.getAll : "undefined");
 const ServiceController = require("../controllers/serviceController");
 const TermsController = require("../controllers/termsController");
-const DashboardController = require("../controllers/dashboardController");
 
 // Services
-const EmailSchedulerService = require("../services/schedulerService");
 
 // Middleware
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
@@ -143,7 +144,7 @@ router.get("/company/logo", async (req, res) => {
 
     // Set proper headers
     res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+    res.setHeader("Cache-Control", "private, no-cache, no-store, must-revalidate"); // Disable cache to fix CORS/update issues
     res.setHeader("X-Content-Type-Options", "nosniff");
 
     // Send file
@@ -213,16 +214,7 @@ router.put(
   AuthController.changePassword
 );
 
-// =============================================================================
-// DASHBOARD ROUTES
-// =============================================================================
 
-// router.get("/dashboard/charts", DashboardController.getChartData);
-// router.get("/dashboard/performance", DashboardController.getPerformanceMetrics);
-// router.get("/dashboard/stats", DashboardController.getStats);
-// router.get("/dashboard/alerts", DashboardController.getAlerts);
-// router.get("/dashboard/summary", DashboardController.getBusinessSummary);
-router.get("/dashboard/overview", DashboardController.getDashboardOverview);
 // =============================================================================
 // QUERY MANAGEMENT ROUTES - Only existing methods
 // =============================================================================
@@ -233,30 +225,29 @@ router.get("/queries/summary", QueryController.getPaginationSummary);
 router.get("/queries", QueryController.getAllQueries);
 router.get("/queries/:id", QueryController.getQueryById);
 router.put("/queries/:id/status", QueryController.updateQueryStatus);
-router.post("/test/email", QueryController.testEmail);
+
 
 // =============================================================================
 // MACHINE MANAGEMENT ROUTES - Only existing methods
 // =============================================================================
 
-router.get("/machines/stats", MachineController.getStats);
-router.get("/machines/active", MachineController.getActive);
+
+// router.get("/machines/active", MachineController.getActive);
 router.get("/machines/search", MachineController.search);
-router.put("/machines/bulk/update", MachineController.bulkUpdate);
+// router.put("/machines/bulk/update", MachineController.bulkUpdate);
 router.get("/machines", MachineController.getAll);
 router.post("/machines", MachineController.create);
 router.get("/machines/:id", MachineController.getById);
 router.put("/machines/:id", MachineController.update);
 router.delete("/machines/:id", MachineController.delete);
-router.put("/machines/:id/toggle-status", MachineController.toggleStatus);
-router.get("/machines/:id/pricing", MachineController.getPricing);
+
 
 // =============================================================================
 // CUSTOMER MANAGEMENT ROUTES - Only existing methods
 // =============================================================================
 
 router.get("/customers/search", CustomerController.searchForQuotation);
-router.get("/customers/stats", CustomerController.getStats);
+
 router.get("/customers/export", CustomerController.exportCustomers);
 router.get("/customers", CustomerController.getAll);
 router.post("/customers", CustomerController.create);
@@ -271,7 +262,7 @@ router.delete("/customers/:id", CustomerController.delete);
 
 router.get("/quotations/next-number", QuotationController.getNextNumber);
 router.get("/quotations/export", QuotationController.exportQuotations);
-router.get("/quotations/stats", QuotationController.getStats);
+
 router.get(
   "/quotations/customer/:customerId",
   QuotationController.getCustomerHistory
@@ -283,10 +274,7 @@ router.get(
 router.get("/quotations", QuotationController.getAll);
 router.post("/quotations", QuotationController.create);
 router.put("/quotations/:id/status", QuotationController.updateStatus);
-router.put(
-  "/quotations/:id/delivery",
-  QuotationController.updateDeliveryStatus
-);
+
 router.get("/quotations/:id/pdf", QuotationController.generatePDF);
 router.get("/quotations/:id", QuotationController.getById);
 router.put("/quotations/:id", QuotationController.update);
@@ -300,7 +288,7 @@ router.delete("/quotations/:id", QuotationController.delete);
 router.get("/documents", DocumentController.getAll);
 router.post("/documents", DocumentController.createOrUpdate);
 
-router.get("/documents/stats", DocumentController.getStats);
+
 router.get("/documents/expiring", DocumentController.getExpiring);
 
 router.get("/documents/machine/:machineId", DocumentController.getByMachine);
@@ -360,7 +348,7 @@ router.delete("/documents/:id", DocumentController.delete);
 // =============================================================================
 
 // Service statistics and data
-router.get("/services/stats", ServiceController.getStats);
+
 router.get("/services/export", ServiceController.exportToCSV);
 
 // Service categories management
@@ -398,61 +386,19 @@ router.get("/services/machine/:machineId", ServiceController.getByMachine);
 // TERMS & CONDITIONS ROUTES - Only existing methods
 // =============================================================================
 
-router.get("/terms-conditions/categories", TermsController.getCategories);
+
 router.get("/terms-conditions/default", TermsController.getDefault);
 router.post("/terms-conditions/set-default", TermsController.setDefault);
 router.put("/terms-conditions/reorder", TermsController.reorder);
 router.delete("/terms-conditions/bulk", TermsController.bulkDelete);
 router.get("/terms-conditions/for-quotation", TermsController.getForQuotation);
-router.get("/terms-conditions/stats", TermsController.getStats);
+
 router.get("/terms-conditions", TermsController.getAll);
 router.post("/terms-conditions", TermsController.create);
 router.get("/terms-conditions/:id", TermsController.getById);
 router.put("/terms-conditions/:id", TermsController.update);
 router.delete("/terms-conditions/:id", TermsController.delete);
 router.post("/terms-conditions/:id/duplicate", TermsController.duplicate);
-
-// =============================================================================
-// EMAIL MANAGEMENT ROUTES
-// =============================================================================
-
-router.get("/email/stats", async (req, res) => {
-  try {
-    const stats = await EmailSchedulerService.getJobStats();
-    res.json({
-      success: true,
-      message: "Email job statistics retrieved successfully",
-      data: stats,
-    });
-  } catch (error) {
-    console.error("Email stats error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve email statistics",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-});
-
-router.get("/email/jobs", async (req, res) => {
-  try {
-    const limit = req.query.limit ? parseInt(req.query.limit) : 50;
-    const jobs = await EmailSchedulerService.getRecentJobs(limit);
-    res.json({
-      success: true,
-      message: "Recent email jobs retrieved successfully",
-      data: jobs,
-      count: jobs.length,
-    });
-  } catch (error) {
-    console.error("Email jobs error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve email jobs",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-});
 
 // =============================================================================
 // COMPANY SETTINGS ROUTES
@@ -694,6 +640,16 @@ router.get("/company/images/:type/info", async (req, res) => {
 });
 
 // =============================================================================
+// PRICING CATALOG ROUTES (New)
+// =============================================================================
+
+router.get("/quotation-machines", QuotationMachineController.getAll);
+router.post("/quotation-machines", QuotationMachineController.create);
+router.get("/quotation-machines/:id", QuotationMachineController.getById);
+router.put("/quotation-machines/:id", QuotationMachineController.update);
+router.delete("/quotation-machines/:id", QuotationMachineController.delete);
+
+// =============================================================================
 // UTILITY ROUTES
 // =============================================================================
 
@@ -722,10 +678,7 @@ router.get("/health", (req, res) => {
 router.get("/system/status", async (req, res) => {
   try {
     const { testConnection } = require("../config/database");
-    const EmailSchedulerService = require("../services/schedulerService");
-
     const dbConnected = await testConnection();
-    const emailStats = await EmailSchedulerService.getEmailStats();
     const imageStatus = await CompanyImageManager.checkImages();
 
     res.json({
@@ -746,10 +699,7 @@ router.get("/system/status", async (req, res) => {
           )} MB`,
         },
         emailJobs: {
-          total: emailStats.total_jobs || 0,
-          completed: emailStats.completed || 0,
-          failed: emailStats.failed || 0,
-          pending: emailStats.pending || 0,
+          status: "active"
         },
         companyImages: {
           logo: imageStatus.logo ? "available" : "missing",
@@ -788,7 +738,7 @@ router.use((req, res) => {
       documents: "/api/admin/documents/*",
       services: "/api/admin/services/*",
       termsConditions: "/api/admin/terms-conditions/*",
-      email: "/api/admin/email/*",
+
       company: "/api/admin/company/*",
       system: "/api/admin/system/*",
     },

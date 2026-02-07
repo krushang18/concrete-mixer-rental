@@ -28,6 +28,7 @@ export const quotationApi = {
         machine_id: filters.machine_id,
         start_date: filters.start_date,
         end_date: filters.end_date,
+        date: filters.date, // Single date filter
         sort_by: filters.sort_by || "created_at",
         sort_order: filters.sort_order || "DESC",
         page: filters.page || 1,
@@ -40,11 +41,7 @@ export const quotationApi = {
         (key) => params[key] === undefined && delete params[key]
       );
 
-      console.log("🔍 API Request params:", params); // Debug log
-
       const { data } = await apiClient.get("/admin/quotations", { params });
-
-      console.log("📊 API Response:", data); // Debug log
 
       return {
         success: true,
@@ -213,42 +210,7 @@ export const quotationApi = {
     }
   },
 
-  updateDeliveryStatus: async (id, deliveryStatus) => {
-    if (!id) {
-      throw new QuotationApiError("Quotation ID is required");
-    }
-    if (!deliveryStatus) {
-      throw new QuotationApiError("Delivery status is required");
-    }
 
-    const validStatuses = ["pending", "delivered", "completed", "cancelled"];
-    if (!validStatuses.includes(deliveryStatus)) {
-      throw new QuotationApiError(
-        `Invalid delivery status. Must be one of: ${validStatuses.join(", ")}`
-      );
-    }
-
-    try {
-      const { data } = await apiClient.put(`/admin/quotations/${id}/delivery`, {
-        delivery_status: deliveryStatus,
-      });
-      toast.success(data.message || "Delivery status updated successfully");
-      return {
-        success: true,
-        message: data.message,
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        `Failed to update delivery status for ID ${id}`;
-      toast.error(errorMsg);
-      throw new QuotationApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
 
   // Get next quotation number
   getNextNumber: async () => {
@@ -341,7 +303,7 @@ export const quotationApi = {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `quotation-${id}.pdf`);
+      link.setAttribute("download", `OCS_SLCM_Quote-${id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -370,7 +332,6 @@ export const quotationApi = {
     }
 
     try {
-      console.log(`🔧 Previewing PDF for quotation ID: ${id}`);
 
       const response = await apiClient.get(`/admin/quotations/${id}/pdf`, {
         responseType: "blob",
@@ -440,28 +401,6 @@ export const quotationApi = {
       const errorMsg =
         error.response?.data?.message || "Failed to export quotations";
       toast.error(errorMsg);
-      throw new QuotationApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
-
-  // Get quotation statistics
-  getStats: async () => {
-    try {
-      const { data } = await apiClient.get("/admin/quotations/stats");
-      return {
-        success: true,
-        data: data.data || {},
-        message: data.message,
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Failed to fetch quotation statistics";
-      console.error("Quotation stats error:", errorMsg);
-      // Don't show toast for stats errors - they're not critical
       throw new QuotationApiError(
         errorMsg,
         error.response?.data?.errors,

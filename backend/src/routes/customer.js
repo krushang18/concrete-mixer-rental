@@ -78,48 +78,7 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Route: Get basic stats (for frontend display)
-// GET /api/customer/stats
-router.get("/stats", async (req, res) => {
-  try {
-    // Only return basic, non-sensitive statistics
-    const stats = {
-      service_areas: ["Gujarat", "Rajasthan", "Maharashtra"],
-      years_in_business: 10, // Update as needed
-      equipment_types: 5, // Update as needed
-      happy_customers: "500+", // Update as needed
-    };
 
-    res.json({
-      success: true,
-      message: "Statistics retrieved successfully",
-      data: stats,
-    });
-  } catch (error) {
-    console.error("Error fetching stats:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve statistics",
-    });
-  }
-});
-
-// Route: Test email functionality (for development)
-// POST /api/customer/test-email
-if (process.env.NODE_ENV === "development") {
-  router.post("/test-email", async (req, res) => {
-    try {
-      const result = await QueryController.testEmail(req, res);
-      return result;
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: "Email test failed",
-        error: error.message,
-      });
-    }
-  });
-}
 
 // Error handling middleware for customer routes
 router.use((err, req, res, next) => {

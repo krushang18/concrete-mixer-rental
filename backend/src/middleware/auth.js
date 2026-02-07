@@ -62,39 +62,7 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Optional authentication (doesn't fail if no token)
-const optionalAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
 
-    if (!token) {
-      // No token provided, continue without authentication
-      return next();
-    }
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId);
-
-      if (user) {
-        req.user = {
-          userId: decoded.userId,
-          username: decoded.username,
-          email: decoded.email,
-        };
-      }
-    } catch (error) {
-      // Invalid token, but continue without authentication
-      console.log("Optional auth failed:", error.message);
-    }
-
-    next();
-  } catch (error) {
-    console.error("Optional auth middleware error:", error);
-    next(); // Continue without authentication
-  }
-};
 
 // Check if user is admin (for future role-based access)
 const requireAdmin = async (req, res, next) => {
@@ -140,68 +108,9 @@ const verifyToken = (token) => {
   }
 };
 
-// Extract token from request
-const extractToken = (req) => {
-  const authHeader = req.headers["authorization"];
-  return authHeader && authHeader.split(" ")[1];
-};
-
-// Check token expiry
-const isTokenExpired = (token) => {
-  try {
-    const decoded = jwt.decode(token);
-    if (!decoded || !decoded.exp) {
-      return true;
-    }
-
-    const currentTime = Date.now() / 1000;
-    return decoded.exp < currentTime;
-  } catch (error) {
-    return true;
-  }
-};
-
-// Refresh token (generate new token with same payload)
-const refreshToken = async (oldToken) => {
-  try {
-    const decoded = jwt.verify(oldToken, process.env.JWT_SECRET, {
-      ignoreExpiration: true,
-    });
-
-    // Check if user still exists
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      throw new Error("User no longer exists");
-    }
-
-    // Generate new token
-    const newToken = generateToken({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    });
-
-    return {
-      success: true,
-      token: newToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      },
-    };
-  } catch (error) {
-    throw new Error("Token refresh failed");
-  }
-};
-
 module.exports = {
   authenticateToken,
-  optionalAuth,
   requireAdmin,
   generateToken,
   verifyToken,
-  extractToken,
-  isTokenExpired,
-  refreshToken,
 };

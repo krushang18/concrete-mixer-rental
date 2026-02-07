@@ -12,12 +12,10 @@ import {
   User,
   FileText,
   Package,
-  Truck,
   CheckCircle,
   Clock,
   AlertCircle,
   XCircle,
-  Ban,
   ExternalLink,
   RefreshCcw,
   ChevronDown
@@ -37,12 +35,7 @@ const quotationStatusConfig = {
   expired: { label: 'Expired', color: 'orange', icon: AlertCircle }
 };
 
-const deliveryStatusConfig = {
-  pending: { label: 'Pending', color: 'yellow', icon: Package },
-  delivered: { label: 'Delivered', color: 'blue', icon: Truck },
-  completed: { label: 'Completed', color: 'green', icon: CheckCircle },
-  cancelled: { label: 'Cancelled', color: 'red', icon: Ban }
-};
+
 
 const QuotationDetail = () => {
   const { id } = useParams();
@@ -63,11 +56,10 @@ const QuotationDetail = () => {
   const deleteMutation = useMutation({
     mutationFn: quotationApi.delete,
     onSuccess: () => {
-      toast.success('Quotation deleted successfully');
       navigate('/quotations');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete quotation');
+      // Toast handled by API
     }
   });
 
@@ -75,26 +67,15 @@ const QuotationDetail = () => {
   const statusMutation = useMutation({
     mutationFn: ({ status }) => quotationApi.updateStatus(id, status),
     onSuccess: () => {
-      toast.success('Status updated successfully');
       queryClient.invalidateQueries(['quotation', id]);
       queryClient.invalidateQueries(['quotations']);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update status');
+      // Toast handled by API
     }
   });
 
-  const deliveryMutation = useMutation({
-    mutationFn: ({ status }) => quotationApi.updateDeliveryStatus(id, status),
-    onSuccess: () => {
-      toast.success('Delivery status updated successfully');
-      queryClient.invalidateQueries(['quotation', id]);
-      queryClient.invalidateQueries(['quotations']);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update delivery status');
-    }
-  });
+
 
   // Handlers
   const handleDelete = () => {
@@ -110,9 +91,7 @@ const QuotationDetail = () => {
     statusMutation.mutate({ status });
   };
 
-  const handleDeliveryStatusUpdate = (status) => {
-    deliveryMutation.mutate({ status });
-  };
+
 
   // Download PDF functionality
   const handleDownloadPDF = async () => {
@@ -129,12 +108,11 @@ const QuotationDetail = () => {
   };
 
   // Status Badge Component
-  const StatusBadge = ({ status, type = 'quotation', showDropdown = false, onUpdate }) => {
-    const config = type === 'quotation' ? quotationStatusConfig : deliveryStatusConfig;
+  const StatusBadge = ({ status, showDropdown = false, onUpdate }) => {
     
     // Handle undefined or empty status
-    const currentStatus = status || (type === 'quotation' ? 'draft' : 'pending');
-    const statusInfo = config[currentStatus] || { 
+    const currentStatus = status || 'draft';
+    const statusInfo = quotationStatusConfig[currentStatus] || { 
       label: currentStatus || 'Unknown', 
       color: 'gray', 
       icon: AlertCircle 
@@ -169,7 +147,7 @@ const QuotationDetail = () => {
           </summary>
           <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-[120px]">
             <div className="py-1">
-              {Object.entries(config).map(([key, statusConfig]) => {
+              {Object.entries(quotationStatusConfig).map(([key, statusConfig]) => {
                 const StatusIcon = statusConfig.icon;
                 return (
                   <button
@@ -294,20 +272,12 @@ const QuotationDetail = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <span className="text-sm font-medium text-gray-700">Quotation Status</span>
                 <StatusBadge 
-                  status={quotation.status} 
+                  status={quotation.quotation_status} 
                   showDropdown={true} 
                   onUpdate={handleStatusUpdate} 
                 />
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <span className="text-sm font-medium text-gray-700">Delivery Status</span>
-                <StatusBadge 
-                  status={quotation.delivery_status} 
-                  type="delivery" 
-                  showDropdown={true} 
-                  onUpdate={handleDeliveryStatusUpdate} 
-                />
-              </div>
+
             </div>
           </div>
         </div>
@@ -430,81 +400,120 @@ const QuotationDetail = () => {
         <div className="p-4 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Quotation Items</h3>
           {quotation.items && quotation.items.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                      Duration
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                      Unit Price
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                      GST
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {quotation.items.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {index + 1}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-900">
-                        <div className="max-w-xs">
-                          <p className="font-medium break-words">
-                            {item.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {item.item_type === 'machine' ? 'Machine' : 'Additional Charge'}
-                          </p>
-                          {/* Show hidden info on mobile */}
-                          <div className="mt-2 sm:hidden space-y-1">
-                            <p className="text-xs text-gray-500">
-                              Duration: {item.duration_type || '-'}
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        #
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Duration
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantity
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unit Price
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        GST
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {quotation.items.map((item, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {index + 1}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-gray-900">
+                          <div className="max-w-xs">
+                            <p className="font-medium break-words">
+                              {item.description}
                             </p>
-                            <p className="text-xs text-gray-500 md:hidden">
-                              Unit Price: ₹{item.unit_price?.toLocaleString('en-IN')}
-                            </p>
-                            <p className="text-xs text-gray-500 lg:hidden">
-                              GST: {item.gst_percentage}% (₹{item.gst_amount?.toLocaleString('en-IN')})
+                            <p className="text-xs text-gray-500 mt-1">
+                              {item.item_type === 'machine' ? 'Machine' : 'Additional Charge'}
                             </p>
                           </div>
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.duration_type || '-'}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.quantity}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{item.unit_price?.toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.gst_percentage}% (₹{item.gst_amount?.toLocaleString('en-IN')})
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₹{item.total_amount?.toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4">
+                {quotation.items.map((item, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow">
+                    {/* Item Header */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Item #{index + 1}</span>
+                        <p className="font-medium text-gray-900 mt-1 text-base">{item.description}</p>
+                        <p className="text-xs text-gray-500">{item.item_type === 'machine' ? 'Machine' : 'Additional Charge'}</p>
+                      </div>
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded ml-2 whitespace-nowrap">
+                        Qty: {item.quantity}
+                      </span>
+                    </div>
+                    
+                    {/* Divider */}
+                    <div className="border-t border-gray-100 my-2"></div>
+
+                    {/* Details Grid */}
+                    <div className="space-y-2 text-sm">
+                      {item.duration_type && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Duration:</span>
+                          <span className="font-medium text-gray-900">{item.duration_type}</span>
                         </div>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
-                        {item.duration_type || '-'}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.quantity}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">
-                        ₹{item.unit_price?.toLocaleString('en-IN')}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
-                        {item.gst_percentage}% (₹{item.gst_amount?.toLocaleString('en-IN')})
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ₹{item.total_amount?.toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Unit Price:</span>
+                        <span className="font-medium text-gray-900">₹{item.unit_price?.toLocaleString('en-IN')}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">GST ({item.gst_percentage}%) :</span>
+                        <span className="font-medium text-gray-900">₹{item.gst_amount?.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                     
+                     {/* Total Footer */}
+                     <div className="mt-3 pt-2 border-t border-gray-200 flex justify-between items-center bg-gray-50 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
+                        <span className="font-medium text-gray-700">Total Amount</span>
+                        <span className="text-lg font-bold text-gray-900">₹{item.total_amount?.toLocaleString('en-IN')}</span>
+                     </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -522,6 +531,20 @@ const QuotationDetail = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
                 {quotation.additional_notes}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Terms & Conditions */}
+      {quotation.terms_text && (
+        <div className="bg-white rounded-lg shadow-sm border mb-4 sm:mb-6">
+          <div className="p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Terms & Conditions</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words font-mono">
+                {quotation.terms_text}
               </p>
             </div>
           </div>

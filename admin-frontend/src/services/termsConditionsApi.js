@@ -1,6 +1,5 @@
 // src/services/termsConditionsApi.js
 import apiClient from "./api";
-import toast from "react-hot-toast";
 
 export class TermsConditionsApiError extends Error {
   constructor(message, errors = [], status = null) {
@@ -20,7 +19,6 @@ export const termsConditionsApi = {
   getAll: async (filters = {}) => {
     try {
       const params = {
-        category: filters.category,
         is_default: filters.is_default,
         search: filters.search,
         limit: filters.limit,
@@ -44,7 +42,6 @@ export const termsConditionsApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to fetch terms and conditions";
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -70,9 +67,6 @@ export const termsConditionsApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to fetch terms and conditions with ID ${id}`;
-      if (error.response?.status !== 404) {
-        toast.error(errorMsg);
-      }
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -102,25 +96,14 @@ export const termsConditionsApi = {
     }
   },
 
-  // Get all categories
-  getCategories: async () => {
+  // Get terms for quotation (formatted)
+  getForQuotation: async () => {
     try {
-      const { data } = await apiClient.get(
-        "/admin/terms-conditions/categories"
-      );
-      return {
-        success: true,
-        data: data.data || [],
-        message: data.message,
-      };
+      const { data } = await apiClient.get("/admin/terms-conditions/for-quotation");
+      return { success: true, data: data.data };
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Failed to fetch categories";
-      throw new TermsConditionsApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
+      console.error("Failed to fetch terms for quotation", error);
+      return { success: false, data: [] };
     }
   },
 
@@ -137,9 +120,6 @@ export const termsConditionsApi = {
         "/admin/terms-conditions",
         termsData
       );
-      toast.success(
-        data.message || "Terms and conditions created successfully"
-      );
       return {
         success: true,
         data: data.data || null,
@@ -149,7 +129,6 @@ export const termsConditionsApi = {
       const errorMsg =
         error.response?.data?.message ||
         "Failed to create terms and conditions";
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -174,9 +153,6 @@ export const termsConditionsApi = {
         `/admin/terms-conditions/${id}`,
         termsData
       );
-      toast.success(
-        data.message || "Terms and conditions updated successfully"
-      );
       return {
         success: true,
         data: data.data || null,
@@ -186,7 +162,6 @@ export const termsConditionsApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to update terms and conditions with ID ${id}`;
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -203,9 +178,6 @@ export const termsConditionsApi = {
 
     try {
       const { data } = await apiClient.delete(`/admin/terms-conditions/${id}`);
-      toast.success(
-        data.message || "Terms and conditions deleted successfully"
-      );
       return {
         success: true,
         message: data.message,
@@ -214,7 +186,6 @@ export const termsConditionsApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to delete terms and conditions with ID ${id}`;
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -233,7 +204,6 @@ export const termsConditionsApi = {
       const { data } = await apiClient.put("/admin/terms-conditions/reorder", {
         items: orderData, // Change from 'order' to 'items'
       });
-      toast.success(data.message || "Display order updated successfully");
       return {
         success: true,
         message: data.message,
@@ -241,7 +211,6 @@ export const termsConditionsApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to update display order";
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -259,7 +228,6 @@ export const termsConditionsApi = {
       const { data } = await apiClient.delete("/admin/terms-conditions/bulk", {
         data: { ids: termsIds }, // Use 'ids' not 'terms_ids'
       });
-      toast.success(data.message || "Terms deleted successfully");
       return {
         success: true,
         message: data.message,
@@ -267,7 +235,6 @@ export const termsConditionsApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to delete terms";
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -291,7 +258,6 @@ export const termsConditionsApi = {
           ids: ids,
         }
       );
-      toast.success(data.message || "Default status updated successfully");
       return {
         success: true,
         message: data.message,
@@ -299,7 +265,6 @@ export const termsConditionsApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to update default status";
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -308,29 +273,7 @@ export const termsConditionsApi = {
     }
   },
 
-  // Get statistics
-  getStats: async () => {
-    try {
-      const { data } = await apiClient.get("/admin/terms-conditions/stats");
-      return {
-        success: true,
-        data: data.data || {},
-        message: data.message,
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        "Failed to fetch terms and conditions statistics";
-      console.error("Terms conditions stats error:", errorMsg);
-      throw new TermsConditionsApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
-
-  // Duplicate terms and conditions
+  // Export terms and conditions
   duplicate: async (id) => {
     if (!id) {
       throw new TermsConditionsApiError("Terms and conditions ID is required");
@@ -339,9 +282,6 @@ export const termsConditionsApi = {
     try {
       const { data } = await apiClient.post(
         `/admin/terms-conditions/${id}/duplicate`
-      );
-      toast.success(
-        data.message || "Terms and conditions duplicated successfully"
       );
       return {
         success: true,
@@ -352,7 +292,6 @@ export const termsConditionsApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to duplicate terms and conditions with ID ${id}`;
-      toast.error(errorMsg);
       throw new TermsConditionsApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -367,7 +306,7 @@ export const termsConditionsValidation = {
   // Validate terms and conditions data
   validateTermsData: (data, isUpdate = false) => {
     const errors = [];
-    const { title, description, category, display_order } = data;
+    const { title, description, display_order } = data;
 
     // Required fields for creation
     if (!isUpdate) {
@@ -377,9 +316,6 @@ export const termsConditionsValidation = {
       if (!description?.trim()) {
         errors.push("Description is required");
       }
-      if (!category?.trim()) {
-        errors.push("Category is required");
-      }
     }
 
     // Field validations
@@ -388,9 +324,6 @@ export const termsConditionsValidation = {
     }
     if (description && description.length > 2000) {
       errors.push("Description must be less than 2000 characters");
-    }
-    if (category && category.length > 100) {
-      errors.push("Category must be less than 100 characters");
     }
     if (
       display_order !== undefined &&
@@ -418,9 +351,7 @@ export const termsConditionsValidation = {
       errors.push("Updates object is required");
     }
 
-    if (updates.category && updates.category.length > 100) {
-      errors.push("Category must be less than 100 characters");
-    }
+
 
     return {
       isValid: errors.length === 0,
@@ -465,9 +396,7 @@ export const termsConditionsUtils = {
   // Format terms for display
   formatTermsForDisplay: (terms) => {
     if (!terms) return null;
-    console.log(
-      "------------------------------------------formatTermsForDisplay"
-    );
+
 
     return {
       ...terms,
@@ -475,41 +404,11 @@ export const termsConditionsUtils = {
         terms.description?.length > 100
           ? `${terms.description.substring(0, 100)}...`
           : terms.description,
-      formattedCategory: termsConditionsUtils.formatCategory(terms.category),
       isDefault: terms.is_default === 1 || terms.is_default === true,
     };
   },
 
-  // Format category for display
-  formatCategory: (category) => {
-    console.log("----------------------------------------------formatCategory");
 
-    if (!category || typeof category !== "string") return "Uncategorized";
-
-    return category
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  },
-
-  // Get category color class
-  getCategoryColor: (category) => {
-    if (!category || typeof category !== "string")
-      return "bg-gray-100 text-gray-800";
-
-    const colorMap = {
-      general: "bg-blue-100 text-blue-800",
-      payment: "bg-green-100 text-green-800",
-      delivery: "bg-orange-100 text-orange-800",
-      maintenance: "bg-purple-100 text-purple-800",
-      liability: "bg-red-100 text-red-800",
-      warranty: "bg-yellow-100 text-yellow-800",
-      cancellation: "bg-gray-100 text-gray-800",
-    };
-
-    const normalizedCategory = category.toLowerCase().replace(/\s+/g, "_");
-    return colorMap[normalizedCategory] || "bg-gray-100 text-gray-800";
-  },
 
   // Get default badge class
   getDefaultBadgeClass: (isDefault) => {
@@ -527,27 +426,7 @@ export const termsConditionsUtils = {
     });
   },
 
-  // Group terms by category
-  groupByCategory: (terms = []) => {
-    const grouped = {};
 
-    terms.forEach((term) => {
-      const category = term.category || "Uncategorized";
-      if (!grouped[category]) {
-        grouped[category] = [];
-      }
-      grouped[category].push(term);
-    });
-
-    // Sort terms within each category by display order
-    Object.keys(grouped).forEach((category) => {
-      grouped[category] = termsConditionsUtils.sortByDisplayOrder(
-        grouped[category]
-      );
-    });
-
-    return grouped;
-  },
 
   // Filter terms by search term
   filterBySearch: (terms = [], searchTerm = "") => {
@@ -558,8 +437,7 @@ export const termsConditionsUtils = {
     return terms.filter(
       (t) =>
         (t.title || "").toLowerCase().includes(term) ||
-        (t.description || "").toLowerCase().includes(term) ||
-        (t.category || "").toLowerCase().includes(term)
+        (t.description || "").toLowerCase().includes(term)
     );
   },
 
@@ -572,24 +450,13 @@ export const termsConditionsUtils = {
     // Sort by display order
     const sortedTerms = termsConditionsUtils.sortByDisplayOrder(selectedTerms);
 
-    // Group by category
-    const groupedTerms = termsConditionsUtils.groupByCategory(sortedTerms);
-
     let termsText = "";
-    console.log(
-      "------------------------------------------generateQuotationTerms"
-    );
-    Object.keys(groupedTerms).forEach((category, categoryIndex) => {
-      if (categoryIndex > 0) termsText += "\n\n";
-
-      termsText += `${termsConditionsUtils.formatCategory(category).toUpperCase()}:\n`;
-
-      groupedTerms[category].forEach((term, termIndex) => {
-        termsText += `${termIndex + 1}. ${term.title}\n`;
-        if (term.description) {
-          termsText += `   ${term.description}\n`;
-        }
-      });
+    sortedTerms.forEach((term, index) => {
+      if (index > 0) termsText += "\n\n";
+      termsText += `${index + 1}. ${term.title}\n`;
+      if (term.description) {
+        termsText += `   ${term.description}\n`;
+      }
     });
 
     return termsText;
@@ -600,7 +467,6 @@ export const termsConditionsUtils = {
     if (terms.length === 0) {
       return {
         total: 0,
-        byCategory: {},
         defaultCount: 0,
         averageLength: 0,
       };
@@ -608,7 +474,6 @@ export const termsConditionsUtils = {
 
     const stats = {
       total: terms.length,
-      byCategory: {},
       defaultCount: 0,
       averageLength: 0,
     };
@@ -616,13 +481,6 @@ export const termsConditionsUtils = {
     let totalLength = 0;
 
     terms.forEach((term) => {
-      // Count by category
-      const category = term.category || "Uncategorized";
-      if (!stats.byCategory[category]) {
-        stats.byCategory[category] = 0;
-      }
-      stats.byCategory[category]++;
-
       // Count defaults
       if (term.is_default) {
         stats.defaultCount++;
@@ -638,25 +496,12 @@ export const termsConditionsUtils = {
   },
 
   // Generate suggested display order
-  generateDisplayOrder: (existingTerms = [], category = null) => {
-    let maxOrder = 0;
-
-    if (category) {
-      // Find max order within the same category
-      const categoryTerms = existingTerms.filter(
-        (t) => t.category === category
-      );
-      maxOrder = categoryTerms.reduce(
-        (max, term) => Math.max(max, term.display_order || 0),
-        0
-      );
-    } else {
-      // Find max order overall
-      maxOrder = existingTerms.reduce(
-        (max, term) => Math.max(max, term.display_order || 0),
-        0
-      );
-    }
+  generateDisplayOrder: (existingTerms = []) => {
+    // Find max order overall
+    const maxOrder = existingTerms.reduce(
+      (max, term) => Math.max(max, term.display_order || 0),
+      0
+    );
 
     return maxOrder + 1;
   },
@@ -712,13 +557,12 @@ export const termsConditionsUtils = {
 
   // Format terms for export
   formatForExport: (terms = []) => {
-    console.log("------------------------------------------formatForExport");
+
 
     return terms.map((term) => ({
       ID: term.id,
       Title: term.title,
       Description: term.description,
-      Category: termsConditionsUtils.formatCategory(term.category),
       "Is Default": term.is_default ? "Yes" : "No",
       "Display Order": term.display_order || "",
       "Created Date": new Date(term.created_at).toLocaleDateString("en-IN"),
@@ -726,60 +570,7 @@ export const termsConditionsUtils = {
     }));
   },
 
-  // Create terms template
-  createTemplate: (category) => {
-    const templates = {
-      general: {
-        title: "General Terms",
-        description:
-          "These terms and conditions govern the rental agreement between the parties.",
-        category: "general",
-      },
-      payment: {
-        title: "Payment Terms",
-        description: "Payment must be made in advance or as per agreed terms.",
-        category: "payment",
-      },
-      delivery: {
-        title: "Delivery Terms",
-        description:
-          "Equipment will be delivered to the specified location at the agreed time.",
-        category: "delivery",
-      },
-      maintenance: {
-        title: "Maintenance Responsibility",
-        description:
-          "The renter is responsible for basic maintenance during the rental period.",
-        category: "maintenance",
-      },
-      liability: {
-        title: "Liability Terms",
-        description:
-          "The renter assumes full responsibility for the equipment during the rental period.",
-        category: "liability",
-      },
-      warranty: {
-        title: "Warranty Terms",
-        description:
-          "Equipment is provided as-is with no warranty unless specified otherwise.",
-        category: "warranty",
-      },
-      cancellation: {
-        title: "Cancellation Policy",
-        description:
-          "Cancellations must be made 24 hours in advance to avoid charges.",
-        category: "cancellation",
-      },
-    };
 
-    return (
-      templates[category] || {
-        title: "New Term",
-        description: "Enter description here...",
-        category: category || "general",
-      }
-    );
-  },
 
   // Format date for display
   formatDate: (date) => {
@@ -791,24 +582,5 @@ export const termsConditionsUtils = {
     });
   },
 
-  // Check if terms are used in quotations
-  checkUsageInQuotations: async (termId) => {
-    try {
-      const { data } = await apiClient.get(
-        `/admin/terms-conditions/${termId}/usage`
-      );
-      return {
-        isUsed: data.data?.isUsed || false,
-        quotationCount: data.data?.quotationCount || 0,
-        recentQuotations: data.data?.recentQuotations || [],
-      };
-    } catch (error) {
-      console.error("Error checking terms usage:", error);
-      return {
-        isUsed: false,
-        quotationCount: 0,
-        recentQuotations: [],
-      };
-    }
-  },
+
 };

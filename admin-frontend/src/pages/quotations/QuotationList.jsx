@@ -21,33 +21,28 @@ import {
   Clock,
   XCircle,
   Package,
-  Truck,
-  CircleCheck,
-  Ban,
   Building2,
   Phone,
   IndianRupee,
-  CalendarSync, 
   X,
-  Users,
-  Menu
+  Menu,
+  Settings,
+  Download
 } from 'lucide-react';
 
 import { quotationApi } from '../../services/quotationApi';
-import { machineApi } from '../../services/machineApi';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
+import SearchBar from '../../components/common/SearchBar';
+import SearchResultsIndicator from '../../components/common/SearchResultsIndicator';
 
 // Zustand store for quotation state management
 const useQuotationStore = create((set, get) => ({
   selectedQuotations: [],
   filters: {
     status: '',
-    delivery_status: '',
-    machine_id: '',
-    start_date: '',
-    end_date: '',
+    date: '', // Single date filter
     sort_by: 'created_at',
     sort_order: 'DESC',
     page: 1,
@@ -58,30 +53,19 @@ const useQuotationStore = create((set, get) => ({
   deleteDialog: { open: false, id: null },
   
   // Actions
-  setSelectedQuotations: (quotations) => set({ selectedQuotations: quotations }),
-  addSelectedQuotation: (quotationId) => set((state) => ({
-    selectedQuotations: state.selectedQuotations.includes(quotationId) 
-      ? state.selectedQuotations.filter(id => id !== quotationId)
-      : [...state.selectedQuotations, quotationId]
-  })),
-  clearSelectedQuotations: () => set({ selectedQuotations: [] }),
   setFilters: (newFilters) => set((state) => ({
     filters: { ...state.filters, ...newFilters }
   })),
   resetFilters: () => set({
     filters: {
       status: '',
-      delivery_status: '',
-      machine_id: '',
-      start_date: '',
-      end_date: '',
+      date: '',
       sort_by: 'created_at',
       sort_order: 'DESC',
       page: 1,
       limit: 20
     },
     searchTerm: '',
-    selectedQuotations: []
   }),
   setSearchTerm: (term) => set({ searchTerm: term }),
   toggleMobileFilters: () => set((state) => ({ showMobileFilters: !state.showMobileFilters })),
@@ -91,10 +75,7 @@ const useQuotationStore = create((set, get) => ({
 // Validation schema for filters
 const filterSchema = yup.object({
   status: yup.string(),
-  delivery_status: yup.string(),
-  machine_id: yup.string(),
-  start_date: yup.date().nullable(),
-  end_date: yup.date().nullable().min(yup.ref('start_date'), 'End date must be after start date'),
+  date: yup.string().nullable(),
   sort_by: yup.string().oneOf(['created_at', 'quotation_number', 'customer_name', 'grand_total']),
   sort_order: yup.string().oneOf(['ASC', 'DESC'])
 });
@@ -120,13 +101,6 @@ const quotationStatusConfig = {
   expired: { label: 'Expired', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertCircle }
 };
 
-const deliveryStatusConfig = {
-  pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Package },
-  delivered: { label: 'Delivered', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Truck },
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-800 border-green-200', icon: CircleCheck },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800 border-red-200', icon: Ban }
-};
-
 // Format currency in Indian format
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -147,11 +121,11 @@ const formatPhone = (phone) => {
   return phone;
 };
 
-// Mobile-first Status Badge Component
-const StatusBadge = ({ status, type = 'quotation', size = 'sm' }) => {
-  const config = type === 'quotation' ? quotationStatusConfig : deliveryStatusConfig;
-  const statusInfo = config[status] || { label: status, color: 'bg-gray-100 text-gray-800 border-gray-200', icon: AlertCircle };
+// Mobile-first Status Badge Component with Edit Support
+const StatusBadge = ({ status, size = 'sm', showDropdown = false, onUpdate }) => {
+  const statusInfo = quotationStatusConfig[status] || { label: status, color: 'bg-gray-100 text-gray-800 border-gray-200', icon: AlertCircle };
   const Icon = statusInfo.icon;
+  const [isEditing, setIsEditing] = useState(false);
 
   const sizeClasses = {
     xs: 'px-2 py-1 text-xs',
@@ -159,116 +133,45 @@ const StatusBadge = ({ status, type = 'quotation', size = 'sm' }) => {
     md: 'px-3 py-1 text-sm'
   };
 
+  if (showDropdown && isEditing) {
+    return (
+      <select
+        className={`rounded border-gray-300 text-xs shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50`}
+        value={status}
+        onChange={(e) => {
+          onUpdate(e.target.value);
+          setIsEditing(false);
+        }}
+        onBlur={() => setIsEditing(false)}
+        autoFocus
+      >
+        {Object.entries(quotationStatusConfig).map(([key, config]) => (
+          <option key={key} value={key}>
+            {config.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   return (
-    <span className={`inline-flex items-center rounded-full font-medium border ${statusInfo.color} ${sizeClasses[size]}`}>
+    <span 
+      className={`inline-flex items-center rounded-full font-medium border ${statusInfo.color} ${sizeClasses[size]} ${showDropdown ? 'cursor-pointer hover:opacity-80' : ''}`}
+      onClick={() => showDropdown && onUpdate && setIsEditing(true)}
+      title={showDropdown ? "Click to change status" : ""}
+    >
       <Icon className="w-3 h-3 mr-1" />
       {statusInfo.label}
     </span>
   );
 };
 
-// Mobile-optimized Stats Cards Component
-const QuotationStatsCards = ({ quotationsData, stats }) => {
-  let calculatedStats;
-  if (stats?.success && stats?.data) {
-    calculatedStats = stats.data;
-  } else {
-    // Fallback calculation from quotations data
-    const quotations = quotationsData || [];
-    calculatedStats = {
-      totalQuotations: quotations.length,
-      pendingQuotations: quotations.filter(q => q.quotation_status === 'sent').length,
-      acceptedQuotations: quotations.filter(q => q.quotation_status === 'accepted').length,
-      totalRevenue: quotations.filter(q => q.quotation_status === 'accepted').reduce((sum, q) => sum + (q.grand_total || 0), 0)
-    };
-  }
-
-  const cards = [
-    { title: 'Total', value: calculatedStats.totalQuotations || 0, color: 'text-blue-600', bgColor: 'bg-blue-50', icon: Users },
-    { title: 'Pending', value: calculatedStats.pendingQuotations || 0, color: 'text-yellow-600', bgColor: 'bg-yellow-50', icon: Clock },
-    { title: 'Accepted', value: calculatedStats.acceptedQuotations || 0, color: 'text-green-600', bgColor: 'bg-green-50', icon: CheckCircle },
-    { title: 'Conversion Rate', value: calculatedStats.conversion_rate || 0, color: 'text-purple-600', bgColor: 'bg-purple-50', icon: CalendarSync }
-  ];
-
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-      {cards.map((card, index) => {
-        const Icon = card.icon;
-        return (
-          <div key={index} className={`${card.bgColor} rounded-lg p-3 sm:p-4 transform hover:scale-105 transition-transform duration-200`}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 truncate">
-                  {card.title}
-                </p>
-                <p className={`text-lg sm:text-2xl font-bold ${card.color} mb-1`}>
-                  {typeof card.value === 'string' ? card.value : card.value.toLocaleString('en-IN')}
-                </p>
-              </div>
-              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${card.color} flex-shrink-0`} />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 // Mobile-first Bulk Actions Component
-const BulkActions = ({ selectedQuotations, onBulkUpdate, onDeselectAll }) => {
-  if (selectedQuotations.length === 0) return null;
-  
-  return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <span className="text-blue-800 font-medium text-sm">
-          {selectedQuotations.length} selected
-        </span>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <select
-            onChange={(e) => {
-              if (e.target.value) {
-                onBulkUpdate({ ids: selectedQuotations, action: 'status', value: e.target.value });
-                e.target.value = '';
-              }
-            }}
-            className="text-sm rounded border-blue-300 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Update Status</option>
-            {Object.entries(quotationStatusConfig).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
-            ))}
-          </select>
-          
-          <select
-            onChange={(e) => {
-              if (e.target.value) {
-                onBulkUpdate({ ids: selectedQuotations, action: 'delivery_status', value: e.target.value });
-                e.target.value = '';
-              }
-            }}
-            className="text-sm rounded border-blue-300 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Update Delivery</option>
-            {Object.entries(deliveryStatusConfig).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
-            ))}
-          </select>
-          
-          <button
-            onClick={onDeselectAll}
-            className="px-3 py-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
-          >
-            Deselect All
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 // Mobile-first Filters Component with React Hook Form
-const QuotationFilters = ({ onApplyFilters, onReset, machinesData }) => {
+const QuotationFilters = ({ onApplyFilters, onReset }) => {
   const { filters, showMobileFilters, setFilters, toggleMobileFilters } = useQuotationStore();
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
@@ -286,10 +189,7 @@ const QuotationFilters = ({ onApplyFilters, onReset, machinesData }) => {
   const handleReset = () => {
     reset({
       status: '',
-      delivery_status: '',
-      machine_id: '',
-      start_date: '',
-      end_date: '',
+      date: '',
       sort_by: 'created_at',
       sort_order: 'DESC'
     });
@@ -324,7 +224,7 @@ const QuotationFilters = ({ onApplyFilters, onReset, machinesData }) => {
       {/* Filter form */}
       <div className={`p-4 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -339,73 +239,31 @@ const QuotationFilters = ({ onApplyFilters, onReset, machinesData }) => {
               </select>
             </div>
             
-            {/* Delivery Status Filter */}
+            {/* Single Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-              <select
-                {...register('delivery_status')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Status</option>
-                {Object.entries(deliveryStatusConfig).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Machine Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Machine</label>
-              <select
-                {...register('machine_id')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Machines</option>
-                {machinesData?.data?.map(machine => (
-                  <option key={machine.id} value={machine.id}>
-                    {machine.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Date Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input
                 type="date"
-                {...register('start_date')}
+                {...register('date')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
-              {errors.start_date && (
-                <p className="text-red-500 text-xs mt-1">{errors.start_date.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                {...register('end_date')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-              {errors.end_date && (
-                <p className="text-red-500 text-xs mt-1">{errors.end_date.message}</p>
+              {errors.date && (
+                <p className="text-red-500 text-xs mt-1">{errors.date.message}</p>
               )}
             </div>
             
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch lg:justify-end gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch lg:justify-end gap-2 lg:col-span-1">
               <button
                 type="submit"
-                className="flex-1 sm:flex-none lg:flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
               >
                 Apply
               </button>
               <button
                 type="button"
                 onClick={handleReset}
-                className="flex-1 sm:flex-none lg:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
                 Reset
               </button>
@@ -418,22 +276,15 @@ const QuotationFilters = ({ onApplyFilters, onReset, machinesData }) => {
 };
 
 // Mobile-first Quotation Card Component
-const QuotationCard = ({ quotation, isSelected, onSelect, onDelete }) => {
+const QuotationCard = ({ quotation, onDelete }) => {
   return (
     <div className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow duration-200">
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onSelect(quotation.id)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
-          />
           <div className="min-w-0 flex-1">
             <h3 className="font-medium text-gray-900 text-sm">{quotation.quotation_number}</h3>
             <div className="mt-1 flex flex-wrap gap-1">
               <StatusBadge status={quotation.quotation_status} size="xs" />
-              <StatusBadge status={quotation.delivery_status} type="delivery" size="xs" />
             </div>
           </div>
         </div>
@@ -443,7 +294,7 @@ const QuotationCard = ({ quotation, isSelected, onSelect, onDelete }) => {
         <div className="flex items-center">
           <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="font-medium truncate">{quotation.customer_name}</span>
-          {quotation.company_name && (
+          {quotation.company_name && quotation.company_name !== quotation.customer_name && (
             <span className="ml-1 truncate">({quotation.company_name})</span>
           )}
         </div>
@@ -499,7 +350,8 @@ const QuotationCard = ({ quotation, isSelected, onSelect, onDelete }) => {
         </Link>
         <button
           onClick={() => onDelete(quotation.id)}
-          className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+          className="flex-1 bg-red-100 text-red-700 py-1.5 px-3 rounded-lg hover:bg-red-200 transition-colors text-sm flex items-center justify-center"
+          title="Delete"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -514,13 +366,9 @@ const QuotationList = () => {
   const queryClient = useQueryClient();
   
   const {
-    selectedQuotations,
     filters,
     searchTerm,
     deleteDialog,
-    setSelectedQuotations,
-    addSelectedQuotation,
-    clearSelectedQuotations,
     setFilters,
     resetFilters,
     setSearchTerm,
@@ -535,10 +383,7 @@ const QuotationList = () => {
     'quotations', 
     debouncedSearchTerm,
     filters.status,
-    filters.delivery_status,
-    filters.machine_id,
-    filters.start_date,
-    filters.end_date,
+    filters.date,
     filters.sort_by,
     filters.sort_order,
     filters.page,
@@ -551,10 +396,7 @@ const QuotationList = () => {
     queryFn: () => quotationApi.getAll({
       search: debouncedSearchTerm || undefined,
       status: filters.status || undefined,
-      delivery_status: filters.delivery_status || undefined,
-      machine_id: filters.machine_id || undefined,
-      start_date: filters.start_date || undefined,
-      end_date: filters.end_date || undefined,
+      date: filters.date || undefined,
       sort_by: filters.sort_by,
       sort_order: filters.sort_order,
       page: filters.page,
@@ -566,25 +408,26 @@ const QuotationList = () => {
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
   });
-  
-  // Fetch machines for filter dropdown with reduced frequency
-  const { data: machinesData } = useQuery({
-    queryKey: ['machines-filter'],
-    queryFn: () => machineApi.getAll({ is_active: true }),
-    staleTime: 1000 * 60 * 10, // 10 minutes
-    cacheTime: 1000 * 60 * 15, // 15 minutes
-    refetchOnWindowFocus: false,
-  });
 
-  // Fetch stats with reduced frequency
-  const { data: statsData } = useQuery({
-    queryKey: ['quotation-stats'],
-    queryFn: () => quotationApi.getStats(),
-    staleTime: 1000 * 60 * 10, // 10 minutes
-    cacheTime: 1000 * 60 * 15, // 15 minutes
-    retry: 1,
-    refetchOnWindowFocus: false,
-  });
+  // Handle status update
+  const handleStatusUpdate = async (id, newStatus) => {
+    try {
+      await quotationApi.updateStatus(id, newStatus);
+      toast.success('Status updated successfully');
+      queryClient.invalidateQueries(['quotations']);
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  // Handle PDF Download
+  const handleDownload = async (id) => {
+    try {
+        await quotationApi.generatePDF(id);
+    } catch (error) {
+        console.error("Download failed:", error);
+    }
+  };
   
   // Optimized mutations with optimistic updates
   const deleteMutation = useMutation({
@@ -603,7 +446,6 @@ const QuotationList = () => {
       return { previousData };
     },
     onSuccess: () => {
-      toast.success('Quotation deleted successfully');
       queryClient.invalidateQueries(['quotation-stats']);
       setDeleteDialog({ open: false, id: null });
     },
@@ -611,32 +453,11 @@ const QuotationList = () => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      toast.error(error.message || 'Failed to delete quotation');
+      // Toast handled by API
     }
   });
 
-  // Bulk update mutation
-  const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ ids, action, value }) => {
-      const promises = ids.map(id => {
-        if (action === 'status') {
-          return quotationApi.updateStatus(id, value);
-        } else if (action === 'delivery_status') {
-          return quotationApi.updateDeliveryStatus(id, value);
-        }
-      });
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      toast.success('Quotations updated successfully');
-      queryClient.invalidateQueries(['quotations']);
-      queryClient.invalidateQueries(['quotation-stats']);
-      clearSelectedQuotations();
-    },
-    onError: (error) => {
-      toast.error('Failed to update quotations');
-    }
-  });
+
   
   const quotations = quotationsData?.data || [];
   const pagination = quotationsData?.pagination || {};
@@ -644,25 +465,11 @@ const QuotationList = () => {
   // Event handlers - all using useCallback to maintain references
   const handlePageChange = useCallback((newPage) => {
     setFilters({ page: newPage });
-    clearSelectedQuotations();
-  }, [setFilters, clearSelectedQuotations]);
+  }, [setFilters]);
 
   const handleLimitChange = useCallback((newLimit) => {
     setFilters({ limit: newLimit, page: 1 });
-    clearSelectedQuotations();
-  }, [setFilters, clearSelectedQuotations]);
-
-  const handleSelectAll = useCallback(() => {
-    if (selectedQuotations.length === quotations.length && quotations.length > 0) {
-      clearSelectedQuotations();
-    } else {
-      setSelectedQuotations(quotations.map(q => q.id));
-    }
-  }, [selectedQuotations.length, quotations, clearSelectedQuotations, setSelectedQuotations]);
-
-  const handleBulkUpdate = useCallback((updateData) => {
-    bulkUpdateMutation.mutate(updateData);
-  }, [bulkUpdateMutation]);
+  }, [setFilters]);
 
   const applyFilters = useCallback(() => {
     setFilters({ page: 1 });
@@ -673,10 +480,8 @@ const QuotationList = () => {
       const exportData = await quotationApi.getAll({
         search: debouncedSearchTerm,
         status: filters.status,
-        delivery_status: filters.delivery_status,
         machine_id: filters.machine_id,
-        start_date: filters.start_date,
-        end_date: filters.end_date,
+        date: filters.date,
         limit: 1000
       });
 
@@ -688,7 +493,6 @@ const QuotationList = () => {
         'Contact': quotation.customer_contact,
         'Total Amount': quotation.grand_total,
         'Status': quotation.quotation_status,
-        'Delivery Status': quotation.delivery_status,
         'Created Date': new Date(quotation.created_at).toLocaleDateString('en-IN'),
         'Machines': quotation.machines || '',
         'Days Ago': quotation.days_ago
@@ -709,9 +513,7 @@ const QuotationList = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       
-      toast.success('Quotations exported successfully');
     } catch (error) {
-      toast.error('Failed to export quotations');
     }
   }, [debouncedSearchTerm, filters]);
 
@@ -757,15 +559,17 @@ const QuotationList = () => {
               </h1>
               <p className="text-gray-600 text-sm sm:text-base mt-1">
                 Manage quotations and track delivery status
-                {pagination?.total && (
-                  <span className="text-xs sm:text-sm ml-2">
+                {pagination?.total ? (
+                  <span className="text-xs sm:text-sm text-gray-500 ml-1">
                     ({pagination.total} total)
                   </span>
-                )}
+                ) : null}
               </p>
             </div>
             
-            <div className="flex items-center space-x-3">
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
               <button
                 onClick={() => refetch()}
                 disabled={isFetching}
@@ -788,85 +592,42 @@ const QuotationList = () => {
                 <Plus className="w-4 h-4 mr-2" />
                 New Quotation
               </Link>
-            </div>
-          </div>
-        </div>
-        
-        {/* Stats Cards */}
-        <QuotationStatsCards quotationsData={quotationsData?.data} stats={statsData} />
-        
-        {/* Mobile-first Search Bar */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search by customer name, company, contact, or quotation number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-            autoComplete="off"
-            spellCheck="false"
-          />
-          {isFetching && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <RefreshCcw className="w-4 h-4 animate-spin text-gray-400" />
-            </div>
-          )}
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              title="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Search Results Indicator */}
-        {(searchTerm || debouncedSearchTerm) && (
-          <div className="mb-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-blue-800">
-                  {isFetching ? (
-                    'Searching...'
-                  ) : (
-                    <>
-                      Search results for "<strong>{debouncedSearchTerm}</strong>"
-                      {pagination && (
-                        <span className="ml-1">
-                          ({pagination.total || 0} {(pagination.total || 0) === 1 ? 'result' : 'results'})
-                        </span>
-                      )}
-                    </>
-                  )}
-                </span>
-              </div>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              <Link
+                to="/quotations/pricing"
+                className="flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
-                Clear search
-              </button>
+                <Settings className="w-4 h-4 mr-2" />
+                Catalog
+              </Link>
             </div>
-          </div>
-        )}
+        </div>
+        
+        
+        {/* Search Bar */}
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search by quotation number, customer, or machine..."
+          isFetching={isFetching}
+          className="mb-4"
+        />
+
+        {/* Search Results */}
+        <SearchResultsIndicator
+          searchTerm={searchTerm}
+          debouncedSearchTerm={debouncedSearchTerm}
+          isFetching={isFetching}
+          resultCount={pagination?.total}
+          onClear={() => setSearchTerm('')}
+        />
         
         {/* Filters */}
         <QuotationFilters 
           onApplyFilters={applyFilters} 
           onReset={resetFilters} 
-          machinesData={machinesData} 
         />
         
-        {/* Bulk Actions */}
-        <BulkActions
-          selectedQuotations={selectedQuotations}
-          onBulkUpdate={handleBulkUpdate}
-          onDeselectAll={clearSelectedQuotations}
-        />
+
         
         {/* Responsive Table/Card View */}
         <div className="bg-white rounded-lg border overflow-hidden relative">
@@ -875,14 +636,6 @@ const QuotationList = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedQuotations.length === quotations.length && quotations.length > 0}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Quotation
                   </th>
@@ -890,13 +643,10 @@ const QuotationList = () => {
                     Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Machine Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Delivery
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
@@ -909,14 +659,6 @@ const QuotationList = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {quotations.map((quotation) => (
                   <tr key={quotation.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedQuotations.includes(quotation.id)}
-                        onChange={() => addSelectedQuotation(quotation.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
                     
                     <td className="px-6 py-4">
                       <div>
@@ -935,7 +677,7 @@ const QuotationList = () => {
                         <p className="text-sm font-medium text-gray-900 truncate max-w-xs" title={quotation.customer_name}>
                           {quotation.customer_name}
                         </p>
-                        {quotation.company_name && (
+                        {quotation.company_name && quotation.company_name !== quotation.customer_name && (
                           <p className="text-sm text-gray-500 truncate max-w-xs" title={quotation.company_name}>
                             {quotation.company_name}
                           </p>
@@ -952,7 +694,7 @@ const QuotationList = () => {
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(quotation.grand_total)}
+                          {formatCurrency(quotation.machine_total)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {quotation.total_items} item(s)
@@ -961,11 +703,11 @@ const QuotationList = () => {
                     </td>
                     
                     <td className="px-6 py-4">
-                      <StatusBadge status={quotation.quotation_status} />
-                    </td>
-                    
-                    <td className="px-6 py-4">
-                      <StatusBadge status={quotation.delivery_status} type="delivery" />
+                      <StatusBadge 
+                        status={quotation.quotation_status} 
+                        showDropdown={true}
+                        onUpdate={(newStatus) => handleStatusUpdate(quotation.id, newStatus)}
+                      />
                     </td>
                     
                     <td className="px-6 py-4">
@@ -992,6 +734,13 @@ const QuotationList = () => {
                           <Edit2 className="w-4 h-4" />
                         </Link>
                         <button
+                          onClick={() => handleDownload(quotation.id)}
+                          className="p-2 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-gray-100 transition-colors"
+                          title="Download PDF"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => setDeleteDialog({ open: true, id: quotation.id })}
                           className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-gray-100 transition-colors"
                           title="Delete quotation"
@@ -1009,38 +758,29 @@ const QuotationList = () => {
           {/* Mobile Card View */}
           <div className="lg:hidden">
             {quotations.length > 0 && (
-              <div className="p-4 border-b bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedQuotations.length === quotations.length && quotations.length > 0}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+              <>
+                <div className="p-4 border-b bg-gray-50">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">
                       {quotations.length} {quotations.length === 1 ? 'quotation' : 'quotations'}
                     </span>
+                    <span className="text-sm text-gray-500">
+                      {pagination.total || quotations.length} total
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-500">
-                    {pagination.total || quotations.length} total
-                  </span>
                 </div>
-              </div>
-            )}
             
-            <div className="divide-y divide-gray-200">
-              {quotations.map((quotation) => (
-                <div key={quotation.id} className="p-4">
-                  <QuotationCard
-                    quotation={quotation}
-                    isSelected={selectedQuotations.includes(quotation.id)}
-                    onSelect={addSelectedQuotation}
-                    onDelete={(id) => setDeleteDialog({ open: true, id })}
-                  />
+                <div className="divide-y divide-gray-200">
+                  {quotations.map((quotation) => (
+                    <QuotationCard
+                      key={quotation.id}
+                      quotation={quotation}
+                      onDelete={(id) => setDeleteDialog({ open: true, id })}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
           
           {/* Loading state overlay - Only on table content, not entire page */}
@@ -1062,11 +802,11 @@ const QuotationList = () => {
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No quotations found</h3>
                 <p className="text-gray-500 mb-4 text-sm leading-relaxed">
-                  {searchTerm || filters.status || filters.start_date || filters.end_date 
+                  {searchTerm || filters.status || filters.date 
                     ? 'No quotations match your current search and filter criteria. Try adjusting your filters or search terms.'
                     : 'No quotations have been created yet. Create your first quotation to get started.'}
                 </p>
-                {(searchTerm || filters.status || filters.start_date || filters.end_date) && (
+                {(searchTerm || filters.status || filters.date) && (
                   <button
                     onClick={resetFilters}
                     className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -1075,7 +815,7 @@ const QuotationList = () => {
                     Clear all filters
                   </button>
                 )}
-                {(!searchTerm && !filters.status && !filters.start_date && !filters.end_date) && (
+                {(!searchTerm && !filters.status && !filters.date) && (
                   <Link
                     to="/quotations/new"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1126,18 +866,17 @@ const QuotationList = () => {
         />
 
         {/* Loading Overlay for Actions */}
-        {(deleteMutation.isPending || bulkUpdateMutation.isPending) && (
+        {/* Loading Overlay for Actions */}
+        {deleteMutation.isPending && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 flex items-center gap-4 shadow-xl min-w-[300px]">
               <LoadingSpinner size="lg" />
               <div>
                 <div className="text-gray-900 font-medium">
-                  {deleteMutation.isPending && 'Deleting Quotation'}
-                  {bulkUpdateMutation.isPending && 'Updating Quotations'}
+                  Deleting Quotation
                 </div>
                 <div className="text-gray-500 text-sm mt-1">
-                  {deleteMutation.isPending && 'Please wait while we delete the quotation...'}
-                  {bulkUpdateMutation.isPending && `Please wait while we update ${selectedQuotations.length} quotations...`}
+                  Please wait while we delete the quotation...
                 </div>
               </div>
             </div>

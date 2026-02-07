@@ -11,7 +11,7 @@ import { Toaster } from "react-hot-toast";
 
 // Pages
 import LoginPage from "./pages/auth/LoginPage";
-import Dashboard from "./pages/dashboard/Dashboard";
+
 
 // Components
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -27,10 +27,11 @@ import "./styles/index.css";
 //Auth
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import QueryManagementPage from "./pages/queries/QueryManagementPage";
-import { MachineDetail, Machines } from "./pages/machines";
+import { Machines } from "./pages/machines";
 import { Customers, CustomerForm, CustomerDetail } from "./pages/customers";
 import QuotationList from "./pages/quotations/QuotationList";
 import QuotationForm from "./pages/quotations/QuotationForm";
+import PricingCatalog from "./pages/quotations/PricingCatalog";
 import QuotationDetail from "./pages/quotations/QuotationDetail";
 import TermsConditionsPage from "./pages/termsAndConditions/TermsConditionsPage";
 import ServicesPage from "./pages/services/ServicesPage";
@@ -39,6 +40,7 @@ import EditServicePage from "./pages/services/EditServicePage";
 import CategoriesPage from "./pages/services/CategoriesPage";
 import { ServiceDetailPage } from "./components/services";
 import CompanySettings from "./pages/CompanySettings";
+import DocumentsPage from "./pages/documents/DocumentsPage";
 
 // Create Query Client
 const queryClient = new QueryClient({
@@ -101,29 +103,26 @@ function App() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route index element={<Navigate to="/quotations" replace />} />
                   <Route path="queries" element={<QueryManagementPage />} />
                   <Route path="machines" element={<Machines />} />
-                  <Route path="machines/:id" element={<MachineDetail />} />
+
                   <Route path="customers" element={<Customers />} />
                   <Route path="customers/new" element={<CustomerForm />} />
                   <Route path="customers/:id" element={<CustomerDetail />} />
                   <Route path="customers/:id/edit" element={<CustomerForm />} />
                   <Route path="quotations" element={<QuotationList />} />
+                  <Route path="quotations/pricing" element={<PricingCatalog />} />
                   <Route path="quotations/new" element={<QuotationForm />} />
                   <Route path="quotations/:id" element={<QuotationDetail />} />
                   <Route
                     path="quotations/:id/edit"
                     element={<QuotationForm />}
                   />
+
                   <Route
                     path="documents"
-                    element={
-                      <div className="p-6 text-center text-gray-500">
-                        Documents Page - Coming Soon
-                      </div>
-                    }
+                    element={<DocumentsPage />}
                   />
                   <Route
                     path="terms-and-conditions"
@@ -148,7 +147,7 @@ function App() {
                 {/* Catch all route */}
                 <Route
                   path="*"
-                  element={<Navigate to="/dashboard" replace />}
+                  element={<Navigate to="/quotations" replace />}
                 />
               </Routes>
             </div>

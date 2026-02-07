@@ -445,27 +445,6 @@ export const documentApi = {
       );
     }
   },
-
-  // Get document statistics
-  getStats: async () => {
-    try {
-      const { data } = await apiClient.get("/admin/documents/stats");
-      return {
-        success: true,
-        data: data.data || {},
-        message: data.message,
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Failed to fetch document statistics";
-      console.error("Document stats error:", errorMsg);
-      throw new DocumentApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
 };
 
 // Document validation utilities
@@ -651,12 +630,15 @@ export const documentUtils = {
   suggestRenewalDate: (expiryDate, documentType) => {
     if (!expiryDate) return null;
 
+    // If expired, start renewal from Today
+    const today = new Date();
     const expiry = new Date(expiryDate);
-    const renewal = new Date(expiry);
+    const startDate = expiry < today ? today : expiry;
+    const renewal = new Date(startDate);
 
     // Suggest renewal periods based on document type
     const renewalPeriods = {
-      RC_Book: { years: 15 }, // RC books are typically valid for 15 years
+      RC_Book: { years: 1 }, // RC renewal is typically 1 year (as requested)
       PUC: { months: 6 }, // PUC certificates are typically valid for 6 months
       Fitness: { years: 1 }, // Fitness certificates are typically valid for 1 year
       Insurance: { years: 1 }, // Insurance policies are typically valid for 1 year

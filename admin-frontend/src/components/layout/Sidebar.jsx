@@ -1,7 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { 
-  LayoutDashboard, 
   MessageSquare, 
   Settings, 
   Users, 
@@ -15,7 +14,7 @@ import {
 import { clsx } from 'clsx'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+
   { name: 'Queries', href: '/queries', icon: MessageSquare },
   { name: 'Machines', href: '/machines', icon: Truck },
   { name: 'Customers', href: '/customers', icon: Users },
@@ -97,7 +96,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         </ul>
 
         {/* Quick Actions - Desktop only */}
-        {!isMobile && (
+        {/* {!isMobile && (
           <div className="mt-8">
             <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Quick Actions
@@ -117,16 +116,16 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
               </li>
             </ul>
           </div>
-        )}
+        )} */}
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
+      {/* <div className="border-t border-gray-200 p-4 bg-gray-50">
         <div className="text-center">
           <div className="text-sm text-gray-600 font-medium">Concrete Mixer Rental</div>
           <div className="text-xs text-gray-500">Admin Portal v2.0</div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

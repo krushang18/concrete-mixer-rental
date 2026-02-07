@@ -30,13 +30,14 @@ const customerSchema = yup.object({
     .max(100, 'Company name must be less than 100 characters'),
   contact_person: yup
     .string()
-    .required('Contact person is required')
-    .min(2, 'Contact person must be at least 2 characters')
+    .nullable()
+    .notRequired()
     .max(100, 'Contact person must be less than 100 characters'),
   email: yup
     .string()
     .email('Invalid email format')
-    .required('Email is required'),
+    .nullable()
+    .notRequired(),
   phone: yup
     .string()
     .required('Phone number is required')
@@ -52,8 +53,8 @@ const customerSchema = yup.object({
     .max(500, 'Address must be less than 500 characters'),
   site_location: yup
     .string()
-    .required('Site location is required')
-    .min(2, 'Site location must be at least 2 characters')
+    .nullable()
+    .notRequired()
     .max(100, 'Site location must be less than 100 characters'),
   gst_number: yup
     .string()
@@ -113,7 +114,6 @@ const CustomerForm = () => {
     retry: 1,
     onError: (error) => {
       console.error('Failed to fetch customer:', error);
-      toast.error(`Failed to load customer data: ${error.message}`);
     }
   });
 
@@ -143,11 +143,10 @@ const CustomerForm = () => {
     mutationFn: customerApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries(['customers']);
-      toast.success('Customer created successfully');
       navigate('/customers');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create customer');
+      // Toast handled by API
     }
   });
 
@@ -156,11 +155,10 @@ const CustomerForm = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['customers']);
       queryClient.invalidateQueries(['customer', id]);
-      toast.success('Customer updated successfully');
       navigate('/customers');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update customer');
+      // Toast handled by API
     }
   });
 
@@ -187,7 +185,7 @@ const CustomerForm = () => {
         createMutation.mutate(formattedData);
       }
     } catch (error) {
-      toast.error('An error occurred while saving');
+      // Toast handled by API or logic
     } finally {
       setIsSubmitting(false);
     }
@@ -337,7 +335,7 @@ const CustomerForm = () => {
             {/* Contact Person */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Person *
+                Contact Person
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -361,7 +359,7 @@ const CustomerForm = () => {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
+                Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -414,7 +412,7 @@ const CustomerForm = () => {
             {/* Site Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Site Location *
+                Site Location
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -504,29 +502,29 @@ const CustomerForm = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-200">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
           >
-            <X className="w-4 h-4 inline-block mr-2" />
+            <X className="w-4 h-4 mr-2" />
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || (!isDirty && isEdit)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 {isEdit ? 'Updating...' : 'Creating...'}
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" />
+                <Save className="w-4 h-4 mr-2" />
                 {isEdit ? 'Update Customer' : 'Create Customer'}
               </>
             )}

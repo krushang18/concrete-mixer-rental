@@ -15,11 +15,10 @@ import {
 import { termsConditionsApi, termsConditionsValidation, termsConditionsUtils } from '../../services/termsConditionsApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
+const TermModal = ({ isOpen, onClose, term, categories, onSuccess, existingTerms = [] }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
     is_default: false,
     display_order: ''
   });
@@ -35,7 +34,6 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
         setFormData({
           title: term.title || '',
           description: term.description || '',
-          category: term.category || '',
           is_default: term.is_default || false,
           display_order: term.display_order || ''
         });
@@ -44,7 +42,6 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
         setFormData({
           title: '',
           description: '',
-          category: categories?.[0] || '',
           is_default: false,
           display_order: ''
         });
@@ -142,17 +139,18 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
         }
         break;
         
-      case 'category':
-        if (!value?.trim()) {
-          error = 'Category is required';
-        } else if (value.length > 100) {
-          error = 'Category must be less than 100 characters';
-        }
-        break;
-        
       case 'display_order':
         if (value && (isNaN(value) || value < 0)) {
           error = 'Display order must be a valid positive number';
+        } else if (value) {
+            // Check for duplicate display order
+            const isDuplicate = existingTerms.some(t => 
+                Number(t.display_order) === Number(value) && 
+                (!term || t.id !== term.id)
+            );
+            if (isDuplicate) {
+                error = 'This order number is already assigned to another term';
+            }
         }
         break;
         
@@ -171,19 +169,34 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
   // Validate entire form
   const validateForm = () => {
     const validation = termsConditionsValidation.validateTermsData(formData, isEditing);
+    let isValid = validation.isValid;
+    const fieldErrors = {};
     
-    if (!validation.isValid) {
-      const fieldErrors = {};
+    if (!isValid) {
       validation.errors.forEach(error => {
         if (error.includes('Title')) fieldErrors.title = error;
         else if (error.includes('Description')) fieldErrors.description = error;
-        else if (error.includes('Category')) fieldErrors.category = error;
         else if (error.includes('Display order')) fieldErrors.display_order = error;
       });
+    }
+
+    // Custom check for duplicate display order
+    if (formData.display_order) {
+        const isDuplicate = existingTerms.some(t => 
+            Number(t.display_order) === Number(formData.display_order) && 
+            (!term || t.id !== term.id)
+        );
+        if (isDuplicate) {
+            isValid = false;
+            fieldErrors.display_order = 'This order number is already assigned to another term';
+        }
+    }
+    
+    if (!isValid) {
       setErrors(fieldErrors);
     }
     
-    return validation.isValid;
+    return isValid;
   };
 
   // Handle form submission
@@ -332,41 +345,8 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
               </p>
             </div>
 
-            {/* Category and Display Order Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Category Field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Tag className="w-4 h-4 inline mr-2" />
-                  Category *
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.category}
-                    onChange={(e) => handleChange('category', e.target.value)}
-                    onBlur={() => handleBlur('category')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      errors.category && touched.category ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    disabled={isLoading}
-                  >
-                    <option value="">Select Category</option>
-                    {categorySuggestions.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {termsConditionsUtils.formatCategory(cat)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {errors.category && touched.category && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertTriangle className="w-4 h-4 mr-1" />
-                    {errors.category}
-                  </p>
-                )}
-              </div>
-
-              {/* Display Order Field */}
+            {/* Display Order Field */}
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Hash className="w-4 h-4 inline mr-2" />
@@ -440,11 +420,6 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess }) => {
                     {formData.description || 'Term description will appear here...'}
                   </p>
                   <div className="flex items-center space-x-3">
-                    {formData.category && (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${termsConditionsUtils.getCategoryColor(formData.category)}`}>
-                        {termsConditionsUtils.formatCategory(formData.category)}
-                      </span>
-                    )}
                     {formData.display_order && (
                       <span className="text-xs text-gray-500">
                         Order: {formData.display_order}

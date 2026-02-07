@@ -165,7 +165,7 @@ class Query {
       const summaryQuery = `
       SELECT 
         COUNT(*) as total_records,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+        COUNT(CASE WHEN status = 'new' THEN 1 END) as new_count,
         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_count,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
         COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count,
@@ -283,6 +283,22 @@ class Query {
       throw new Error("Failed to get queries count");
     }
   }
+
+  // Get total count of all queries (add this to your Query model)
+static async getTotalCount() {
+  const query = `
+    SELECT COUNT(*) as count 
+    FROM customer_queries
+  `;
+
+  try {
+    const rows = await executeQuery(query, []);
+    return rows[0].count;
+  } catch (error) {
+    console.error("Error getting total queries count:", error);
+    throw new Error("Failed to get total queries count");
+  }
+}
 
   // Validate query data
   static validateQueryData(data) {

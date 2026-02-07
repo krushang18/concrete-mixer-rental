@@ -2,9 +2,20 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 
+// Helper to determine base URL
+const getBaseUrl = () => {
+  const envUrl = process.env.REACT_APP_API_BASE_URL;
+  // If env var exists and is absolute (starts with http), use it
+  if (envUrl && envUrl.startsWith('http')) {
+    return envUrl;
+  }
+  // Otherwise fallback to default backend URL (fixes issue where stale env is relative)
+  return "http://localhost:3000/api";
+};
+
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:3000/api",
+  baseURL: getBaseUrl(),
   timeout: 15000, // 15 seconds timeout
   headers: {
     "Content-Type": "application/json",

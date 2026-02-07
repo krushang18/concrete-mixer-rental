@@ -176,87 +176,7 @@ class User {
     }
   }
 
-  // Get all users (for admin management)
-  static async getAll() {
-    try {
-      const query = `
-        SELECT id, username, email, created_at, last_login, updated_at
-        FROM users 
-        ORDER BY created_at DESC
-      `;
 
-      const result = await executeQuery(query);
-      return result;
-    } catch (error) {
-      console.error("Error getting all users:", error);
-      throw error;
-    }
-  }
-
-  // Delete user
-  static async delete(userId) {
-    try {
-      const query = "DELETE FROM users WHERE id = ?";
-      const result = await executeQuery(query, [userId]);
-
-      if (result.affectedRows === 0) {
-        return { success: false, message: "User not found" };
-      }
-
-      return { success: true, message: "User deleted successfully" };
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      throw error;
-    }
-  }
-
-  // Update user profile
-  static async updateProfile(userId, updateData) {
-    try {
-      const { username, email } = updateData;
-
-      const query = `
-        UPDATE users 
-        SET username = ?, email = ?, updated_at = NOW()
-        WHERE id = ?
-      `;
-
-      const result = await executeQuery(query, [username, email, userId]);
-
-      if (result.affectedRows === 0) {
-        return { success: false, message: "User not found" };
-      }
-
-      return { success: true, message: "Profile updated successfully" };
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-
-      // Handle duplicate key errors
-      if (error.code === "ER_DUP_ENTRY") {
-        if (error.message.includes("username")) {
-          throw new Error("Username already exists");
-        }
-        if (error.message.includes("email")) {
-          throw new Error("Email already exists");
-        }
-      }
-
-      throw error;
-    }
-  }
-
-  // Check if user exists
-  static async exists(username, email) {
-    try {
-      const query =
-        "SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1";
-      const result = await executeQuery(query, [username, email]);
-      return result.length > 0;
-    } catch (error) {
-      console.error("Error checking if user exists:", error);
-      throw error;
-    }
-  }
 
   // Initialize default admin users
   static async initializeDefaultUsers() {
@@ -320,40 +240,7 @@ class User {
     }
   }
 
-  // Validate user data
-  static validateUserData(userData) {
-    const errors = [];
-    const { username, password, email } = userData;
 
-    // Username validation
-    if (!username || username.trim().length < 3) {
-      errors.push("Username must be at least 3 characters long");
-    }
-
-    if (username && username.length > 50) {
-      errors.push("Username must be less than 50 characters");
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      errors.push("Valid email address is required");
-    }
-
-    // Password validation
-    if (!password || password.length < 6) {
-      errors.push("Password must be at least 6 characters long");
-    }
-
-    if (password && password.length > 255) {
-      errors.push("Password must be less than 255 characters");
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
-  }
 }
 
 module.exports = User;

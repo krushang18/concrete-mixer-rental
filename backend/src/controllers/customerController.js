@@ -30,7 +30,7 @@ class CustomerController {
       console.log("📝 Customer filters:", filters);
 
       // Get customers with total count
-      const result = await Customer.getAllWithPagination(filters);
+      const result = await Customer.getAll(filters);
 
       // Calculate pagination metadata
       const totalPages = Math.ceil(result.total / limit);
@@ -332,138 +332,9 @@ class CustomerController {
     }
   }
 
-  // Get or create customer (for quotations)
-  static async getOrCreate(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed",
-          errors: errors.array(),
-        });
-      }
 
-      const customerData = {
-        company_name: req.body.company_name?.trim(),
-        contact_person: req.body.contact_person?.trim(),
-        email: req.body.email?.trim(),
-        phone: req.body.phone?.replace(/\D/g, ""),
-        address: req.body.address?.trim(),
-        site_location: req.body.site_location?.trim(),
-        gst_number: req.body.gst_number?.trim().toUpperCase(),
-      };
 
-      const result = await Customer.getOrCreate(customerData);
 
-      if (result.success) {
-        res.json({
-          success: true,
-          message: result.message,
-          data: result.customer,
-          created: result.created,
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: result.message,
-          errors: result.errors,
-        });
-      }
-    } catch (error) {
-      console.error("Error in CustomerController.getOrCreate:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to get or create customer",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
-  }
-
-  // Bulk update customers
-  static async bulkUpdate(req, res) {
-    try {
-      const { customer_ids, updates } = req.body;
-
-      if (
-        !customer_ids ||
-        !Array.isArray(customer_ids) ||
-        customer_ids.length === 0
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Customer IDs array is required",
-        });
-      }
-
-      if (!updates || typeof updates !== "object") {
-        return res.status(400).json({
-          success: false,
-          message: "Updates object is required",
-        });
-      }
-
-      const result = await Customer.bulkUpdate({ customer_ids, updates });
-
-      if (result.success) {
-        res.json({
-          success: true,
-          message: result.message,
-          updatedCount: result.updatedCount,
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: result.message,
-        });
-      }
-    } catch (error) {
-      console.error("Error in CustomerController.bulkUpdate:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to bulk update customers",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
-  }
-
-  // Get customer statistics
-  // Replace the current getStats method with:
-  static async getStats(req, res, next) {
-    try {
-      console.log("CustomerController.getStats: Starting...");
-
-      const stats = await Customer.getStats();
-      console.log("CustomerController.getStats: Got stats from model:", stats);
-
-      const responseData = {
-        success: true,
-        message: "Customer statistics retrieved successfully",
-        data: {
-          totalCustomers: parseInt(stats.total_customers) || 0,
-          customersWithGST: parseInt(stats.customers_with_gst) || 0,
-          newToday: parseInt(stats.new_today) || 0,
-          newThisWeek: parseInt(stats.new_this_week) || 0,
-          newThisMonth: parseInt(stats.new_this_month) || 0,
-          lastUpdated: new Date().toISOString(),
-        },
-      };
-
-      console.log("CustomerController.getStats: Sending JSON response");
-      res.json(responseData);
-    } catch (error) {
-      console.error("Error in CustomerController.getStats:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve customer statistics",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
-  }
 
   // Export customers to Excel/CSV
   static async exportCustomers(req, res) {

@@ -9,8 +9,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
-const bottomNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+const bottomNavigation = [ // Dashboard removed as per user request
   { name: 'Queries', href: '/queries', icon: MessageSquare },
   { name: 'Machines', href: '/machines', icon: Truck },
   { name: 'Quotations', href: '/quotations', icon: FileText },

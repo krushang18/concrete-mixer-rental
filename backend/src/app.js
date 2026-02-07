@@ -15,10 +15,15 @@ const {
 // Import routes
 const customerRoutes = require("./routes/customer");
 const adminRoutes = require("./routes/admin");
+const documentRoutes = require("./routes/documentRoutes");
 
-// Import database and email configs
-const { testConnection } = require("./config/database");
+
+// ...
+
+// API Routes
+
 const { testEmailConnection } = require("./config/email");
+const { testConnection } = require("./config/database");
 
 // Import services for initialization
 const EmailSchedulerService = require("./services/schedulerService");
@@ -100,6 +105,7 @@ app.get("/health", async (req, res) => {
 // API Routes
 app.use("/api/customer", customerRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/documents", documentRoutes);
 
 // Root endpoint with comprehensive API documentation
 app.get("/", (req, res) => {
@@ -437,7 +443,7 @@ const initializeApp = async () => {
     // Initialize default machines (if needed)
     console.log("🚛 Checking machine data...");
     try {
-      await Machine.initializeDefaultMachines();
+      // await Machine.initializeDefaultMachines();
       console.log("✅ Machine data checked");
     } catch (error) {
       console.warn("⚠️ Could not check machine data:", error.message);
@@ -446,7 +452,7 @@ const initializeApp = async () => {
     // Initialize default terms & conditions
     console.log("📋 Initializing terms & conditions...");
     try {
-      await TermsConditions.initializeDefault();
+      await TermsConditions.initializeDefaults();
       console.log("✅ Terms & conditions initialized");
     } catch (error) {
       console.warn(

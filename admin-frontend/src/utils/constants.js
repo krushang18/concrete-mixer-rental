@@ -50,6 +50,7 @@ export const QUERY_STATUS = {
   NEW: "new",
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
+  CANCELLED: "cancelled",
 };
 
 export const QUOTATION_STATUS = {

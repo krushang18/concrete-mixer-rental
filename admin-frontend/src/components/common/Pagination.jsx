@@ -51,7 +51,7 @@ const Pagination = ({ pagination = {}, onPageChange, onLimitChange }) => {
           Previous
         </button>
         <div className="flex items-center">
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-gray-700 whitespace-nowrap">
             Page {current_page} of {total_pages}
           </span>
         </div>

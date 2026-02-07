@@ -78,7 +78,7 @@ class EmailService {
     try {
       const resetUrl = `${
         process.env.FRONTEND_URL || "http://localhost:5000"
-      }/reset-password/${resetToken}`;
+      }/admin/reset-password/${resetToken}`;
 
       const subject = "Password Reset Request - Concrete Mixer Rental Admin";
 
@@ -195,41 +195,7 @@ class EmailService {
     }
   }
 
-  // Test email configuration
-  async testEmailSetup() {
-    try {
-      await this.transporter.verify();
 
-      // Send test email to company email
-      const testMailOptions = {
-        from: this.companyEmail,
-        to: this.companyEmail,
-        subject: "Email Configuration Test - Concrete Mixer Rental",
-        html: `
-          <h2>Email Configuration Test</h2>
-          <p>This is a test email to verify your email configuration is working correctly.</p>
-          <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-          <p><strong>From:</strong> ${this.companyEmail}</p>
-          <p><strong>Admin Emails:</strong> ${this.adminEmails.join(", ")}</p>
-          <p>If you receive this email, your configuration is working properly!</p>
-        `,
-      };
-
-      const info = await this.transporter.sendMail(testMailOptions);
-
-      return {
-        success: true,
-        messageId: info.messageId,
-        message: "Test email sent successfully",
-      };
-    } catch (error) {
-      console.error("❌ Email test failed:", error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
 
   // Send custom email (for future use)
   async sendCustomEmail(to, subject, htmlContent, options = {}) {

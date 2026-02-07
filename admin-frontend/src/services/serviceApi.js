@@ -55,13 +55,7 @@ export const serviceApi = {
 
   // Get service record by ID
   getById: async (id) => {
-    console.log(
-      "----------------------------------------------------------------------"
-    );
-    console.log("Called");
-    console.log(
-      "----------------------------------------------------------------------"
-    );
+
 
     if (!id) {
       throw new ServiceApiError("Service record ID is required");
@@ -152,19 +146,13 @@ export const serviceApi = {
     }
 
     try {
-      console.log("=== SERVICE API UPDATE ===");
-      console.log("API URL:", `/admin/services/${id}`);
-      console.log("Data being sent:", JSON.stringify(serviceData, null, 2));
-      console.log("==========================");
 
       const { data } = await apiClient.put(
         `/admin/services/${id}`,
         serviceData
       );
 
-      console.log("=== API RESPONSE ===");
-      console.log("Response:", data);
-      console.log("====================");
+
 
       toast.success(data.message || "Service record updated successfully");
       return {
@@ -173,10 +161,6 @@ export const serviceApi = {
         message: data.message,
       };
     } catch (error) {
-      console.error("=== API ERROR ===");
-      console.error("Error:", error);
-      console.error("Error response:", error.response);
-      console.error("=================");
 
       const errorMsg =
         error.response?.data?.message ||
@@ -294,19 +278,135 @@ export const serviceApi = {
     }
   },
 
-  // Get service statistics
-  getStats: async () => {
+  // Update service category
+  updateServiceCategory: async (id, categoryData) => {
+    if (!id || !categoryData) {
+      throw new ServiceApiError("Category ID and data are required");
+    }
+
     try {
-      const { data } = await apiClient.get("/admin/services/stats");
+      const { data } = await apiClient.put(
+        `/admin/services/categories/${id}`,
+        categoryData
+      );
+      toast.success(data.message || "Service category updated successfully");
       return {
         success: true,
-        data: data.data || {},
+        data: data.data || null,
         message: data.message,
       };
     } catch (error) {
       const errorMsg =
-        error.response?.data?.message || "Failed to fetch service statistics";
-      console.error("Service stats error:", errorMsg);
+        error.response?.data?.message || "Failed to update service category";
+      toast.error(errorMsg);
+      throw new ServiceApiError(
+        errorMsg,
+        error.response?.data?.errors,
+        error.response?.status
+      );
+    }
+  },
+
+  // Delete service category
+  deleteServiceCategory: async (id) => {
+    if (!id) {
+      throw new ServiceApiError("Category ID is required");
+    }
+
+    try {
+      const { data } = await apiClient.delete(
+        `/admin/services/categories/${id}`
+      );
+      toast.success(data.message || "Service category deleted successfully");
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Failed to delete service category";
+      throw new ServiceApiError(
+        errorMsg,
+        error.response?.data?.errors,
+        error.response?.status
+      );
+    }
+  },
+
+  // Get sub-services
+  getSubServices: async (categoryId) => {
+    if (!categoryId) {
+      throw new ServiceApiError("Category ID is required");
+    }
+
+    try {
+      const { data } = await apiClient.get(
+        `/admin/services/categories/${categoryId}/sub-services`
+      );
+      return {
+        success: true,
+        data: data.data || [],
+        message: data.message,
+      };
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Failed to fetch sub-services";
+      throw new ServiceApiError(
+        errorMsg,
+        error.response?.data?.errors,
+        error.response?.status
+      );
+    }
+  },
+
+  // Update sub-service item
+  updateSubServiceItem: async (id, subItemData) => {
+    if (!id || !subItemData) {
+      throw new ServiceApiError("Sub-service ID and data are required");
+    }
+
+    try {
+      const { data } = await apiClient.put(
+        `/admin/services/sub-items/${id}`,
+        subItemData
+      );
+      toast.success(data.message || "Sub-service item updated successfully");
+      return {
+        success: true,
+        data: data.data || null,
+        message: data.message,
+      };
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Failed to update sub-service item";
+      toast.error(errorMsg);
+      throw new ServiceApiError(
+        errorMsg,
+        error.response?.data?.errors,
+        error.response?.status
+      );
+    }
+  },
+
+  // Delete sub-service item
+  deleteSubServiceItem: async (id) => {
+    if (!id) {
+      throw new ServiceApiError("Sub-service ID is required");
+    }
+
+    try {
+      const { data } = await apiClient.delete(
+        `/admin/services/sub-items/${id}`
+      );
+      toast.success(data.message || "Sub-service item deleted successfully");
+      return {
+        success: true,
+        message: data.message,
+      };
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Failed to delete sub-service item";
+      toast.error(errorMsg);
       throw new ServiceApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -369,32 +469,7 @@ export const serviceApi = {
     }
   },
 
-  // Get service summary by machine
-  getSummaryByMachine: async (machineId) => {
-    if (!machineId) {
-      throw new ServiceApiError("Machine ID is required");
-    }
 
-    try {
-      const { data } = await apiClient.get(
-        `/admin/services/machine/${machineId}/summary`
-      );
-      return {
-        success: true,
-        data: data.data || {},
-        message: data.message,
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        `Failed to fetch service summary for machine ${machineId}`;
-      throw new ServiceApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
 };
 
 // Service validation utilities

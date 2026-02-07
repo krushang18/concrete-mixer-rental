@@ -107,104 +107,7 @@ export const customerApi = {
     }
   },
 
-  // Get customer statistics (matches backend implementation)
-  getStats: async () => {
-    try {
-      const { data } = await apiClient.get("/admin/customers/stats");
-      return {
-        success: true,
-        data: data.data || {
-          totalCustomers: 0,
-          customersWithGST: 0,
-          newToday: 0,
-          newThisWeek: 0,
-          newThisMonth: 0,
-          lastUpdated: new Date().toISOString(),
-        },
-        message: data.message,
-      };
-    } catch (error) {
-      // If stats endpoint fails, provide fallback data
-      console.warn(
-        "Customer stats endpoint failed, using fallback:",
-        error.message
-      );
-      return {
-        success: true,
-        data: {
-          totalCustomers: 0,
-          customersWithGST: 0,
-          newToday: 0,
-          newThisWeek: 0,
-          newThisMonth: 0,
-          lastUpdated: new Date().toISOString(),
-        },
-        message: "Using fallback statistics data",
-      };
-    }
-  },
 
-  // Export customers to Excel/CSV
-  exportToExcel: async (filters = {}) => {
-    try {
-      const params = {
-        ...filters,
-        format: "excel",
-      };
-
-      // Remove undefined values
-      Object.keys(params).forEach(
-        (key) => params[key] === undefined && delete params[key]
-      );
-
-      const response = await apiClient.get("/admin/customers/export", {
-        params,
-        responseType: "blob", // Important: This tells axios to expect binary data
-      });
-
-      // Get filename from response headers or use default
-      const contentDisposition = response.headers["content-disposition"];
-      let filename = `customers-export-${new Date().toISOString().split("T")[0]}.xlsx`;
-
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(
-          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
-        );
-        if (filenameMatch) {
-          filename = filenameMatch[1].replace(/['"]/g, "");
-        }
-      }
-
-      // Create blob and trigger download
-      const url = window.URL.createObjectURL(
-        new Blob([response.data], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        })
-      );
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      return {
-        success: true,
-        message: "Customers exported successfully",
-      };
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Failed to export customers";
-      toast.error(errorMsg);
-      throw new CustomerApiError(
-        errorMsg,
-        error.response?.data?.errors,
-        error.response?.status
-      );
-    }
-  },
   // Get customer by ID
   getById: async (id) => {
     if (!id) {
@@ -326,9 +229,7 @@ export const customerApi = {
 
     try {
       const { data } = await apiClient.get(`/admin/customers/${id}/quotations`);
-      console.log("------------------------------------");
-      console.log(data);
-      console.log("------------------------------------");
+
 
       return {
         success: true,

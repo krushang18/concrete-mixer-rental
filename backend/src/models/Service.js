@@ -534,27 +534,6 @@ class Service {
     }
   }
 
-  // Get service statistics
-  static async getStats() {
-    try {
-      const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total_service_records,
-          COUNT(CASE WHEN DATE(service_date) = CURDATE() THEN 1 END) as today_services,
-          COUNT(CASE WHEN DATE(service_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as week_services,
-          COUNT(CASE WHEN DATE(service_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as month_services,
-          COUNT(DISTINCT machine_id) as machines_serviced,
-          AVG(engine_hours) as avg_engine_hours
-        FROM service_records
-      `);
-
-      return stats[0];
-    } catch (error) {
-      console.error("Error getting service stats:", error);
-      throw error;
-    }
-  }
-
   // Get service history summary for a machine
   static async getMachineServiceSummary(machineId) {
     try {
@@ -600,46 +579,7 @@ class Service {
     }
   }
 
-  // Validate service data
-  static validateServiceData(data, isUpdate = false) {
-    const errors = [];
-    const { machine_id, service_date, engine_hours } = data;
 
-    // Required fields for creation
-    if (!isUpdate) {
-      if (!machine_id || isNaN(machine_id)) {
-        errors.push("Valid machine ID is required");
-      }
-
-      if (!service_date) {
-        errors.push("Service date is required");
-      }
-    }
-
-    // Validation for provided fields
-    if (service_date !== undefined) {
-      const date = new Date(service_date);
-      if (isNaN(date.getTime())) {
-        errors.push("Valid service date is required");
-      }
-
-      // Check if service date is not in the future
-      if (date > new Date()) {
-        errors.push("Service date cannot be in the future");
-      }
-    }
-
-    if (engine_hours !== undefined && engine_hours !== null) {
-      if (isNaN(engine_hours) || engine_hours < 0) {
-        errors.push("Engine hours must be a positive number");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
-  }
 
   // Create service category
   static async createServiceCategory(categoryData) {
@@ -750,6 +690,81 @@ class Service {
       console.error("Error creating sub-service item:", error);
       throw error;
     }
+  }
+
+  // Get sub-services by category ID
+  static async getSubServices(categoryId) {
+    try {
+      const query = `
+        SELECT id, name, description, is_active
+        FROM service_sub_items 
+        WHERE category_id = ? AND is_active = 1
+        ORDER BY display_order ASC, name ASC
+      `;
+      return await executeQuery(query, [categoryId]);
+    } catch (error) {
+      console.error("Error getting sub-services:", error);
+      throw error;
+    }
+  }
+
+  // Update service category
+  static async updateServiceCategory(id, name, description) {
+    try {
+      const query = `
+        UPDATE service_categories 
+        SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+      await executeQuery(query, [name, description, id]);
+      return { success: true, message: "Service category updated successfully" };
+    } catch (error) {
+       console.error("Error updating service category:", error);
+       throw error;
+    }
+  }
+
+  // Delete service category
+  static async deleteServiceCategory(id) {
+    try {
+      // Delete sub-services first (cascading delete)
+      await executeQuery("DELETE FROM service_sub_items WHERE category_id = ?", [id]);
+      
+      // Then delete the category
+      await executeQuery("DELETE FROM service_categories WHERE id = ?", [id]);
+      
+      return { success: true, message: "Service category and related items deleted successfully" };
+    } catch (error) {
+      console.error("Error deleting service category:", error);
+      throw error;
+    }
+  }
+
+  // Update sub-service item
+  static async updateSubServiceItem(id, category_id, name, description) {
+      try {
+        const query = `
+          UPDATE service_sub_items 
+          SET category_id = ?, name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `;
+        await executeQuery(query, [category_id, name, description, id]);
+        return { success: true, message: "Sub-service updated successfully" };
+      } catch (error) {
+        console.error("Error updating sub-service:", error);
+        throw error;
+      }
+  }
+
+  // Delete sub-service item
+  static async deleteSubServiceItem(id) {
+      try {
+        await executeQuery("DELETE FROM service_sub_items WHERE id = ?", [id]);
+        return { success: true, message: "Sub-service deleted successfully" };
+      } catch (error) {
+         console.error("Error deleting sub-service:", error);
+         throw error;
+      }
   }
 
   // Export service records to CSV format

@@ -9,7 +9,6 @@ class TermsConditions {
           id,
           title,
           description,
-          category,
           is_default,
           display_order,
           created_at,
@@ -21,14 +20,11 @@ class TermsConditions {
       const params = [];
 
       // Apply filters
-      if (filters.category) {
-        conditions.push("category = ?");
-        params.push(filters.category);
-      }
 
       if (filters.is_default !== undefined) {
         conditions.push("is_default = ?");
-        params.push(filters.is_default ? 1 : 0);
+        const isDefault = filters.is_default === 'true' || filters.is_default === true || filters.is_default === 1 || filters.is_default === '1';
+        params.push(isDefault ? 1 : 0);
       }
 
       if (filters.search) {
@@ -60,7 +56,6 @@ class TermsConditions {
           id,
           title,
           description,
-          category,
           is_default,
           display_order,
           created_at,
@@ -88,39 +83,14 @@ class TermsConditions {
     }
   }
 
-  // Get terms and conditions by category
-  static async getByCategory(category) {
-    try {
-      return await this.getAll({ category });
-    } catch (error) {
-      console.error("Error getting terms and conditions by category:", error);
-      throw error;
-    }
-  }
 
-  // Get all categories
-  static async getCategories() {
-    try {
-      const query = `
-        SELECT DISTINCT category, COUNT(*) as count
-        FROM terms_conditions
-        WHERE category IS NOT NULL AND category != ''
-        GROUP BY category
-        ORDER BY category ASC
-      `;
 
-      const categories = await executeQuery(query);
-      return categories;
-    } catch (error) {
-      console.error("Error getting categories:", error);
-      throw error;
-    }
-  }
+
 
   // Create new terms and conditions
   static async create(tcData) {
     try {
-      const { title, description, category, is_default, display_order } =
+      const { title, description, is_default, display_order } =
         tcData;
 
       // Validate data
@@ -147,18 +117,16 @@ class TermsConditions {
       INSERT INTO terms_conditions (
         title,
         description,
-        category,
         is_default,
         display_order,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+      ) VALUES (?, ?, ?, ?, NOW(), NOW())
     `;
 
       const result = await executeQuery(query, [
         title,
         description,
-        category || null,
         is_default ? 1 : 0,
         finalDisplayOrder,
       ]);
@@ -177,7 +145,7 @@ class TermsConditions {
   // Update terms and conditions
   static async update(id, tcData) {
     try {
-      const { title, description, category, is_default, display_order } =
+      const { title, description, is_default, display_order } =
         tcData;
 
       // Validate data
@@ -204,7 +172,6 @@ class TermsConditions {
         SET 
           title = ?,
           description = ?,
-          category = ?,
           is_default = ?,
           display_order = ?,
           updated_at = NOW()
@@ -214,7 +181,6 @@ class TermsConditions {
       await executeQuery(query, [
         title || existingTC.title,
         description || existingTC.description,
-        category !== undefined ? category : existingTC.category,
         is_default !== undefined ? (is_default ? 1 : 0) : existingTC.is_default,
         display_order !== undefined ? display_order : existingTC.display_order,
         id,
@@ -368,7 +334,6 @@ class TermsConditions {
       const duplicateData = {
         title: `${originalTC.title} (Copy)`,
         description: originalTC.description,
-        category: originalTC.category,
         is_default: false, // Copies should not be default
         display_order: null, // Will be auto-assigned
       };
@@ -437,63 +402,24 @@ class TermsConditions {
   }
 
   // Get terms and conditions for quotation (formatted for selection)
-  static async getForQuotation(category = null) {
+  static async getForQuotation() {
     try {
-      const filters = category ? { category } : {};
-      const allTerms = await this.getAll(filters);
+      const allTerms = await this.getAll();
 
-      // Group by category for easier selection
-      const grouped = {};
-
-      allTerms.forEach((term) => {
-        const cat = term.category || "General";
-        if (!grouped[cat]) {
-          grouped[cat] = [];
-        }
-        grouped[cat].push({
-          id: term.id,
-          title: term.title,
-          description: term.description,
-          is_default: term.is_default === 1,
-          display_order: term.display_order,
-        });
-      });
-
-      return {
-        grouped,
-        flat: allTerms.map((term) => ({
-          id: term.id,
-          title: term.title,
-          description: term.description,
-          category: term.category,
-          is_default: term.is_default === 1,
-          display_order: term.display_order,
-        })),
-      };
+      return allTerms.map((term) => ({
+        id: term.id,
+        title: term.title,
+        description: term.description,
+        is_default: term.is_default === 1,
+        display_order: term.display_order,
+      }));
     } catch (error) {
       console.error("Error getting terms and conditions for quotation:", error);
       throw error;
     }
   }
 
-  // Get statistics
-  static async getStats() {
-    try {
-      const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total_terms,
-          COUNT(CASE WHEN is_default = 1 THEN 1 END) as default_terms,
-          COUNT(DISTINCT category) as total_categories,
-          COUNT(CASE WHEN category IS NULL OR category = '' THEN 1 END) as uncategorized_terms
-        FROM terms_conditions
-      `);
 
-      return stats[0];
-    } catch (error) {
-      console.error("Error getting terms and conditions stats:", error);
-      throw error;
-    }
-  }
 
   // Validate terms and conditions data
   static validateTCData(data, isUpdate = false) {
@@ -629,43 +555,7 @@ class TermsConditions {
     }
   }
 
-  static async getByIds(ids) {
-    try {
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return [];
-      }
 
-      // Validate all IDs are numbers
-      const validIds = ids
-        .filter((id) => !isNaN(parseInt(id)))
-        .map((id) => parseInt(id));
-
-      if (validIds.length === 0) {
-        return [];
-      }
-
-      const placeholders = validIds.map(() => "?").join(",");
-      const query = `
-      SELECT 
-        id, 
-        title, 
-        description, 
-        category, 
-        display_order,
-        is_default,
-        created_at
-      FROM terms_conditions 
-      WHERE id IN (${placeholders})
-      ORDER BY display_order ASC, id ASC
-    `;
-
-      const terms = await executeQuery(query, validIds);
-      return terms;
-    } catch (error) {
-      console.error("Error getting terms and conditions by IDs:", error);
-      throw error;
-    }
-  }
 }
 
 module.exports = TermsConditions;

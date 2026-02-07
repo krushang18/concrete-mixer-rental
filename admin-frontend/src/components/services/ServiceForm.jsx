@@ -1,11 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { serviceApi } from '../../services/serviceApi';
 import { machineApi } from '../../services/machineApi';
 import { 
   Save, ArrowLeft, Plus, Search, X, ChevronDown, ChevronUp,
-  AlertCircle, Check, FileText
+  AlertCircle, Check, FileText, Loader2
 } from 'lucide-react';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+
+import Pagination from '../../components/common/Pagination';
+
 
 const ServiceForm = ({ serviceId = null, onBack }) => {
   const [formData, setFormData] = useState({
@@ -18,6 +22,10 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
     services: {}
   });
   
+  const hasInitialized = useRef(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const [errors, setErrors] = useState({});
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,13 +174,17 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
     }
   }, [serviceData]);
 
-  // Auto-expand first category when categories load
+  // Auto-expand first category when categories load - FIX: Only run once
   useEffect(() => {
-    if (serviceCategories.length > 0 && expandedCategories.size === 0 && !searchTerm) {
-      const firstCategories = serviceCategories.slice(0, 1).map(cat => cat.id);
-      setExpandedCategories(new Set(firstCategories));
+    if (serviceCategories.length > 0 && !hasInitialized.current && !searchTerm) {
+      // Find the first category that has sub-services
+      const firstExpandable = serviceCategories.find(cat => cat.sub_services && cat.sub_services.length > 0);
+      if (firstExpandable) {
+        setExpandedCategories(new Set([firstExpandable.id]));
+      }
+      hasInitialized.current = true;
     }
-  }, [serviceCategories.length, expandedCategories.size, searchTerm]);
+  }, [serviceCategories, searchTerm]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -213,11 +225,20 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
       }
       
       const wasSelected = currentServices[categoryId].selected;
-      currentServices[categoryId].selected = !wasSelected;
+      const newSelectedState = !wasSelected;
+      currentServices[categoryId].selected = newSelectedState;
       
-      if (wasSelected) {
-        Object.keys(currentServices[categoryId].subServices).forEach(subId => {
-          currentServices[categoryId].subServices[subId].selected = false;
+      // Cascade selection/deselection to all sub-services
+      const categoryDef = serviceCategories.find(cat => cat.id === categoryId);
+      if (categoryDef && categoryDef.sub_services) {
+        categoryDef.sub_services.forEach(subService => {
+          if (!currentServices[categoryId].subServices[subService.id]) {
+            currentServices[categoryId].subServices[subService.id] = {
+              selected: false,
+              notes: ''
+            };
+          }
+          currentServices[categoryId].subServices[subService.id].selected = newSelectedState;
         });
       }
       
@@ -226,7 +247,7 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
         services: currentServices
       };
     });
-  }, []);
+  }, [serviceCategories]);
 
   const toggleSubService = useCallback((categoryId, subServiceId) => {
     setFormData(prev => {
@@ -250,15 +271,18 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
       const wasSelected = currentServices[categoryId].subServices[subServiceId].selected;
       currentServices[categoryId].subServices[subServiceId].selected = !wasSelected;
       
+      // Check if any sub-service is selected
       const hasSelectedSubServices = Object.values(currentServices[categoryId].subServices).some(sub => sub.selected);
       
-      if (hasSelectedSubServices && !currentServices[categoryId].selected) {
+      // Auto-select parent if any sub-service is selected
+      if (hasSelectedSubServices) {
         currentServices[categoryId].selected = true;
-      }
-      
-      const category = serviceCategories.find(cat => cat.id === categoryId);
-      if (category?.sub_services?.length > 0 && !hasSelectedSubServices) {
-        currentServices[categoryId].selected = false;
+      } else {
+        // Auto-deselect parent if NO sub-service is selected (only if it has sub-services)
+        const categoryDef = serviceCategories.find(cat => cat.id === categoryId);
+        if (categoryDef && categoryDef.sub_services && categoryDef.sub_services.length > 0) {
+          currentServices[categoryId].selected = false;
+        }
       }
       
       return {
@@ -476,14 +500,21 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
       })
     : serviceCategories;
 
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   // Loading states
   if (machinesLoading || categoriesLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading form data...</p>
-        </div>
+        <LoadingSpinner size="large" text="Loading form data..." />
       </div>
     );
   }
@@ -636,7 +667,7 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
               <button
                 type="button"
                 onClick={() => openAddModal('category')}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto justify-center"
+                className="inline-flex items-center px-3 py-2 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors w-full sm:w-auto justify-center"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Category
@@ -676,8 +707,8 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
             )}
 
             {/* Service Categories */}
-            <div className="space-y-3 sm:space-y-4 max-h-[600px] overflow-y-auto">
-              {filteredCategories.map(category => {
+            <div className="space-y-3 sm:space-y-4 max-h-[800px] overflow-y-auto pr-1">
+              {paginatedCategories.map(category => {
                 const hasSubServices = category.sub_services && category.sub_services.length > 0;
                 const isExpanded = expandedCategories.has(category.id);
                 const categorySelected = isCategorySelected(category.id);
@@ -689,29 +720,30 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
                   }`}>
                     
                     {/* Category Header */}
-                    <div className="flex items-center p-3 sm:p-4">
+                    <div className="flex items-start p-2 sm:p-4">
                       {/* Category Checkbox */}
-                      <div className="flex items-center flex-1 min-w-0">
+                      <div className="flex items-start flex-1 min-w-0">
                         <button
                           type="button"
                           onClick={() => toggleCategorySelection(category.id)}
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 mr-3 flex-shrink-0 ${
+                          className={`p-1 sm:p-0.5 rounded-md border flex items-center justify-center transition-all duration-200 mr-2 sm:mr-3 flex-shrink-0 shadow-sm mt-0.5 sm:mt-1 ${
                             categorySelected
-                              ? 'bg-blue-500 border-blue-500 text-white'
-                              : 'border-gray-300 hover:border-blue-400'
+                              ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-white border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                           }`}
+                          style={{ minWidth: '20px', minHeight: '20px' }}
                         >
-                          {categorySelected && <Check className="w-3 h-3" />}
+                          {categorySelected && <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
                         </button>
                         
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`font-medium transition-colors truncate ${
+                        <div className="flex-1 min-w-0 font-medium pt-0.5">
+                          <h3 className={`font-medium transition-colors text-sm sm:text-base break-words ${
                             categorySelected ? 'text-blue-900' : 'text-gray-900'
                           }`}>
                             {category.name}
                           </h3>
                           {category.description && (
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{category.description}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 mt-0.5 break-words">{category.description}</p>
                           )}
                           
                           {/* Category validation error */}
@@ -770,20 +802,21 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
                                   ? 'bg-blue-100 border-blue-300'
                                   : 'bg-white border-gray-200 hover:border-gray-300'
                               }`}>
-                                <div className="flex items-center mb-2">
+                                <div className="flex items-start mb-2">
                                   <button
                                     type="button"
                                     onClick={() => toggleSubService(category.id, subService.id)}
-                                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-200 mr-3 flex-shrink-0 ${
+                                    className={`p-1 sm:p-0.5 rounded border flex items-center justify-center transition-all duration-200 mr-2 sm:mr-3 flex-shrink-0 shadow-sm mt-0.5 sm:mt-1 ${
                                       subSelected
-                                        ? 'bg-blue-500 border-blue-500 text-white'
-                                        : 'border-gray-300 hover:border-blue-400'
+                                        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-white border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                                     }`}
+                                    style={{ minWidth: '18px', minHeight: '18px' }}
                                   >
-                                    {subSelected && <Check className="w-2.5 h-2.5" />}
+                                    {subSelected && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3" />}
                                   </button>
                                   
-                                  <span className={`text-sm font-medium transition-colors truncate ${
+                                  <span className={`text-sm font-medium transition-colors break-words flex-1 ${
                                     subSelected ? 'text-blue-900' : 'text-gray-700'
                                   }`}>
                                     {subService.name}
@@ -792,7 +825,7 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
                                 
                                 {/* Sub-service description */}
                                 {subService.description && (
-                                  <p className="text-xs text-gray-600 ml-7 mb-2 line-clamp-2">{subService.description}</p>
+                                  <p className="text-[10px] sm:text-xs text-gray-600 ml-6 sm:ml-7 mb-2 leading-relaxed">{subService.description}</p>
                                 )}
                                 
                                 {/* Sub-service notes */}
@@ -832,7 +865,29 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
                   </div>
                 );
               })}
+
             </div>
+
+            {/* Pagination Controls */}
+            {filteredCategories.length > itemsPerPage && (
+              <div className="mt-4">
+                <Pagination
+                  pagination={{
+                    current_page: currentPage,
+                    total: filteredCategories.length,
+                    per_page: itemsPerPage,
+                    total_pages: Math.ceil(filteredCategories.length / itemsPerPage),
+                    has_prev_page: currentPage > 1,
+                    has_next_page: currentPage < Math.ceil(filteredCategories.length / itemsPerPage),
+                    from: (currentPage - 1) * itemsPerPage + 1,
+                    to: Math.min(currentPage * itemsPerPage, filteredCategories.length)
+                  }}
+                  onPageChange={(page) => setCurrentPage(page)}
+                  onLimitChange={() => {}} // Not implementing limit change here
+                />
+              </div>
+            )}
+
 
             {/* No categories found */}
             {filteredCategories.length === 0 && (
@@ -872,7 +927,7 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
             <button
               type="button"
               onClick={onBack || (() => window.history.back())}
-              className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors order-2 sm:order-1"
+              className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all shadow-sm order-2 sm:order-1"
             >
               Cancel
             </button>
@@ -880,11 +935,11 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
               type="button"
               onClick={handleSubmit}
               disabled={serviceMutation.isPending}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all order-1 sm:order-2"
             >
               {serviceMutation.isPending ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
@@ -975,7 +1030,7 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
               <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all shadow-sm"
                 >
                   Cancel
                 </button>
@@ -983,11 +1038,11 @@ const ServiceForm = ({ serviceId = null, onBack }) => {
                   onClick={handleAddItem}
                   disabled={!newItemData.name.trim() || (addModalType === 'subcategory' && !newItemData.category_id) || 
                            addCategoryMutation.isPending || addSubServiceMutation.isPending}
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {(addCategoryMutation.isPending || addSubServiceMutation.isPending) ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Adding...
                     </>
                   ) : (

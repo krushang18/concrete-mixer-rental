@@ -138,6 +138,7 @@ class Document {
         expiry_date,
         last_renewed_date,
         remarks,
+        notification_days, // Extract notification_days
       } = documentData;
 
       // Validate required fields
@@ -150,6 +151,9 @@ class Document {
         };
       }
 
+      let documentId;
+      let action;
+
       // Check if document already exists for this machine
       const existingDoc = await executeQuery(
         "SELECT id FROM machine_documents WHERE machine_id = ? AND document_type = ?",
@@ -158,6 +162,9 @@ class Document {
 
       if (existingDoc.length > 0) {
         // Update existing document
+        documentId = existingDoc[0].id;
+        action = "updated";
+        
         const query = `
           UPDATE machine_documents 
           SET 
@@ -172,17 +179,12 @@ class Document {
           expiry_date,
           last_renewed_date || null,
           remarks || null,
-          existingDoc[0].id,
+          documentId,
         ]);
-
-        return {
-          success: true,
-          id: existingDoc[0].id,
-          message: "Document updated successfully",
-          action: "updated",
-        };
       } else {
         // Create new document
+        action = "created";
+        
         const query = `
           INSERT INTO machine_documents (
             machine_id,
@@ -202,14 +204,34 @@ class Document {
           last_renewed_date || null,
           remarks || null,
         ]);
-
-        return {
-          success: true,
-          id: result.insertId,
-          message: "Document created successfully",
-          action: "created",
-        };
+        
+        documentId = result.insertId;
       }
+
+      // Handle Notifications if provided
+      if (notification_days) {
+        let daysArray = [];
+        if (Array.isArray(notification_days)) {
+          daysArray = notification_days;
+        } else if (typeof notification_days === 'string') {
+          // Try to parse if string
+          try {
+             const parts = notification_days.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
+             if (parts.length > 0) daysArray = parts;
+          } catch (e) { console.warn("Failed to parse notification days", e); }
+        }
+
+        if (daysArray.length > 0) {
+           await this.configureNotifications(documentId, daysArray);
+        }
+      }
+
+      return {
+        success: true,
+        id: documentId,
+        message: `Document ${action} successfully`,
+        action: action,
+      };
     } catch (error) {
       console.error("Error creating/updating document:", error);
       throw error;
@@ -303,8 +325,8 @@ class Document {
           DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry
         FROM machine_documents md
         JOIN machines m ON md.machine_id = m.id
-        WHERE m.is_active = 1 
-        AND md.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+        JOIN machines m ON md.machine_id = m.id
+        WHERE md.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
         ORDER BY md.expiry_date ASC
       `;
 
@@ -316,53 +338,99 @@ class Document {
     }
   }
 
-  // Get document statistics
-  static async getStats() {
-    try {
-      const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total_documents,
-          COUNT(CASE WHEN DATEDIFF(expiry_date, CURDATE()) <= 0 THEN 1 END) as expired_documents,
-          COUNT(CASE WHEN DATEDIFF(expiry_date, CURDATE()) BETWEEN 1 AND 7 THEN 1 END) as expiring_this_week,
-          COUNT(CASE WHEN DATEDIFF(expiry_date, CURDATE()) BETWEEN 8 AND 30 THEN 1 END) as expiring_this_month,
-          AVG(DATEDIFF(expiry_date, CURDATE())) as avg_days_until_expiry
-        FROM machine_documents md
-        JOIN machines m ON md.machine_id = m.id
-        WHERE m.is_active = 1
-      `);
-
-      return stats[0];
-    } catch (error) {
-      console.error("Error getting document stats:", error);
-      throw error;
-    }
-  }
-
   // Configure document notifications
   static async configureNotifications(documentId, notificationDays) {
     try {
-      // Clear existing notifications
+      // 1. Clear existing notifications rules
       await executeQuery(
         "DELETE FROM document_notifications WHERE machine_document_id = ?",
         [documentId]
       );
 
-      // Add new notifications
-      if (notificationDays && notificationDays.length > 0) {
-        const values = notificationDays
-          .map((days) => `(${documentId}, ${days}, 1, NOW(), NOW())`)
-          .join(",");
+      // 2. Validate and prepare new rules
+      let daysArray = [];
+      if (Array.isArray(notificationDays)) {
+        daysArray = notificationDays;
+      } else if (typeof notificationDays === 'string') {
+        try {
+           const parts = notificationDays.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
+           if (parts.length > 0) daysArray = parts;
+        } catch (e) { console.warn("Failed to parse notification days", e); }
+      }
+
+      if (daysArray.length === 0) {
+        return { success: true, message: "No notifications configured" };
+      }
+
+      // 3. Insert new notification rules
+      const values = daysArray
+        .map((days) => `(${documentId}, ${days}, 1, NOW(), NOW())`)
+        .join(",");
+      
+      if (values) {
         const query = `
-          INSERT INTO document_notifications (machine_document_id, days_before, is_active, created_at, updated_at)
-          VALUES ${values}
+            INSERT INTO document_notifications (machine_document_id, days_before, is_active, created_at, updated_at)
+            VALUES ${values}
+          `;
+        await executeQuery(query);
+      }
+
+      // ==============================================================================
+      // NEW LOGIC: Pre-schedule Email Jobs
+      // ==============================================================================
+
+      // 4. Get Document Details (needed for email payload)
+      const doc = await this.getById(documentId);
+      if (!doc) throw new Error("Document not found for notification configuration");
+
+      // 5. Delete ANY existing pending jobs for this document (to avoid duplicates/stale jobs)
+      await executeQuery(
+        "DELETE FROM email_jobs WHERE entity_id = ? AND entity_type = 'document' AND status = 'pending'",
+        [documentId]
+      );
+
+      // 6. Calculate Schedule Dates and Insert Jobs
+      const expiryDate = new Date(doc.expiry_date);
+      
+      for (const daysBefore of daysArray) {
+        // Calculate Scheduled Date
+        const scheduledDate = new Date(expiryDate);
+        scheduledDate.setDate(expiryDate.getDate() - daysBefore);
+        // Set to 9:00 AM on that day
+        scheduledDate.setHours(9, 0, 0, 0);
+
+        // check if the date is already passed
+        const now = new Date();
+        if (scheduledDate < now) {
+             console.log(`Skipping notification for ${daysBefore} days before (Date: ${scheduledDate}) as it is in the past.`);
+             continue;
+        }
+
+        // Prepare Payload (same structure as before)
+        const jobData = {
+          document_id: doc.id,
+          machine_id: doc.machine_id,
+          machine_number: doc.machine_number, // Ensure getById returns this
+          machine_name: doc.machine_name,     // Ensure getById returns this
+          document_type: doc.document_type,
+          expiry_date: doc.expiry_date,
+          days_until_expiry: daysBefore, 
+          notification_rule: daysBefore
+        };
+
+        // Insert Job
+        const insertJobQuery = `
+          INSERT INTO email_jobs (
+            type, entity_id, entity_type, data, status, attempts, max_attempts, created_at, scheduled_for
+          ) VALUES ('document_expiry', ?, 'document', ?, 'pending', 0, 3, NOW(), ?)
         `;
 
-        await executeQuery(query);
+        await executeQuery(insertJobQuery, [documentId, JSON.stringify(jobData), scheduledDate]);
       }
 
       return {
         success: true,
-        message: "Notification settings updated successfully",
+        message: "Notification settings updated and email jobs scheduled",
       };
     } catch (error) {
       console.error("Error configuring notifications:", error);
@@ -404,8 +472,7 @@ class Document {
         FROM machine_documents md
         JOIN machines m ON md.machine_id = m.id
         JOIN document_notifications dn ON md.id = dn.machine_document_id
-        WHERE m.is_active = 1 
-        AND dn.is_active = 1
+        WHERE dn.is_active = 1
         AND DATEDIFF(md.expiry_date, CURDATE()) = dn.days_before
         AND NOT EXISTS (
           SELECT 1 FROM document_notification_logs dnl

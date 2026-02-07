@@ -192,6 +192,29 @@ const CompanySettings = () => {
   // Watch new password for confirmation validation and strength indicator
   const newPassword = watchPassword('newPassword');
 
+  // Helper to get full image URL
+  const getFullImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    
+    // Determine backend origin
+    let origin = "http://localhost:3000";
+    const envApiUrl = process.env.REACT_APP_API_BASE_URL;
+    
+    if (envApiUrl && envApiUrl.startsWith('http')) {
+        try {
+            const urlObj = new URL(envApiUrl);
+            origin = urlObj.origin;
+        } catch (e) {
+            console.error("Invalid REACT_APP_API_BASE_URL", e);
+        }
+    }
+    
+    // Ensure path starts with /
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    return `${origin}${cleanPath}`;
+  };
+
   // Debug helper - check image availability
   useEffect(() => {
     const checkImages = async () => {
@@ -208,8 +231,12 @@ const CompanySettings = () => {
           
           // Set preview URLs based on image info response
           const newPreviewUrls = {
-            logo: logoInfo.success && logoInfo.data?.exists ? logoInfo.data.url || `/api/admin/company/logo?t=${Date.now()}` : null,
-            signature: signatureInfo.success && signatureInfo.data?.exists ? signatureInfo.data.url || `/api/admin/company/signature?t=${Date.now()}` : null
+            logo: logoInfo.success && logoInfo.data?.exists 
+                ? getFullImageUrl(`${logoInfo.data.url}?t=${Date.now()}`) 
+                : null,
+            signature: signatureInfo.success && signatureInfo.data?.exists 
+                ? getFullImageUrl(signatureInfo.data.url) || getFullImageUrl(`/api/admin/company/signature?t=${Date.now()}`) 
+                : null
           };
           
           console.log('Setting preview URLs from info:', newPreviewUrls);
@@ -219,8 +246,8 @@ const CompanySettings = () => {
           
           // Fallback: try direct image URLs anyway
           const fallbackUrls = {
-            logo: `/api/admin/company/logo?t=${Date.now()}`,
-            signature: `/api/admin/company/signature?t=${Date.now()}`
+            logo: getFullImageUrl(`/api/admin/company/logo?t=${Date.now()}`),
+            signature: getFullImageUrl(`/api/admin/company/signature?t=${Date.now()}`)
           };
           
           console.log('Using fallback URLs:', fallbackUrls);
@@ -249,8 +276,8 @@ const CompanySettings = () => {
         
         // Set preview URLs using the backend endpoints directly
         setPreviewUrls({
-          logo: response.data.logo_info?.exists ? `/api/admin/company/logo?t=${Date.now()}` : null,
-          signature: response.data.signature_info?.exists ? `/api/admin/company/signature?t=${Date.now()}` : null
+          logo: response.data.logo_info?.exists ? getFullImageUrl(`/api/admin/company/logo?t=${Date.now()}`) : null,
+          signature: response.data.signature_info?.exists ? getFullImageUrl(`/api/admin/company/signature?t=${Date.now()}`) : null
         });
       }
     } catch (error) {
@@ -275,12 +302,12 @@ const CompanySettings = () => {
       if (response.success) {
         const formatted = companyUtils.formatCompanyInfo(response.data);
         setCompanyData(formatted);
-        toast.success('Company details updated successfully');
+        // Toast handled by API
         // Don't refetch, use the response data to minimize API calls
       }
     } catch (error) {
       console.error('Error updating company details:', error);
-      toast.error('Failed to update company details');
+      // Toast handled by API
     } finally {
       setSaving(false);
     }
@@ -354,7 +381,7 @@ const CompanySettings = () => {
           [`${type}_url`]: response.data?.url || response.data?.[`${type}_url`] || true
         }));
         
-        toast.success(`${type === 'logo' ? 'Logo' : 'Signature'} uploaded successfully`);
+        // Toast handled by API
         
         // Force a complete refresh of the preview after a short delay
         // This ensures the backend has processed the new image
@@ -364,19 +391,19 @@ const CompanySettings = () => {
           
           setPreviewUrls(prev => ({
             ...prev,
-            [type]: `/api/admin/company/${type}?t=${timestamp}&refresh=true`
+            [type]: getFullImageUrl(`/api/admin/company/${type}?t=${timestamp}&refresh=true`)
           }));
         }, 500); // 500ms delay to ensure backend processing is complete
       }
     } catch (error) {
       // Reset preview on error - check if image exists on server
-      const existingImageUrl = `/api/admin/company/${type}?t=${Date.now()}`;
+      const existingImageUrl = getFullImageUrl(`/api/admin/company/${type}?t=${Date.now()}`);
       setPreviewUrls(prev => ({
         ...prev,
         [type]: existingImageUrl
       }));
       console.error(`Error uploading ${type}:`, error);
-      toast.error(`Failed to upload ${type}`);
+      // Toast handled by API
     } finally {
       if (type === 'logo') setLogoUploading(false);
       else setSignatureUploading(false);
@@ -807,8 +834,10 @@ const CompanySettings = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Current Password *
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      </div>
                       <input
                         type={showPasswords.current ? 'text' : 'password'}
                         {...registerPassword('currentPassword', { 
@@ -818,15 +847,15 @@ const CompanySettings = () => {
                             message: 'Password must be at least 6 characters'
                           }
                         })}
-                        className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter your current password"
+                        className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-200"
+                        placeholder="Current password"
                       />
                       <button
                         type="button"
                         onClick={() => togglePasswordVisibility('current')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
                       >
-                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.current ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                     {passwordErrors.currentPassword && (
@@ -839,8 +868,10 @@ const CompanySettings = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       New Password *
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      </div>
                       <input
                         type={showPasswords.new ? 'text' : 'password'}
                         {...registerPassword('newPassword', { 
@@ -850,15 +881,15 @@ const CompanySettings = () => {
                             message: 'Password must be at least 6 characters'
                           }
                         })}
-                        className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter your new password"
+                        className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-200"
+                        placeholder="New password"
                       />
                       <button
                         type="button"
                         onClick={() => togglePasswordVisibility('new')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
                       >
-                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.new ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                     {passwordErrors.newPassword && (
@@ -876,23 +907,25 @@ const CompanySettings = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Confirm New Password *
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                      </div>
                       <input
                         type={showPasswords.confirm ? 'text' : 'password'}
                         {...registerPassword('confirmPassword', { 
                           required: 'Please confirm your new password',
                           validate: value => value === newPassword || 'Passwords do not match'
                         })}
-                        className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Confirm your new password"
+                        className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-200"
+                        placeholder="Confirm password"
                       />
                       <button
                         type="button"
                         onClick={() => togglePasswordVisibility('confirm')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
                       >
-                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.confirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                     {passwordErrors.confirmPassword && (

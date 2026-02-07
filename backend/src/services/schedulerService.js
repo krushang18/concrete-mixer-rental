@@ -1,5 +1,6 @@
 const { executeQuery } = require("../config/database");
 const emailService = require("./emailService");
+const Document = require("../models/Document");
 const cron = require("cron");
 
 class EmailSchedulerService {
@@ -9,29 +10,6 @@ class EmailSchedulerService {
     this.documentExpiryAfternoonJob = null;
     this.documentExpiryEveningJob = null;
     this.cleanupJob = null;
-  }
-
-  // =============================================================================
-  // CUSTOMER EMAIL METHODS (Immediate sending - no queueing)
-  // =============================================================================
-
-  // Send customer query emails immediately (no queueing needed)
-  static async sendCustomerQueryEmails(customerData) {
-    try {
-      console.log("📧 Sending customer query emails...");
-      const result = await emailService.sendNewQueryEmails(customerData);
-
-      if (result.success) {
-        console.log("✅ Customer query emails sent successfully");
-      } else {
-        console.error("❌ Failed to send customer query emails:", result.error);
-      }
-
-      return result;
-    } catch (error) {
-      console.error("❌ Error sending customer query emails:", error);
-      return { success: false, error: error.message };
-    }
   }
 
   // =============================================================================
@@ -170,92 +148,14 @@ class EmailSchedulerService {
   // MAIN PROCESSING METHOD - Enhanced to do BOTH checking and processing
   // =============================================================================
 
-  // Enhanced processDocumentExpiryJobs - checks for new documents AND processes pending jobs
+  // Enhanced processDocumentExpiryJobs - Processes scheduled jobs
   static async processDocumentExpiryJobs() {
     try {
-      console.log(
-        "🔄 Processing document expiry jobs (checking new + processing pending)..."
-      );
+      console.log("🔄 Processing scheduled document expiry jobs...");
 
       // ====================================================================
-      // STEP 1: CHECK FOR NEW EXPIRING DOCUMENTS AND QUEUE THEM
+      // STEP 1: PROCESS PENDING JOBS THAT ARE DUE
       // ====================================================================
-
-      console.log("📋 Step 1: Checking for new expiring documents...");
-
-      let newDocumentsQueued = 0;
-
-      try {
-        // Get documents expiring in next 14 days that haven't been notified today
-        const expiringDocuments = await executeQuery(`
-          SELECT 
-            md.id,
-            md.document_type,
-            md.expiry_date,
-            m.machine_number,
-            m.name as machine_name,
-            DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry
-          FROM machine_documents md
-          JOIN machines m ON md.machine_id = m.id
-          WHERE m.is_active = 1 
-          AND DATEDIFF(md.expiry_date, CURDATE()) <= 14
-          AND NOT EXISTS (
-            SELECT 1 FROM email_jobs ej 
-            WHERE ej.type = 'document_expiry' 
-            AND JSON_EXTRACT(ej.data, '$.document_id') = md.id
-            AND ej.status = 'completed'
-            AND DATE(ej.created_at) = CURDATE()
-          )
-          ORDER BY md.expiry_date ASC
-          LIMIT 20
-        `);
-
-        console.log(
-          `📊 Found ${expiringDocuments.length} new documents requiring notifications`
-        );
-
-        // Queue new expiring documents
-        for (const doc of expiringDocuments) {
-          if (!doc || !doc.id || !doc.machine_number) {
-            console.warn(`⚠️ Skipping invalid document:`, doc);
-            continue;
-          }
-
-          const documentInfo = {
-            document_id: doc.id,
-            machine_number: doc.machine_number,
-            machine_name: doc.machine_name || "Unknown Machine",
-            document_type: doc.document_type || "Unknown Document",
-            expiry_date: doc.expiry_date,
-            days_until_expiry: doc.days_until_expiry || 0,
-          };
-
-          try {
-            await this.addDocumentExpiryJob(documentInfo);
-            newDocumentsQueued++;
-            console.log(
-              `➕ Queued notification for ${doc.machine_number} - ${doc.document_type}`
-            );
-          } catch (queueError) {
-            console.error(
-              `❌ Failed to queue ${doc.machine_number}:`,
-              queueError.message
-            );
-          }
-        }
-      } catch (checkError) {
-        console.error(
-          "❌ Error checking for new expiring documents:",
-          checkError.message
-        );
-        // Continue to processing existing jobs even if this fails
-      }
-
-      // ====================================================================
-      // STEP 2: PROCESS ALL PENDING JOBS (including newly queued ones)
-      // ====================================================================
-
-      console.log("📬 Step 2: Processing pending email jobs...");
 
       const pendingJobs = await executeQuery(`
         SELECT 
@@ -268,12 +168,13 @@ class EmailSchedulerService {
         WHERE type = 'document_expiry' 
         AND status = 'pending'
         AND attempts < max_attempts
-        ORDER BY created_at ASC
-        LIMIT 25
+        AND (scheduled_for IS NULL OR scheduled_for <= NOW())
+        ORDER BY scheduled_for ASC
+        LIMIT 50
       `);
 
       console.log(
-        `📬 Found ${pendingJobs.length} pending email jobs to process`
+        `📬 Found ${pendingJobs.length} due email jobs to process`
       );
 
       let processedCount = 0;
@@ -292,13 +193,17 @@ class EmailSchedulerService {
             throw new Error(`Job ${job.id} has no data`);
           }
 
-          let documentInfo;
-          try {
-            documentInfo = JSON.parse(job.data);
-          } catch (parseError) {
-            throw new Error(
-              `Job ${job.id} has invalid JSON: ${parseError.message}`
-            );
+          let documentInfo = job.data;
+          
+          // Parse data if it's a string (mysql2 usually auto-parses JSON columns)
+          if (typeof documentInfo === 'string') {
+            try {
+              documentInfo = JSON.parse(documentInfo);
+            } catch (parseError) {
+               console.warn(`⚠️ JSON parse warning for job ${job.id}: ${parseError.message}, treating as raw string/object`);
+               // If parse fails, it might be that it was double encoded or something else, 
+               // but if it was "invalid JSON" error on [object Object], it means it was ALREADY an object.
+            }
           }
 
           if (!documentInfo?.document_id || !documentInfo?.machine_number) {
@@ -391,8 +296,7 @@ class EmailSchedulerService {
       console.log("\n" + "=".repeat(50));
       console.log("📊 DOCUMENT EXPIRY PROCESSING SUMMARY");
       console.log("=".repeat(50));
-      console.log(`📋 New documents queued: ${newDocumentsQueued}`);
-      console.log(`📬 Pending jobs processed: ${processedCount}`);
+      console.log(`📬 Due jobs processed: ${processedCount}`);
       console.log(`✅ Jobs completed: ${completedCount}`);
       console.log(`❌ Jobs failed: ${failedCount}`);
       console.log("=".repeat(50));
@@ -408,39 +312,17 @@ class EmailSchedulerService {
   }
 
   // =============================================================================
-  // CRON JOB MANAGEMENT - Perfect Implementation
+  // CRON JOB MANAGEMENT
   // =============================================================================
 
-  // Initialize cron jobs - PERFECT VERSION
+  // Initialize cron jobs
   static initializeCronJobs() {
     try {
       console.log("⚙️ Initializing email scheduler cron jobs...");
 
-      // Process document expiry jobs (enhanced version) - Morning
+      // Process document expiry jobs - Morning (9:00 AM IST)
       this.documentExpiryMorningJob = new cron.CronJob(
-        "0 8 * * *", // 8:00 AM
-        () => {
-          this.processDocumentExpiryJobs();
-        },
-        null,
-        false,
-        "Asia/Kolkata"
-      );
-
-      // Process document expiry jobs (enhanced version) - Afternoon
-      this.documentExpiryAfternoonJob = new cron.CronJob(
-        "0 15 * * *", // 3:00 PM
-        () => {
-          this.processDocumentExpiryJobs();
-        },
-        null,
-        false,
-        "Asia/Kolkata"
-      );
-
-      // Process document expiry jobs (enhanced version) - Evening
-      this.documentExpiryEveningJob = new cron.CronJob(
-        "0 19 * * *", // 7:00 PM
+        "0 9 * * *", 
         () => {
           this.processDocumentExpiryJobs();
         },
@@ -460,15 +342,15 @@ class EmailSchedulerService {
         "Asia/Kolkata"
       );
 
-      console.log("✅ Email scheduler cron jobs initialized - 4 jobs total");
-      console.log("📋 Document expiry: 8 AM, 3 PM, 7 PM daily");
+      console.log("✅ Email scheduler cron jobs initialized");
+      console.log("📋 Document expiry check: 9 AM daily");
       console.log("🧹 Cleanup: Sunday 2 AM weekly");
     } catch (error) {
       console.error("❌ Error initializing cron jobs:", error);
     }
   }
 
-  // Start cron jobs - FIXED VERSION
+  // Start cron jobs
   static startCronJobs() {
     try {
       if (!this.documentExpiryMorningJob) {
@@ -476,22 +358,26 @@ class EmailSchedulerService {
       }
 
       this.documentExpiryMorningJob.start();
-      this.documentExpiryAfternoonJob.start();
-      this.documentExpiryEveningJob.start();
-      this.cleanupJob.start();
+      if (this.cleanupJob) this.cleanupJob.start();
 
       console.log("✅ Email scheduler cron jobs started successfully");
+      
+      // Run immediately on server start as requested
+      console.log("🚀 Running initial document expiry check on startup...");
+      this.processDocumentExpiryJobs().catch(err => {
+          console.error("❌ Error during initial startup check:", err);
+      });
+
     } catch (error) {
       console.error("❌ Error starting cron jobs:", error);
     }
   }
 
-  // Stop cron jobs - FIXED VERSION
+  // Stop cron jobs
   static stopCronJobs() {
     try {
       if (this.documentExpiryMorningJob) this.documentExpiryMorningJob.stop();
-      if (this.documentExpiryAfternoonJob)
-        this.documentExpiryAfternoonJob.stop();
+      if (this.documentExpiryAfternoonJob) this.documentExpiryAfternoonJob.stop();
       if (this.documentExpiryEveningJob) this.documentExpiryEveningJob.stop();
       if (this.cleanupJob) this.cleanupJob.stop();
 
@@ -499,6 +385,15 @@ class EmailSchedulerService {
     } catch (error) {
       console.error("❌ Error stopping cron jobs:", error);
     }
+  }
+
+  // Aliases for compatibility
+  static startScheduler() {
+      return this.startCronJobs();
+  }
+
+  static stopScheduler() {
+      return this.stopCronJobs();
   }
 
   // =============================================================================
@@ -520,108 +415,6 @@ class EmailSchedulerService {
     } catch (error) {
       console.error("❌ Error cleaning up old jobs:", error);
     }
-  }
-
-  // Get recent email jobs for admin monitoring
-  static async getRecentJobs(limit = 20) {
-    try {
-      const jobs = await executeQuery(
-        `
-        SELECT 
-          id,
-          type,
-          status,
-          error,
-          attempts,
-          max_attempts,
-          created_at,
-          processed_at
-        FROM email_jobs 
-        ORDER BY created_at DESC
-        LIMIT ?
-      `,
-        [limit]
-      );
-
-      return jobs;
-    } catch (error) {
-      console.error("❌ Error getting recent email jobs:", error);
-      throw error;
-    }
-  }
-
-  // Get email statistics
-  static async getEmailStats() {
-    try {
-      const stats = await executeQuery(`
-        SELECT 
-          COUNT(*) as total_jobs,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
-          COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
-          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-          COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 END) as last_24h
-        FROM email_jobs 
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-      `);
-
-      return (
-        stats[0] || {
-          total_jobs: 0,
-          completed: 0,
-          failed: 0,
-          pending: 0,
-          last_24h: 0,
-        }
-      );
-    } catch (error) {
-      console.error("❌ Error getting email stats:", error);
-      return {
-        total_jobs: 0,
-        completed: 0,
-        failed: 0,
-        pending: 0,
-        last_24h: 0,
-      };
-    }
-  }
-
-  // Retry failed email job (for admin management)
-  static async retryFailedJob(jobId) {
-    try {
-      const result = await executeQuery(
-        `
-        UPDATE email_jobs 
-        SET status = 'pending', attempts = 0, error = NULL, updated_at = NOW()
-        WHERE id = ? AND status = 'failed'
-      `,
-        [jobId]
-      );
-
-      if (result.affectedRows > 0) {
-        console.log(`🔄 Email job ${jobId} queued for retry`);
-        return { success: true, message: "Job queued for retry" };
-      } else {
-        return {
-          success: false,
-          message: "Job not found or not in failed status",
-        };
-      }
-    } catch (error) {
-      console.error("❌ Error retrying email job:", error);
-      throw error;
-    }
-  }
-
-  // =============================================================================
-  // LEGACY METHODS - Keep for backward compatibility (but don't use in cron)
-  // =============================================================================
-
-  // Legacy method - kept for backward compatibility but not used in cron jobs
-  static async checkAndSendDocumentExpiryNotifications() {
-    console.warn(
-      "⚠️ checkAndSendDocumentExpiryNotifications is deprecated. Use processDocumentExpiryJobs instead."
-    );
-    return await this.processDocumentExpiryJobs();
   }
 }
 

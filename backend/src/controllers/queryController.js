@@ -114,7 +114,7 @@ class QueryController {
 
       // Validate status if provided
       const allowedStatuses = [
-        "pending",
+        "new",
         "in_progress",
         "completed",
         "cancelled",
@@ -312,10 +312,10 @@ class QueryController {
         });
       }
 
-      if (!status || !["new", "in_progress", "completed"].includes(status)) {
+      if (!status || !["new", "in_progress", "completed", "cancelled"].includes(status)) {
         return res.status(400).json({
           success: false,
-          message: "Valid status is required (new, in_progress, completed)",
+          message: "Valid status is required (new, in_progress, completed, cancelled)",
         });
       }
 
@@ -344,66 +344,37 @@ class QueryController {
   }
 
   // Get dashboard stats (for admin - Phase 2)
-  static async getDashboardStats(req, res) {
-    try {
-      const [totalQueries, recentQueries, todayQueries, weekQueries] =
-        await Promise.all([
-          Query.getRecentCount(365), // All queries this year
-          Query.getRecentCount(7), // Last 7 days
-          Query.getRecentCount(1), // Today
-          Query.getRecentCount(7), // This week
-        ]);
+// Get dashboard stats (for admin - Phase 2)
+static async getDashboardStats(req, res) {
+  try {
+    const [totalQueries, todayQueries, weekQueries] = await Promise.all([
+      Query.getTotalCount(), // All queries till date
+      Query.getRecentCount(1), // Today
+      Query.getRecentCount(7), // This week
+    ]);
 
-      res.json({
-        success: true,
-        message: "Dashboard stats retrieved successfully",
-        data: {
-          totalQueries,
-          recentQueries,
-          todayQueries,
-          weekQueries,
-          lastUpdated: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      console.error("Error in getDashboardStats:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve dashboard stats",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
+    res.json({
+      success: true,
+      message: "Dashboard stats retrieved successfully",
+      data: {
+        totalQueries,
+        todayQueries,
+        weekQueries,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error in getDashboardStats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve dashboard stats",
+      error:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
+}
 
-  // Test email configuration (for admin - Phase 2)
-  static async testEmail(req, res) {
-    try {
-      const result = await emailService.testEmailSetup();
 
-      if (result.success) {
-        res.json({
-          success: true,
-          message: "Email test successful. Check your inbox.",
-          messageId: result.messageId,
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          message: "Email test failed",
-          error: result.error,
-        });
-      }
-    } catch (error) {
-      console.error("Error in testEmail:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to test email configuration",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    }
-  }
 }
 
 function isValidDate(dateString) {
