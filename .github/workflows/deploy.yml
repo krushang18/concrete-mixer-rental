@@ -1,4 +1,4 @@
-name: Deploy Concrete Mixer Rental - Complete Pipeline
+name: Deploy Concrete Mixer Rental - Production
 
 on:
   push:
@@ -17,19 +17,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
 
       - name: Test Backend
         run: |
           cd backend
           npm ci
-          npm test || echo "No tests configured"
+          npm test || echo "No backend tests configured"
 
       - name: Test Admin Frontend
         run: |
@@ -37,6 +38,8 @@ jobs:
             cd admin-frontend
             npm ci
             CI=false npm run build
+          else
+            echo "Admin frontend not present, skipping"
           fi
 
   deploy:
@@ -63,12 +66,13 @@ jobs:
             cd ${{ env.DEPLOY_PATH }}
 
             git config --global --add safe.directory ${{ env.DEPLOY_PATH }}
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
 
             COMMIT=$(git rev-parse --short HEAD)
             echo "✅ Deployed commit: $COMMIT"
 
-            # ---------------- BACKEND ----------------
+            # ---------- BACKEND ----------
             echo "🔧 Deploying backend"
             cd backend
             npm ci --omit=dev
@@ -76,7 +80,7 @@ jobs:
             chmod -R 755 uploads
             cd ..
 
-            # ---------------- CUSTOMER SITE ----------------
+            # ---------- CUSTOMER SITE ----------
             if [ -d "customer-site" ]; then
               echo "🌍 Deploying customer site"
               rm -f *.html || true
@@ -87,18 +91,18 @@ jobs:
               cp -r customer-site/assets/* assets/ || true
             fi
 
-            # ---------------- ADMIN FRONTEND ----------------
+            # ---------- ADMIN FRONTEND ----------
             if [ -d "admin-frontend" ]; then
               echo "🧱 Building admin frontend"
               cd admin-frontend
               npm ci --omit=dev
 
               cat > .env.production <<EOF
-              REACT_APP_API_BASE_URL=https://fioriforrent.com/api
-              REACT_APP_ENV=production
-              REACT_APP_APP_NAME=Concrete Mixer Rental Admin
-              REACT_APP_VERSION=2.0.0
-              EOF
+                REACT_APP_API_BASE_URL=https://fioriforrent.com/api
+                REACT_APP_ENV=production
+                REACT_APP_APP_NAME=Concrete Mixer Rental Admin
+                REACT_APP_VERSION=2.0.0
+                EOF
 
               CI=false npm run build
               mkdir -p ${{ env.DEPLOY_PATH }}/admin-frontend
@@ -106,9 +110,9 @@ jobs:
               cd ..
             fi
 
-            # ---------------- PM2 ----------------
+            # ---------- PM2 ----------
             echo "♻ Restarting PM2"
-            pm2 start ecosystem.config.js --env production
+            pm2 restart ${{ env.PM2_APP_NAME }} || pm2 start ecosystem.config.js --env production
             pm2 save
 
             sleep 10
@@ -118,6 +122,7 @@ jobs:
             curl -f http://127.0.0.1:3000/health && echo "✅ Backend healthy"
 
             echo "🎉 Deployment finished successfully"
+            echo "Commit: $COMMIT"
 
   notify:
     name: Notify Result
@@ -126,5 +131,6 @@ jobs:
     if: always()
 
     steps:
-      - run: |
+      - name: Deployment status
+        run: |
           echo "Deployment status: ${{ needs.deploy.result }}"
