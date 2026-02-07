@@ -555,7 +555,7 @@ const QuotationList = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                Update Quotation Management
+                Quotation Management
               </h1>
               <p className="text-gray-600 text-sm sm:text-base mt-1">
                 Manage quotations and track delivery status

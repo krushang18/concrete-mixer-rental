@@ -67,9 +67,12 @@ class PDFService {
       // Project root directory (assuming structure: backend/src/services/pdfService.js)
       const projectRoot = path.join(__dirname, '../../');
 
+      // Debug log
+      console.log(`[PDFService] Resolving image: ${imagePath}, clean: ${cleanPath}, root: ${projectRoot}`);
+
       // 2. Try to resolve the file in multiple ways
       const candidates = [
-          // Absolute paths relative to CWD (common in dev)
+          // Absolute paths relative to CWD (common in dev/prod)
           cleanPath,
           path.join(process.cwd(), cleanPath),
           path.join(process.cwd(), 'uploads', cleanPath),
@@ -106,7 +109,7 @@ class PDFService {
           try {
               await fs.access(candidate);
               fullPath = candidate;
-              // console.log(`Image found at: ${fullPath}`); // Debug log
+              console.log(`[PDFService] Image found at: ${fullPath}`); // Debug log
               break;
           } catch (e) {
               // Path doesn't exist
