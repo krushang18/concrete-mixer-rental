@@ -22,13 +22,22 @@ class Company {
 
   // Create or update company details
   static async createOrUpdate(companyData) {
-    const existingQuery = "SELECT id FROM our_company_details LIMIT 1";
+    const existingQuery = "SELECT id, logo_url, signature_url FROM our_company_details LIMIT 1";
     const existing = await executeQuery(existingQuery);
 
     let query, params;
 
     if (existing.length > 0) {
       // Update existing
+      // Use provided URL, or fall back to existing if undefined/null, or keep null if both null.
+      // NOTE: strict check for undefined might be better, but standard pattern is usually:
+      // If we receive "null" specifically, maybe we want to clear?
+      // But here we suspect accidental clearing.
+      // Let's assume: if provided (truthy), use it. If not, keep existing.
+      
+      const newLogo = companyData.logo_url !== undefined ? companyData.logo_url : existing[0].logo_url;
+      const newSignature = companyData.signature_url !== undefined ? companyData.signature_url : existing[0].signature_url;
+
       query = `
         UPDATE our_company_details 
         SET company_name = ?, gst_number = ?, email = ?, phone = ?, phone2 = ?,
@@ -42,8 +51,8 @@ class Company {
         companyData.phone,
         companyData.phone2 || null,
         companyData.address,
-        companyData.logo_url || null,
-        companyData.signature_url || null,
+        newLogo,
+        newSignature,
         existing[0].id,
       ];
     } else {
@@ -94,23 +103,11 @@ class Company {
 
       // 🔽🔽🔽 THIS IS THE PART TO CHANGE 🔽🔽🔽
 
+      // Return with info
       return {
         ...company,
-        // Only provide the URL if the image file actually exists
-        logo_url: logoInfo.exists ? "/api/admin/company/logo" : null,
-        signature_url: signatureInfo.exists
-          ? "/api/admin/company/signature"
-          : null,
-        logo_info: {
-          ...logoInfo,
-          // Also update the info object's URL conditionally
-          url: logoInfo.exists ? "/api/admin/company/logo" : null,
-        },
-        signature_info: {
-          ...signatureInfo,
-          // Do the same for the signature
-          url: signatureInfo.exists ? "/api/admin/company/signature" : null,
-        },
+        logo_info: logoInfo,
+        signature_info: signatureInfo,
       };
 
       // 🔼🔼🔼 END OF CHANGES 🔼🔼🔼

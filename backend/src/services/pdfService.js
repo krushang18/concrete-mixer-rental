@@ -150,6 +150,11 @@ class PDFService {
       let enhancedCompanyData = {};
       if (companyResult.length > 0) {
         const company = companyResult[0];
+        
+        // Use fallbacks if DB has nulls but files might exist
+        const logoUrl = company.logo_url || '/api/admin/company/logo';
+        const signatureUrl = company.signature_url || '/api/admin/company/signature';
+
         // Map to our_ prefix to avoid collision
         enhancedCompanyData = {
             our_company_name: company.company_name,
@@ -158,16 +163,13 @@ class PDFService {
             our_phone: company.phone,
             our_phone2: company.phone2,
             our_address: company.address,
-            our_logo_url: company.logo_url,
-            our_signature_url: company.signature_url
+            our_logo_url: logoUrl,
+            our_signature_url: signatureUrl
         };
 
-        if (company.logo_url) {
-          enhancedCompanyData.logo_base64 = await PDFService.convertImageToBase64(company.logo_url);
-        }
-        if (company.signature_url) {
-          enhancedCompanyData.signature_base64 = await PDFService.convertImageToBase64(company.signature_url);
-        }
+        // Attempt to load images (will use default paths via convertImageToBase64 logic)
+        enhancedCompanyData.logo_base64 = await PDFService.convertImageToBase64(logoUrl);
+        enhancedCompanyData.signature_base64 = await PDFService.convertImageToBase64(signatureUrl);
       }
 
       return { ...quotationData, ...customerData, ...enhancedCompanyData }; // Customer first, then Our Company (prefixed) to ensure no overwrite of critical id but our vars are safe
