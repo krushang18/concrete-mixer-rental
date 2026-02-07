@@ -506,25 +506,22 @@ class Service {
 
       // Get sub-services for each category
       for (let category of categories) {
-        if (category.has_sub_services) {
-          const subServicesQuery = `
-            SELECT 
-              id,
-              name,
-              description,
-              display_order
-            FROM service_sub_items
-            WHERE category_id = ? AND is_active = 1
-            ORDER BY display_order ASC, name ASC
-          `;
+        // Always try to fetch sub-services, don't rely on the potentially out-of-sync flag
+        const subServicesQuery = `
+          SELECT 
+            id,
+            name,
+            description,
+            display_order
+          FROM service_sub_items
+          WHERE category_id = ? AND is_active = 1
+          ORDER BY display_order ASC, name ASC
+        `;
 
-          const subServices = await executeQuery(subServicesQuery, [
-            category.id,
-          ]);
-          category.sub_services = subServices;
-        } else {
-          category.sub_services = [];
-        }
+        const subServices = await executeQuery(subServicesQuery, [
+          category.id,
+        ]);
+        category.sub_services = subServices;
       }
 
       return categories;
