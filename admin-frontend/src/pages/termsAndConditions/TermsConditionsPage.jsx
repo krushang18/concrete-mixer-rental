@@ -227,7 +227,7 @@ const TermsConditionsPage = () => {
            </span>
            {/* <span className="text-xs text-gray-400">
               Last updated: {new Date(term.updated_at || term.created_at).toLocaleDateString()}
-           </span> */}
+           </span>  */}
         </div>
       </div>
     );
