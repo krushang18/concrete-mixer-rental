@@ -1,136 +1,84 @@
-name: Deploy Concrete Mixer Rental - Production
+name: Deploy Concrete Mixer Rental
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 env:
   NODE_VERSION: "20"
-  PM2_APP_NAME: "concrete-mixer-api"
   DEPLOY_PATH: "/var/www/fioriforrent.com"
+  PM2_APP_NAME: "concrete-mixer-api"
 
 jobs:
-  test:
-    name: Test Applications
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Test Backend
-        run: |
-          cd backend
-          npm ci
-          npm test || echo "No backend tests configured"
-
-      - name: Test Admin Frontend
-        run: |
-          if [ -d "admin-frontend" ]; then
-            cd admin-frontend
-            npm ci
-            CI=false npm run build
-          else
-            echo "Admin frontend not present, skipping"
-          fi
-
-  deploy:
-    name: Deploy to Production
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
+          username: krushang
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: 22
           timeout: 300s
           command_timeout: 900s
 
           script: |
             set -e
+
             echo "🚀 Deployment started at $(date)"
 
-            cd ${{ env.DEPLOY_PATH }}
+            cd /var/www/fioriforrent.com
 
-            git config --global --add safe.directory ${{ env.DEPLOY_PATH }}
+            echo "📦 Pulling latest code"
             git fetch origin
             git reset --hard origin/main
 
             COMMIT=$(git rev-parse --short HEAD)
-            echo "✅ Deployed commit: $COMMIT"
+            echo "✅ Commit: $COMMIT"
 
-            # ---------- BACKEND ----------
-            echo "🔧 Deploying backend"
+            # ================= BACKEND =================
+            echo "🔧 Backend setup"
             cd backend
             npm ci --omit=dev
             mkdir -p uploads/{company,quotations,signatures,temp}
             chmod -R 755 uploads
+            pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
             cd ..
 
-            # ---------- CUSTOMER SITE ----------
-            if [ -d "customer-site" ]; then
-              echo "🌍 Deploying customer site"
-              rm -f *.html || true
-              cp customer-site/*.html . || true
-              cp customer-site/robots.txt . || true
-              cp customer-site/sitemap.xml . || true
-              mkdir -p assets
-              cp -r customer-site/assets/* assets/ || true
-            fi
+            # ================= ADMIN FRONTEND =================
+            echo "🧱 Building admin frontend"
+            cd admin-frontend
+            npm ci --omit=dev
 
-            # ---------- ADMIN FRONTEND ----------
-            if [ -d "admin-frontend" ]; then
-              echo "🧱 Building admin frontend"
-              cd admin-frontend
-              npm ci --omit=dev
+            cat > .env.production <<'EOF'
+            REACT_APP_API_BASE_URL=https://fioriforrent.com/api
+            REACT_APP_ENV=production
+            REACT_APP_APP_NAME=Concrete Mixer Rental Admin
+            REACT_APP_VERSION=2.0.0
+            EOF
 
-              cat > .env.production <<EOF
-                REACT_APP_API_BASE_URL=https://fioriforrent.com/api
-                REACT_APP_ENV=production
-                REACT_APP_APP_NAME=Concrete Mixer Rental Admin
-                REACT_APP_VERSION=2.0.0
-                EOF
+            CI=false npm run build
 
-              CI=false npm run build
-              mkdir -p ${{ env.DEPLOY_PATH }}/admin-frontend
-              cp -r build/* ${{ env.DEPLOY_PATH }}/admin-frontend/
-              cd ..
-            fi
+            sudo mkdir -p /var/www/fioriforrent.com/admin
+            sudo rsync -a --delete build/ /var/www/fioriforrent.com/admin/
+            cd ..
 
-            # ---------- PM2 ----------
-            echo "♻ Restarting PM2"
-            pm2 restart ${{ env.PM2_APP_NAME }} || pm2 start ecosystem.config.js --env production
+            # ================= CUSTOMER SITE =================
+            echo "🌍 Deploying customer site"
+            sudo rsync -a --delete customer-site/ /var/www/fioriforrent.com/customer-site/
+
+            # ================= PM2 =================
+            echo "♻ Saving PM2 state"
             pm2 save
 
-            sleep 10
+            # ================= HEALTH CHECK =================
+            sleep 5
+            curl -f http://127.0.0.1:3000/health
 
-            pm2 list | grep ${{ env.PM2_APP_NAME }}
-
-            curl -f http://127.0.0.1:3000/health && echo "✅ Backend healthy"
-
-            echo "🎉 Deployment finished successfully"
+            echo "🎉 Deployment successful"
             echo "Commit: $COMMIT"
-
-  notify:
-    name: Notify Result
-    needs: deploy
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: Deployment status
-        run: |
-          echo "Deployment status: ${{ needs.deploy.result }}"

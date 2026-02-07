@@ -1113,12 +1113,6 @@ const ServiceCategoriesManagement = () => {
           selectedCategoryId={selectedCategoryForSub}
           categories={categories}
           isLoading={subServiceMutation.isPending}
-          onClose={closeSubServiceModal}
-          onSubmit={handleSubServiceSubmit}
-          editingSubService={editingSubService}
-          selectedCategoryId={selectedCategoryForSub}
-          categories={categories}
-          isLoading={subServiceMutation.isPending}
         />
 
         <ConfirmDialog

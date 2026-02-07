@@ -54,9 +54,6 @@ class PDFService {
       // 1. Clean the path
       let cleanPath = imagePath;
       if (cleanPath.startsWith("http")) {
-          // If it's a full URL, try to extract the relative path if it matches our domain/port
-          // For now, let's assume if it's http, we might need to fetch it or finding local path.
-          // Simplest approach: if it looks like a local upload URL (e.g. /uploads/...), use that.
           try {
              const url = new URL(cleanPath);
              cleanPath = url.pathname;
@@ -67,29 +64,40 @@ class PDFService {
       
       if (cleanPath.startsWith("/")) cleanPath = cleanPath.slice(1);
 
+      // Project root directory (assuming structure: backend/src/services/pdfService.js)
+      const projectRoot = path.join(__dirname, '../../');
+
       // 2. Try to resolve the file in multiple ways
       const candidates = [
-          cleanPath,                                      // As is (relative to cwd)
-          path.join(process.cwd(), cleanPath),            // Absolute from cwd
-          path.join(process.cwd(), 'uploads', cleanPath), // In uploads dir
-          path.join(process.cwd(), 'uploads', 'company', cleanPath), // In uploads/company specifically (common for logo/signature)
-          path.join(process.cwd(), 'src', 'uploads', cleanPath) 
+          // Absolute paths relative to CWD (common in dev)
+          cleanPath,
+          path.join(process.cwd(), cleanPath),
+          path.join(process.cwd(), 'uploads', cleanPath),
+          
+          // Paths relative to this file's location (src/services) -> up to backend root
+          path.join(projectRoot, cleanPath),
+          path.join(projectRoot, 'uploads', cleanPath),
+          path.join(projectRoot, 'uploads', 'company', cleanPath),
+
+          // Fallbacks for specific common locations if path is just a filename
+          path.join(process.cwd(), 'uploads', 'company', cleanPath), 
+          path.join(projectRoot, 'uploads', 'company', path.basename(cleanPath))
       ];
       
-      // If path already has 'uploads/', try without it (in case we double added)
+      // If path resolved to include 'uploads/' twice, try without it
       if (cleanPath.includes('uploads/')) {
-          candidates.push(path.join(process.cwd(), cleanPath.replace('uploads/', '')));
+          const stripped = cleanPath.replace('uploads/', '');
+          candidates.push(path.join(process.cwd(), stripped));
+          candidates.push(path.join(projectRoot, stripped));
       }
 
-      // Special handling for API endpoints that map to static files
+      // Special handling for API endpoints that map to specific files
       if (imagePath.includes('api/admin/company/logo')) {
-          candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'logo.jpg'));
-          candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'logo.jpeg'));
+          candidates.unshift(path.join(projectRoot, 'uploads', 'company', 'logo.png'));
           candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'logo.png'));
       }
       if (imagePath.includes('api/admin/company/signature')) {
-          candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'signature.jpg'));
-          candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'signature.jpeg'));
+          candidates.unshift(path.join(projectRoot, 'uploads', 'company', 'signature.png'));
           candidates.unshift(path.join(process.cwd(), 'uploads', 'company', 'signature.png'));
       }
 
@@ -98,24 +106,27 @@ class PDFService {
           try {
               await fs.access(candidate);
               fullPath = candidate;
+              // console.log(`Image found at: ${fullPath}`); // Debug log
               break;
           } catch (e) {
-              // Only log if verbose debugging
+              // Path doesn't exist
           }
       }
 
       if (!fullPath) {
-          console.warn(`Image not found: ${imagePath} (tried: ${candidates.join(', ')})`);
+          console.warn(`[PDFService] Image NOT found: ${imagePath}`);
+          console.warn(`[PDFService] Tried paths:\n${candidates.join('\n')}`);
           return null;
       }
 
       const imageBuffer = await fs.readFile(fullPath);
       const ext = path.extname(fullPath).toLowerCase();
-      const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+      // Default to png if no extension or unknown
+      const mimeType = (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg' : 'image/png';
       
       return `data:${mimeType};base64,${imageBuffer.toString("base64")}`;
     } catch (error) {
-      console.error("Error converting image:", error);
+      console.error(`[PDFService] Error converting image ${imagePath}:`, error.message);
       return null;
     }
   }
