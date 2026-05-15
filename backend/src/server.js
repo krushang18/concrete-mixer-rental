@@ -61,6 +61,8 @@ const startServer = async () => {
       console.log("✅ SERVER IS READY TO ACCEPT CONNECTIONS!");
       console.log("🌟 " + "=".repeat(50));
       console.log("");
+      // Signal PM2 that the app is ready (required when wait_ready: true in ecosystem.config.js)
+      if (process.send) process.send("ready");
 
       // Log additional info for development
       if (NODE_ENV === "development") {
