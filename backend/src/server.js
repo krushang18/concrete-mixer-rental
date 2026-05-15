@@ -7,7 +7,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 
 // Import services for cleanup
 const EmailSchedulerService = require("./services/schedulerService");
-const { closePool } = require("./config/database");
+const { disconnectDB } = require("./config/database");
 
 // Server instance
 let server = null;
@@ -200,7 +200,7 @@ const gracefulShutdown = async (signal) => {
 
     console.log("🗄️ Closing database connections...");
     try {
-      await closePool();
+      await disconnectDB();
       console.log("✅ Database connections closed");
     } catch (error) {
       console.warn("⚠️ Error closing database connections:", error.message);

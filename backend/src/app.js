@@ -23,7 +23,7 @@ const documentRoutes = require("./routes/documentRoutes");
 // API Routes
 
 const { testEmailConnection } = require("./config/email");
-const { testConnection } = require("./config/database");
+const { testConnection, disconnectDB } = require("./config/database");
 
 // Import services for initialization
 const EmailSchedulerService = require("./services/schedulerService");
@@ -341,8 +341,8 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // MySQL specific errors
-  if (err.code === "ER_DUP_ENTRY") {
+  // Prisma specific errors
+  if (err.code === "P2002") {
     return res.status(409).json({
       success: false,
       message: "Duplicate entry",
@@ -350,7 +350,7 @@ app.use((err, req, res, next) => {
     });
   }
 
-  if (err.code === "ER_NO_REFERENCED_ROW_2") {
+  if (err.code === "P2003") {
     return res.status(400).json({
       success: false,
       message: "Reference error",
@@ -358,19 +358,11 @@ app.use((err, req, res, next) => {
     });
   }
 
-  if (err.code === "ER_ROW_IS_REFERENCED_2") {
-    return res.status(400).json({
+  if (err.code === "P2025") {
+    return res.status(404).json({
       success: false,
-      message: "Cannot delete record",
-      error: "Record is referenced by other data",
-    });
-  }
-
-  if (err.code === "ER_BAD_FIELD_ERROR") {
-    return res.status(400).json({
-      success: false,
-      message: "Database field error",
-      error: "Invalid field in database query",
+      message: "Record not found",
+      error: "The requested record does not exist",
     });
   }
 
@@ -474,10 +466,7 @@ const initializeApp = async () => {
     console.log("🔐 Validating environment configuration...");
     const requiredEnvVars = [
       "JWT_SECRET",
-      "DB_HOST",
-      "DB_USER",
-      "DB_PASSWORD",
-      "DB_NAME",
+      "DATABASE_URL",
     ];
 
     const missingEnvVars = requiredEnvVars.filter(
@@ -535,7 +524,7 @@ const initializeApp = async () => {
 };
 
 // Graceful shutdown
-const gracefulShutdown = () => {
+const gracefulShutdown = async () => {
   console.log("\n🛑 Received shutdown signal, closing server gracefully...");
 
   // Stop email scheduler
@@ -546,9 +535,9 @@ const gracefulShutdown = () => {
     console.error("❌ Error stopping email scheduler:", error);
   }
 
-  // Close database connections if available
+  // Close database connections
   try {
-    // Add database connection cleanup here if needed
+    await disconnectDB();
     console.log("✅ Database connections closed");
   } catch (error) {
     console.error("❌ Error closing database connections:", error);

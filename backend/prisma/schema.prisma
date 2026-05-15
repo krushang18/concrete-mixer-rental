@@ -1,0 +1,359 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum QueryStatus {
+  new
+  contacted
+  closed
+}
+
+enum QuotationStatus {
+  draft
+  sent
+  accepted
+  rejected
+}
+
+enum DeliveryStatus {
+  pending
+  delivered
+}
+
+enum EmailJobStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum DocumentType {
+  RC_Book
+  PUC
+  Fitness
+  Insurance
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id                Int       @id @default(autoincrement())
+  username          String    @unique @db.VarChar(100)
+  password          String    @db.VarChar(255)
+  email             String?   @db.VarChar(255)
+  lastLogin         DateTime? @map("last_login")
+  resetToken        String?   @map("reset_token") @db.VarChar(255)
+  resetTokenExpires DateTime? @map("reset_token_expires")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  quotations           Quotation[]
+  notificationDefaults NotificationDefault[]
+
+  @@map("users")
+}
+
+model Machine {
+  id            Int    @id @default(autoincrement())
+  machineNumber String @unique @map("machine_number") @db.VarChar(50)
+  name          String @db.VarChar(255)
+  description   String? @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  serviceRecords ServiceRecord[]
+  documents      MachineDocument[]
+
+  @@map("machines")
+}
+
+model QuotationMachine {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  priceByDay    Decimal? @db.Decimal(10, 2)
+  priceByWeek   Decimal? @db.Decimal(10, 2)
+  priceByMonth  Decimal? @db.Decimal(10, 2)
+  gstPercentage Decimal  @default(18.00) @map("gst_percentage") @db.Decimal(5, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  quotationItems QuotationItem[]
+
+  @@map("quotation_machines")
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  companyName   String   @map("company_name") @db.VarChar(255)
+  contactPerson String?  @map("contact_person") @db.VarChar(255)
+  email         String?  @db.VarChar(255)
+  phone         String?  @db.VarChar(20)
+  address       String?  @db.Text
+  siteLocation  String?  @map("site_location") @db.VarChar(255)
+  gstNumber     String?  @map("gst_number") @db.VarChar(50)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  quotations Quotation[]
+
+  @@map("customers")
+}
+
+model CustomerQuery {
+  id              Int         @id @default(autoincrement())
+  companyName     String?     @map("company_name") @db.VarChar(255)
+  email           String?     @db.VarChar(255)
+  siteLocation    String?     @map("site_location") @db.VarChar(255)
+  contactNumber   String?     @map("contact_number") @db.VarChar(20)
+  duration        String?     @db.VarChar(100)
+  workDescription String?     @map("work_description") @db.Text
+  status          QueryStatus @default(new)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("customer_queries")
+}
+
+model QuotationCounter {
+  id            Int      @id
+  currentNumber Int      @default(0) @map("current_number")
+  lastUpdated   DateTime @updatedAt @map("last_updated")
+
+  @@map("quotation_counter")
+}
+
+model Quotation {
+  id                Int             @id @default(autoincrement())
+  quotationNumber   String          @unique @map("quotation_number") @db.VarChar(50)
+  customerName      String?         @map("customer_name") @db.VarChar(255)
+  customerContact   String?         @map("customer_contact") @db.VarChar(20)
+  companyName       String?         @map("company_name") @db.VarChar(255)
+  customerGstNumber String?         @map("customer_gst_number") @db.VarChar(50)
+  customerId        Int?            @map("customer_id")
+  subtotal          Decimal         @default(0.00) @db.Decimal(12, 2)
+  totalGstAmount    Decimal         @default(0.00) @map("total_gst_amount") @db.Decimal(12, 2)
+  grandTotal        Decimal         @default(0.00) @map("grand_total") @db.Decimal(12, 2)
+  termsText         String?         @map("terms_text") @db.Text
+  additionalNotes   String?         @map("additional_notes") @db.Text
+  quotationStatus   QuotationStatus @default(draft) @map("quotation_status")
+  deliveryStatus    DeliveryStatus  @default(pending) @map("delivery_status")
+  createdBy         Int?            @map("created_by")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  customer      Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdByUser User?           @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  items         QuotationItem[]
+
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id                 Int      @id @default(autoincrement())
+  quotationId        Int      @map("quotation_id")
+  itemType           String   @default("machine") @map("item_type") @db.VarChar(50)
+  quotationMachineId Int?     @map("quotation_machine_id")
+  description        String?  @db.Text
+  durationType       String?  @map("duration_type") @db.VarChar(50)
+  quantity           Decimal  @default(1.00) @db.Decimal(10, 2)
+  unitPrice          Decimal  @default(0.00) @map("unit_price") @db.Decimal(12, 2)
+  gstPercentage      Decimal  @default(0.00) @map("gst_percentage") @db.Decimal(5, 2)
+  gstAmount          Decimal  @default(0.00) @map("gst_amount") @db.Decimal(12, 2)
+  totalAmount        Decimal  @default(0.00) @map("total_amount") @db.Decimal(12, 2)
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  quotation        Quotation         @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  quotationMachine QuotationMachine? @relation(fields: [quotationMachineId], references: [id], onDelete: SetNull)
+
+  @@map("quotation_items")
+}
+
+model ServiceCategory {
+  id             Int      @id @default(autoincrement())
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  hasSubServices Boolean  @default(true) @map("has_sub_services")
+  isActive       Boolean  @default(true) @map("is_active")
+  displayOrder   Int      @default(0) @map("display_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  subItems       ServiceSubItem[]
+  recordServices ServiceRecordService[]
+
+  @@map("service_categories")
+}
+
+model ServiceSubItem {
+  id           Int      @id @default(autoincrement())
+  categoryId   Int      @map("category_id")
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  category          ServiceCategory           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  recordSubServices ServiceRecordSubService[]
+
+  @@map("service_sub_items")
+}
+
+model ServiceRecord {
+  id           Int      @id @default(autoincrement())
+  machineId    Int      @map("machine_id")
+  serviceDate  DateTime @map("service_date") @db.Date
+  engineHours  Decimal? @map("engine_hours") @db.Decimal(10, 2)
+  siteLocation String?  @map("site_location") @db.VarChar(255)
+  operator     String?  @db.VarChar(255)
+  generalNotes String?  @map("general_notes") @db.Text
+  createdBy    Int?     @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  machine  Machine                @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  services ServiceRecordService[]
+
+  @@map("service_records")
+}
+
+model ServiceRecordService {
+  id                Int      @id @default(autoincrement())
+  serviceRecordId   Int      @map("service_record_id")
+  serviceCategoryId Int      @map("service_category_id")
+  wasPerformed      Boolean  @default(false) @map("was_performed")
+  serviceNotes      String?  @map("service_notes") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  serviceRecord   ServiceRecord           @relation(fields: [serviceRecordId], references: [id], onDelete: Cascade)
+  serviceCategory ServiceCategory         @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+  subServices     ServiceRecordSubService[]
+
+  @@map("service_record_services")
+}
+
+model ServiceRecordSubService {
+  id                     Int      @id @default(autoincrement())
+  serviceRecordServiceId Int      @map("service_record_service_id")
+  subServiceId           Int      @map("sub_service_id")
+  wasPerformed           Boolean  @default(false) @map("was_performed")
+  subServiceNotes        String?  @map("sub_service_notes") @db.Text
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  serviceRecordService ServiceRecordService @relation(fields: [serviceRecordServiceId], references: [id], onDelete: Cascade)
+  subService           ServiceSubItem       @relation(fields: [subServiceId], references: [id], onDelete: Cascade)
+
+  @@map("service_record_sub_services")
+}
+
+model MachineDocument {
+  id              Int          @id @default(autoincrement())
+  machineId       Int          @map("machine_id")
+  documentType    DocumentType @map("document_type")
+  expiryDate      DateTime     @map("expiry_date") @db.Date
+  lastRenewedDate DateTime?    @map("last_renewed_date") @db.Date
+  remarks         String?      @db.Text
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  machine          Machine                   @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  notifications    DocumentNotification[]
+  notificationLogs DocumentNotificationLog[]
+
+  @@unique([machineId, documentType])
+  @@map("machine_documents")
+}
+
+model DocumentNotification {
+  id                Int      @id @default(autoincrement())
+  machineDocumentId Int      @map("machine_document_id")
+  daysBefore        Int      @map("days_before")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  machineDocument MachineDocument @relation(fields: [machineDocumentId], references: [id], onDelete: Cascade)
+
+  @@map("document_notifications")
+}
+
+model DocumentNotificationLog {
+  id                Int      @id @default(autoincrement())
+  machineDocumentId Int      @map("machine_document_id")
+  daysBefore        Int?     @map("days_before")
+  sentAt            DateTime @default(now()) @map("sent_at")
+  status            String?  @db.VarChar(50)
+  errorMessage      String?  @map("error_message") @db.Text
+
+  machineDocument MachineDocument @relation(fields: [machineDocumentId], references: [id], onDelete: Cascade)
+
+  @@map("document_notification_logs")
+}
+
+model NotificationDefault {
+  id           Int          @id @default(autoincrement())
+  documentType DocumentType @map("document_type")
+  daysBefore   Json         @map("days_before")
+  createdBy    Int?         @map("created_by")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  creator User? @relation(fields: [createdBy], references: [id])
+
+  @@map("notification_defaults")
+}
+
+model EmailJob {
+  id           Int            @id @default(autoincrement())
+  type         String         @db.VarChar(100)
+  data         Json?
+  status       EmailJobStatus @default(pending)
+  attempts     Int            @default(0)
+  maxAttempts  Int            @default(3) @map("max_attempts")
+  scheduledFor DateTime?      @map("scheduled_for")
+  processedAt  DateTime?      @map("processed_at")
+  error        String?        @db.Text
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([status, scheduledFor])
+  @@map("email_jobs")
+}
+
+model OurCompanyDetails {
+  id           Int      @id @default(autoincrement())
+  companyName  String?  @map("company_name") @db.VarChar(255)
+  gstNumber    String?  @map("gst_number") @db.VarChar(50)
+  email        String?  @db.VarChar(255)
+  phone        String?  @db.VarChar(20)
+  phone2       String?  @db.VarChar(20)
+  address      String?  @db.Text
+  logoUrl      String?  @map("logo_url") @db.VarChar(500)
+  signatureUrl String?  @map("signature_url") @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("our_company_details")
+}
+
+model TermsCondition {
+  id           Int      @id @default(autoincrement())
+  title        String?  @db.VarChar(255)
+  description  String?  @db.Text
+  isDefault    Boolean  @default(false) @map("is_default")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("terms_conditions")
+}

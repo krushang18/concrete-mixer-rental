@@ -1,465 +1,255 @@
-const { executeQuery } = require("../config/database");
+const { prisma } = require("../config/database");
+
+// Compute days until expiry and status from a Date object
+function computeStatus(expiryDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate);
+  expiry.setHours(0, 0, 0, 0);
+  const daysUntilExpiry = Math.round((expiry - today) / 86400000);
+  let status = "OK";
+  if (daysUntilExpiry <= 0) status = "EXPIRED";
+  else if (daysUntilExpiry <= 3) status = "CRITICAL";
+  else if (daysUntilExpiry <= 7) status = "WARNING";
+  else if (daysUntilExpiry <= 14) status = "NOTICE";
+  return { daysUntilExpiry, status };
+}
 
 class Document {
-  // Get all machine documents with expiry information
   static async getAll(filters = {}) {
     try {
-      let query = `
-        SELECT 
-          md.id,
-          md.machine_id,
-          m.machine_number,
-          m.name as machine_name,
-          md.document_type,
-          md.expiry_date,
-          md.last_renewed_date,
-          md.remarks,
-          md.created_at,
-          md.updated_at,
-          DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry,
-          CASE 
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 0 THEN 'EXPIRED'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 3 THEN 'CRITICAL'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 7 THEN 'WARNING'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 14 THEN 'NOTICE'
-            ELSE 'OK'
-          END as status,
-          GROUP_CONCAT(dn.days_before ORDER BY dn.days_before) as notification_days
-        FROM machine_documents md
-        JOIN machines m ON md.machine_id = m.id
-        LEFT JOIN document_notifications dn ON md.id = dn.machine_document_id AND dn.is_active = 1
-      `;
+      const where = {};
+      if (filters.machine_id) where.machineId = parseInt(filters.machine_id);
+      if (filters.document_type) where.documentType = filters.document_type;
 
-      const conditions = [];
-      const params = [];
+      // Status/expiry filters applied in JS after fetch since they need computed fields
+      const docs = await prisma.machineDocument.findMany({
+        where,
+        include: {
+          machine: { select: { machineNumber: true, name: true } },
+          notifications: { where: { isActive: true }, select: { daysBefore: true } },
+        },
+        orderBy: { expiryDate: "asc" },
+      });
 
-      // Apply filters
-      if (filters.machine_id) {
-        conditions.push("md.machine_id = ?");
-        params.push(filters.machine_id);
-      }
+      let result = docs.map((md) => {
+        const { daysUntilExpiry, status } = computeStatus(md.expiryDate);
+        return {
+          id: md.id,
+          machine_id: md.machineId,
+          machine_number: md.machine?.machineNumber,
+          machine_name: md.machine?.name,
+          document_type: md.documentType,
+          expiry_date: md.expiryDate,
+          last_renewed_date: md.lastRenewedDate,
+          remarks: md.remarks,
+          created_at: md.createdAt,
+          updated_at: md.updatedAt,
+          days_until_expiry: daysUntilExpiry,
+          status,
+          notification_days: md.notifications.map((n) => n.daysBefore).join(","),
+        };
+      });
 
-      if (filters.document_type) {
-        conditions.push("md.document_type = ?");
-        params.push(filters.document_type);
-      }
-
+      // Apply status filter in memory
       if (filters.status) {
-        switch (filters.status) {
-          case "expired":
-            conditions.push("DATEDIFF(md.expiry_date, CURDATE()) <= 0");
-            break;
-          case "critical":
-            conditions.push(
-              "DATEDIFF(md.expiry_date, CURDATE()) BETWEEN 1 AND 3"
-            );
-            break;
-          case "warning":
-            conditions.push(
-              "DATEDIFF(md.expiry_date, CURDATE()) BETWEEN 4 AND 7"
-            );
-            break;
-          case "notice":
-            conditions.push(
-              "DATEDIFF(md.expiry_date, CURDATE()) BETWEEN 8 AND 14"
-            );
-            break;
-          case "expiring_soon":
-            conditions.push("DATEDIFF(md.expiry_date, CURDATE()) <= 14");
-            break;
-        }
+        const statusMap = { expired: "EXPIRED", critical: "CRITICAL", warning: "WARNING", notice: "NOTICE", expiring_soon: ["EXPIRED", "CRITICAL", "WARNING", "NOTICE"] };
+        const target = statusMap[filters.status];
+        if (Array.isArray(target)) result = result.filter((d) => target.includes(d.status));
+        else result = result.filter((d) => d.status === target);
       }
-
       if (filters.expiring_within_days) {
-        conditions.push("DATEDIFF(md.expiry_date, CURDATE()) <= ?");
-        params.push(parseInt(filters.expiring_within_days));
+        result = result.filter((d) => d.days_until_expiry <= parseInt(filters.expiring_within_days));
       }
 
-      if (conditions.length > 0) {
-        query += " WHERE " + conditions.join(" AND ");
-      }
-
-      query += " GROUP BY md.id ORDER BY md.expiry_date ASC";
-
-      const documents = await executeQuery(query, params);
-      return documents;
+      return result;
     } catch (error) {
       console.error("Error getting all documents:", error);
       throw error;
     }
   }
 
-  // Get document by ID
   static async getById(id) {
     try {
-      const query = `
-        SELECT 
-          md.*,
-          m.machine_number,
-          m.name as machine_name,
-          DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry,
-          CASE 
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 0 THEN 'EXPIRED'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 3 THEN 'CRITICAL'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 7 THEN 'WARNING'
-            WHEN DATEDIFF(md.expiry_date, CURDATE()) <= 14 THEN 'NOTICE'
-            ELSE 'OK'
-          END as status
-        FROM machine_documents md
-        JOIN machines m ON md.machine_id = m.id
-        WHERE md.id = ?
-        LIMIT 1
-      `;
-
-      const result = await executeQuery(query, [id]);
-      return result[0] || null;
+      const md = await prisma.machineDocument.findUnique({
+        where: { id: parseInt(id) },
+        include: { machine: { select: { machineNumber: true, name: true } } },
+      });
+      if (!md) return null;
+      const { daysUntilExpiry, status } = computeStatus(md.expiryDate);
+      return {
+        id: md.id, machine_id: md.machineId, machine_number: md.machine?.machineNumber, machine_name: md.machine?.name,
+        document_type: md.documentType, expiry_date: md.expiryDate, last_renewed_date: md.lastRenewedDate,
+        remarks: md.remarks, created_at: md.createdAt, updated_at: md.updatedAt, days_until_expiry: daysUntilExpiry, status,
+      };
     } catch (error) {
       console.error("Error getting document by ID:", error);
       throw error;
     }
   }
 
-  // Get documents for a specific machine
   static async getByMachine(machineId) {
-    try {
-      return await this.getAll({ machine_id: machineId });
-    } catch (error) {
-      console.error("Error getting documents by machine:", error);
-      throw error;
-    }
+    return this.getAll({ machine_id: machineId });
   }
 
-  // Create or update machine document
   static async createOrUpdate(documentData) {
     try {
-      const {
-        machine_id,
-        document_type,
-        expiry_date,
-        last_renewed_date,
-        remarks,
-        notification_days, // Extract notification_days
-      } = documentData;
+      const { machine_id, document_type, expiry_date, last_renewed_date, remarks, notification_days } = documentData;
 
-      // Validate required fields
       const validation = this.validateDocumentData(documentData);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          message: "Validation failed",
-          errors: validation.errors,
-        };
-      }
+      if (!validation.isValid) return { success: false, message: "Validation failed", errors: validation.errors };
 
+      const existing = await prisma.machineDocument.findFirst({ where: { machineId: parseInt(machine_id), documentType: document_type } });
       let documentId;
       let action;
 
-      // Check if document already exists for this machine
-      const existingDoc = await executeQuery(
-        "SELECT id FROM machine_documents WHERE machine_id = ? AND document_type = ?",
-        [machine_id, document_type]
-      );
-
-      if (existingDoc.length > 0) {
-        // Update existing document
-        documentId = existingDoc[0].id;
+      if (existing) {
+        documentId = existing.id;
         action = "updated";
-        
-        const query = `
-          UPDATE machine_documents 
-          SET 
-            expiry_date = ?,
-            last_renewed_date = ?,
-            remarks = ?,
-            updated_at = NOW()
-          WHERE id = ?
-        `;
-
-        await executeQuery(query, [
-          expiry_date,
-          last_renewed_date || null,
-          remarks || null,
-          documentId,
-        ]);
+        await prisma.machineDocument.update({
+          where: { id: documentId },
+          data: { expiryDate: new Date(expiry_date), lastRenewedDate: last_renewed_date ? new Date(last_renewed_date) : null, remarks: remarks || null },
+        });
       } else {
-        // Create new document
         action = "created";
-        
-        const query = `
-          INSERT INTO machine_documents (
-            machine_id,
-            document_type,
-            expiry_date,
-            last_renewed_date,
-            remarks,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-        `;
-
-        const result = await executeQuery(query, [
-          machine_id,
-          document_type,
-          expiry_date,
-          last_renewed_date || null,
-          remarks || null,
-        ]);
-        
-        documentId = result.insertId;
+        const created = await prisma.machineDocument.create({
+          data: { machineId: parseInt(machine_id), documentType: document_type, expiryDate: new Date(expiry_date), lastRenewedDate: last_renewed_date ? new Date(last_renewed_date) : null, remarks: remarks || null },
+        });
+        documentId = created.id;
       }
 
-      // Handle Notifications if provided
       if (notification_days) {
-        let daysArray = [];
-        if (Array.isArray(notification_days)) {
-          daysArray = notification_days;
-        } else if (typeof notification_days === 'string') {
-          // Try to parse if string
-          try {
-             const parts = notification_days.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
-             if (parts.length > 0) daysArray = parts;
-          } catch (e) { console.warn("Failed to parse notification days", e); }
-        }
-
-        if (daysArray.length > 0) {
-           await this.configureNotifications(documentId, daysArray);
-        }
+        let daysArray = Array.isArray(notification_days) ? notification_days : (typeof notification_days === "string" ? notification_days.split(",").map((d) => parseInt(d.trim())).filter((n) => !isNaN(n)) : []);
+        if (daysArray.length > 0) await this.configureNotifications(documentId, daysArray);
       }
 
-      return {
-        success: true,
-        id: documentId,
-        message: `Document ${action} successfully`,
-        action: action,
-      };
+      return { success: true, id: documentId, message: `Document ${action} successfully`, action };
     } catch (error) {
       console.error("Error creating/updating document:", error);
       throw error;
     }
   }
 
-  // Update document expiry date (renewal)
   static async renew(id, newExpiryDate, remarks) {
     try {
       const document = await this.getById(id);
-      if (!document) {
-        return {
-          success: false,
-          message: "Document not found",
-        };
-      }
+      if (!document) return { success: false, message: "Document not found" };
 
-      const query = `
-        UPDATE machine_documents 
-        SET 
-          expiry_date = ?,
-          last_renewed_date = CURDATE(),
-          remarks = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `;
-
-      await executeQuery(query, [newExpiryDate, remarks || null, id]);
-
-      // Clear any sent notifications for this document
-      await executeQuery(
-        "DELETE FROM document_notification_logs WHERE machine_document_id = ?",
-        [id]
-      );
-
-      return {
-        success: true,
-        message: "Document renewed successfully",
-      };
+      await prisma.machineDocument.update({
+        where: { id: parseInt(id) },
+        data: { expiryDate: new Date(newExpiryDate), lastRenewedDate: new Date(), remarks: remarks || null },
+      });
+      await prisma.documentNotificationLog.deleteMany({ where: { machineDocumentId: parseInt(id) } });
+      return { success: true, message: "Document renewed successfully" };
     } catch (error) {
       console.error("Error renewing document:", error);
       throw error;
     }
   }
 
-  // Delete document
   static async delete(id) {
     try {
       const document = await this.getById(id);
-      if (!document) {
-        return {
-          success: false,
-          message: "Document not found",
-        };
-      }
-
-      // Delete related notifications first
-      await executeQuery(
-        "DELETE FROM document_notifications WHERE machine_document_id = ?",
-        [id]
-      );
-      await executeQuery(
-        "DELETE FROM document_notification_logs WHERE machine_document_id = ?",
-        [id]
-      );
-
-      // Delete the document
-      await executeQuery("DELETE FROM machine_documents WHERE id = ?", [id]);
-
-      return {
-        success: true,
-        message: "Document deleted successfully",
-      };
+      if (!document) return { success: false, message: "Document not found" };
+      // Cascade via FK handles notifications and logs
+      await prisma.machineDocument.delete({ where: { id: parseInt(id) } });
+      return { success: true, message: "Document deleted successfully" };
     } catch (error) {
       console.error("Error deleting document:", error);
       throw error;
     }
   }
 
-  // Get expiring documents for notifications
   static async getExpiringDocuments(daysAhead = 14) {
     try {
-      const query = `
-        SELECT 
-          md.id,
-          md.machine_id,
-          m.machine_number,
-          m.name as machine_name,
-          md.document_type,
-          md.expiry_date,
-          DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry
-        FROM machine_documents md
-        JOIN machines m ON md.machine_id = m.id
-        JOIN machines m ON md.machine_id = m.id
-        WHERE md.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
-        ORDER BY md.expiry_date ASC
-      `;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const cutoff = new Date(today.getTime() + daysAhead * 86400000);
+      cutoff.setHours(23, 59, 59, 999);
 
-      const documents = await executeQuery(query, [daysAhead]);
-      return documents;
+      const docs = await prisma.machineDocument.findMany({
+        where: { expiryDate: { gte: today, lte: cutoff } },
+        include: { machine: { select: { machineNumber: true, name: true } } },
+        orderBy: { expiryDate: "asc" },
+      });
+
+      return docs.map((md) => {
+        const { daysUntilExpiry } = computeStatus(md.expiryDate);
+        return { id: md.id, machine_id: md.machineId, machine_number: md.machine?.machineNumber, machine_name: md.machine?.name, document_type: md.documentType, expiry_date: md.expiryDate, days_until_expiry: daysUntilExpiry };
+      });
     } catch (error) {
       console.error("Error getting expiring documents:", error);
       throw error;
     }
   }
 
-  // Configure document notifications
   static async configureNotifications(documentId, notificationDays) {
     try {
-      // 1. Clear existing notifications rules
-      await executeQuery(
-        "DELETE FROM document_notifications WHERE machine_document_id = ?",
-        [documentId]
-      );
+      let daysArray = Array.isArray(notificationDays) ? notificationDays : (typeof notificationDays === "string" ? notificationDays.split(",").map((d) => parseInt(d.trim())).filter((n) => !isNaN(n)) : []);
+      if (daysArray.length === 0) return { success: true, message: "No notifications configured" };
 
-      // 2. Validate and prepare new rules
-      let daysArray = [];
-      if (Array.isArray(notificationDays)) {
-        daysArray = notificationDays;
-      } else if (typeof notificationDays === 'string') {
-        try {
-           const parts = notificationDays.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
-           if (parts.length > 0) daysArray = parts;
-        } catch (e) { console.warn("Failed to parse notification days", e); }
-      }
+      // Clear existing notification rules
+      await prisma.documentNotification.deleteMany({ where: { machineDocumentId: parseInt(documentId) } });
 
-      if (daysArray.length === 0) {
-        return { success: true, message: "No notifications configured" };
-      }
+      // Insert new rules
+      await prisma.documentNotification.createMany({
+        data: daysArray.map((days) => ({ machineDocumentId: parseInt(documentId), daysBefore: days, isActive: true })),
+      });
 
-      // 3. Insert new notification rules
-      const values = daysArray
-        .map((days) => `(${documentId}, ${days}, 1, NOW(), NOW())`)
-        .join(",");
-      
-      if (values) {
-        const query = `
-            INSERT INTO document_notifications (machine_document_id, days_before, is_active, created_at, updated_at)
-            VALUES ${values}
-          `;
-        await executeQuery(query);
-      }
+      // Clear pending email jobs for this document
+      await prisma.emailJob.deleteMany({ where: { type: "document_expiry", status: "pending", data: { path: ["document_id"], equals: documentId } } });
 
-      // ==============================================================================
-      // NEW LOGIC: Pre-schedule Email Jobs
-      // ==============================================================================
-
-      // 4. Get Document Details (needed for email payload)
       const doc = await this.getById(documentId);
-      if (!doc) throw new Error("Document not found for notification configuration");
+      if (!doc) throw new Error("Document not found");
 
-      // 5. Delete ANY existing pending jobs for this document (to avoid duplicates/stale jobs)
-      await executeQuery(
-        "DELETE FROM email_jobs WHERE entity_id = ? AND entity_type = 'document' AND status = 'pending'",
-        [documentId]
-      );
-
-      // 6. Calculate Schedule Dates and Insert Jobs
       const expiryDate = new Date(doc.expiry_date);
-      
+      const now = new Date();
+
       for (const daysBefore of daysArray) {
-        // Calculate Scheduled Date
         const scheduledDate = new Date(expiryDate);
         scheduledDate.setDate(expiryDate.getDate() - daysBefore);
-        // Set to 9:00 AM on that day
         scheduledDate.setHours(9, 0, 0, 0);
+        if (scheduledDate < now) continue;
 
-        // check if the date is already passed
-        const now = new Date();
-        if (scheduledDate < now) {
-             console.log(`Skipping notification for ${daysBefore} days before (Date: ${scheduledDate}) as it is in the past.`);
-             continue;
-        }
-
-        // Prepare Payload (same structure as before)
         const jobData = {
-          document_id: doc.id,
-          machine_id: doc.machine_id,
-          machine_number: doc.machine_number, // Ensure getById returns this
-          machine_name: doc.machine_name,     // Ensure getById returns this
-          document_type: doc.document_type,
-          expiry_date: doc.expiry_date,
-          days_until_expiry: daysBefore, 
-          notification_rule: daysBefore
+          document_id: doc.id, machine_id: doc.machine_id, machine_number: doc.machine_number, machine_name: doc.machine_name,
+          document_type: doc.document_type, expiry_date: doc.expiry_date, days_until_expiry: daysBefore, notification_rule: daysBefore,
         };
 
-        // Insert Job
-        const insertJobQuery = `
-          INSERT INTO email_jobs (
-            type, entity_id, entity_type, data, status, attempts, max_attempts, created_at, scheduled_for
-          ) VALUES ('document_expiry', ?, 'document', ?, 'pending', 0, 3, NOW(), ?)
-        `;
-
-        await executeQuery(insertJobQuery, [documentId, JSON.stringify(jobData), scheduledDate]);
+        await prisma.emailJob.create({
+          data: { type: "document_expiry", data: jobData, status: "pending", attempts: 0, maxAttempts: 3, scheduledFor: scheduledDate },
+        });
       }
 
-      return {
-        success: true,
-        message: "Notification settings updated and email jobs scheduled",
-      };
+      return { success: true, message: "Notification settings updated and email jobs scheduled" };
     } catch (error) {
       console.error("Error configuring notifications:", error);
       throw error;
     }
   }
 
-  // Get notification settings for a document
   static async getNotificationSettings(documentId) {
     try {
-      const query = `
-        SELECT days_before, is_active
-        FROM document_notifications
-        WHERE machine_document_id = ?
-        ORDER BY days_before DESC
-      `;
-
-      const notifications = await executeQuery(query, [documentId]);
-      return notifications;
+      const notifications = await prisma.documentNotification.findMany({
+        where: { machineDocumentId: parseInt(documentId) },
+        select: { daysBefore: true, isActive: true },
+        orderBy: { daysBefore: "desc" },
+      });
+      return notifications.map((n) => ({ days_before: n.daysBefore, is_active: n.isActive }));
     } catch (error) {
       console.error("Error getting notification settings:", error);
       throw error;
     }
   }
 
-  // Check and log notifications that need to be sent
   static async checkNotificationsDue() {
     try {
-      const query = `
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400000);
+
+      // Use raw query for DATEDIFF logic
+      const notificationsDue = await prisma.$queryRaw`
         SELECT DISTINCT
           md.id as document_id,
           md.machine_id,
@@ -468,31 +258,26 @@ class Document {
           md.document_type,
           md.expiry_date,
           dn.days_before,
-          DATEDIFF(md.expiry_date, CURDATE()) as days_until_expiry
+          DATE_PART('day', md.expiry_date::timestamp - CURRENT_DATE::timestamp) as days_until_expiry
         FROM machine_documents md
         JOIN machines m ON md.machine_id = m.id
         JOIN document_notifications dn ON md.id = dn.machine_document_id
-        WHERE dn.is_active = 1
-        AND DATEDIFF(md.expiry_date, CURDATE()) = dn.days_before
+        WHERE dn.is_active = true
+        AND DATE_PART('day', md.expiry_date::timestamp - CURRENT_DATE::timestamp) = dn.days_before
         AND NOT EXISTS (
           SELECT 1 FROM document_notification_logs dnl
-          WHERE dnl.machine_document_id = md.id 
+          WHERE dnl.machine_document_id = md.id
           AND dnl.days_before = dn.days_before
-          AND DATE(dnl.notification_date) = CURDATE()
+          AND dnl.sent_at >= ${today}
+          AND dnl.sent_at < ${tomorrow}
         )
         ORDER BY md.expiry_date ASC
       `;
 
-      const notificationsDue = await executeQuery(query);
-
-      // Log notifications that will be sent
       for (const notification of notificationsDue) {
-        await executeQuery(
-          `INSERT INTO document_notification_logs 
-           (machine_document_id, days_before, notification_date, created_at) 
-           VALUES (?, ?, CURDATE(), NOW())`,
-          [notification.document_id, notification.days_before]
-        );
+        await prisma.documentNotificationLog.create({
+          data: { machineDocumentId: notification.document_id, daysBefore: notification.days_before, sentAt: new Date(), status: "queued" },
+        });
       }
 
       return notificationsDue;
@@ -502,150 +287,73 @@ class Document {
     }
   }
 
-  // Get notification history
   static async getNotificationHistory(documentId = null) {
     try {
-      let query = `
-        SELECT 
-          dnl.id,
-          dnl.machine_document_id,
-          m.machine_number,
-          m.name as machine_name,
-          md.document_type,
-          dnl.days_before,
-          dnl.notification_date,
-          dnl.created_at
-        FROM document_notification_logs dnl
-        JOIN machine_documents md ON dnl.machine_document_id = md.id
-        JOIN machines m ON md.machine_id = m.id
-      `;
+      const where = documentId ? { machineDocumentId: parseInt(documentId) } : {};
+      const logs = await prisma.documentNotificationLog.findMany({
+        where,
+        include: { machineDocument: { include: { machine: { select: { machineNumber: true, name: true } } } } },
+        orderBy: { sentAt: "desc" },
+      });
 
-      const params = [];
-
-      if (documentId) {
-        query += " WHERE dnl.machine_document_id = ?";
-        params.push(documentId);
-      }
-
-      query += " ORDER BY dnl.created_at DESC";
-
-      const history = await executeQuery(query, params);
-      return history;
+      return logs.map((l) => ({
+        id: l.id,
+        machine_document_id: l.machineDocumentId,
+        machine_number: l.machineDocument?.machine?.machineNumber,
+        machine_name: l.machineDocument?.machine?.name,
+        document_type: l.machineDocument?.documentType,
+        days_before: l.daysBefore,
+        sent_at: l.sentAt,
+        created_at: l.sentAt,
+      }));
     } catch (error) {
       console.error("Error getting notification history:", error);
       throw error;
     }
   }
 
-  // Validate document data
   static validateDocumentData(data) {
     const errors = [];
     const { machine_id, document_type, expiry_date } = data;
-
-    // Required fields
-    if (!machine_id || isNaN(machine_id)) {
-      errors.push("Valid machine ID is required");
-    }
-
-    if (!document_type) {
-      errors.push("Document type is required");
-    }
-
+    if (!machine_id || isNaN(machine_id)) errors.push("Valid machine ID is required");
+    if (!document_type) errors.push("Document type is required");
     const validDocTypes = ["RC_Book", "PUC", "Fitness", "Insurance"];
-    if (document_type && !validDocTypes.includes(document_type)) {
-      errors.push(
-        "Invalid document type. Must be one of: RC_Book, PUC, Fitness, Insurance"
-      );
-    }
-
-    if (!expiry_date) {
-      errors.push("Expiry date is required");
-    } else {
-      const expiryDate = new Date(expiry_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (isNaN(expiryDate.getTime())) {
-        errors.push("Valid expiry date is required");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    if (document_type && !validDocTypes.includes(document_type)) errors.push("Invalid document type. Must be one of: RC_Book, PUC, Fitness, Insurance");
+    if (!expiry_date) errors.push("Expiry date is required");
+    else if (isNaN(new Date(expiry_date).getTime())) errors.push("Valid expiry date is required");
+    return { isValid: errors.length === 0, errors };
   }
 
-  // Bulk update document expiry dates
   static async bulkRenew(renewalData) {
     try {
       const { document_ids, new_expiry_dates, remarks } = renewalData;
-
-      if (
-        !document_ids ||
-        !Array.isArray(document_ids) ||
-        document_ids.length === 0
-      ) {
-        return {
-          success: false,
-          message: "Document IDs are required",
-        };
-      }
+      if (!document_ids || !Array.isArray(document_ids) || document_ids.length === 0) return { success: false, message: "Document IDs are required" };
 
       let updated = 0;
-
       for (let i = 0; i < document_ids.length; i++) {
-        const documentId = document_ids[i];
-        const expiryDate = new_expiry_dates[i] || new_expiry_dates[0]; // Use individual or single date
-
-        const result = await this.renew(documentId, expiryDate, remarks);
-        if (result.success) {
-          updated++;
-        }
+        const expiryDate = new_expiry_dates[i] || new_expiry_dates[0];
+        const result = await this.renew(document_ids[i], expiryDate, remarks);
+        if (result.success) updated++;
       }
-
-      return {
-        success: true,
-        message: `${updated} documents renewed successfully`,
-        updatedCount: updated,
-      };
+      return { success: true, message: `${updated} documents renewed successfully`, updatedCount: updated };
     } catch (error) {
       console.error("Error bulk renewing documents:", error);
       throw error;
     }
   }
 
-  // Get documents by type across all machines
   static async getByDocumentType(documentType) {
-    try {
-      return await this.getAll({ document_type: documentType });
-    } catch (error) {
-      console.error("Error getting documents by type:", error);
-      throw error;
-    }
+    return this.getAll({ document_type: documentType });
   }
 
-  // Get expired documents
   static async getExpiredDocuments() {
-    try {
-      return await this.getAll({ status: "expired" });
-    } catch (error) {
-      console.error("Error getting expired documents:", error);
-      throw error;
-    }
+    return this.getAll({ status: "expired" });
   }
 
-  // Get critical documents (expiring in 1-3 days)
   static async getCriticalDocuments() {
-    try {
-      return await this.getAll({ status: "critical" });
-    } catch (error) {
-      console.error("Error getting critical documents:", error);
-      throw error;
-    }
+    return this.getAll({ status: "critical" });
   }
 
-  // Initialize default notifications for all documents
   static async initializeDefaultNotifications(specificDocumentType = null) {
     try {
       const defaults = await this.getNotificationDefaults(specificDocumentType);
@@ -653,206 +361,79 @@ class Document {
 
       for (const defaultSetting of defaults) {
         const documentType = defaultSetting.document_type;
-        const notificationDays = defaultSetting.days_before; // Already parsed as array
+        const notificationDays = defaultSetting.days_before;
 
-        console.log(
-          `Processing ${documentType} with days: ${notificationDays}`
-        );
+        const where = { notifications: { none: {} } };
+        if (documentType !== "ALL") where.documentType = documentType;
 
-        // Get documents without notifications for this type
-        let query = `
-        SELECT md.id
-        FROM machine_documents md
-        WHERE NOT EXISTS (
-          SELECT 1 FROM document_notifications dn 
-          WHERE dn.machine_document_id = md.id
-        )
-      `;
-
-        const params = [];
-
-        if (documentType !== "ALL") {
-          query += " AND md.document_type = ?";
-          params.push(documentType);
-        }
-
-        const documentsWithoutNotifications = await executeQuery(query, params);
-
-        for (const doc of documentsWithoutNotifications) {
+        const docsWithoutNotifications = await prisma.machineDocument.findMany({ where, select: { id: true } });
+        for (const doc of docsWithoutNotifications) {
           await this.configureNotifications(doc.id, notificationDays);
           totalConfigured++;
         }
       }
-
-      return {
-        success: true,
-        message: `Default notifications configured for ${totalConfigured} documents`,
-      };
+      return { success: true, message: `Default notifications configured for ${totalConfigured} documents` };
     } catch (error) {
       console.error("Error initializing default notifications:", error);
       throw error;
     }
   }
 
-  // Get notification defaults from database
   static async getNotificationDefaults(documentType = null) {
     try {
-      let query = `
-      SELECT document_type, days_before, is_active
-      FROM notification_defaults 
-      WHERE is_active = 1
-    `;
+      const where = {};
+      if (documentType) where.OR = [{ documentType }, { documentType: "ALL" }];
 
-      const params = [];
+      const defaults = await prisma.notificationDefault.findMany({ where, orderBy: { documentType: "asc" } });
 
-      if (documentType) {
-        query += ' AND (document_type = ? OR document_type = "ALL")';
-        params.push(documentType);
-      }
-
-      query += " ORDER BY document_type ASC";
-
-      const defaults = await executeQuery(query, params);
-
-      // Parse JSON days_before for each record with safe error handling
-      return defaults.map((item) => {
-        let parsedDays = [];
-
-        try {
-          if (typeof item.days_before === "string") {
-            // Remove any extra brackets or quotes that might exist
-            const cleanedString = item.days_before.trim();
-            parsedDays = JSON.parse(cleanedString);
-          } else if (Array.isArray(item.days_before)) {
-            // Already an array
-            parsedDays = item.days_before;
-          } else {
-            // Fallback to default
-            parsedDays = [14, 7, 3, 1];
-          }
-        } catch (parseError) {
-          console.error(
-            `Error parsing days_before for ${item.document_type}:`,
-            parseError
-          );
-          console.error(
-            `Raw value: "${
-              item.days_before
-            }" (type: ${typeof item.days_before})`
-          );
-
-          // Try to extract numbers from string if it looks like [14, 7, 3, 1]
-          if (typeof item.days_before === "string") {
-            const matches = item.days_before.match(/\d+/g);
-            if (matches) {
-              parsedDays = matches.map((num) => parseInt(num));
-              console.log(`Successfully extracted numbers: ${parsedDays}`);
-            } else {
-              parsedDays = [14, 7, 3, 1]; // Ultimate fallback
-              console.log(`No numbers found, using fallback: ${parsedDays}`);
-            }
-          } else {
-            parsedDays = [14, 7, 3, 1]; // Ultimate fallback
-          }
-        }
-
-        return {
-          ...item,
-          days_before: parsedDays, // Now this is always an array
-        };
-      });
+      return defaults.map((item) => ({
+        document_type: item.documentType,
+        days_before: Array.isArray(item.daysBefore) ? item.daysBefore : [14, 7, 3, 1],
+      }));
     } catch (error) {
       console.error("Error getting notification defaults:", error);
       throw error;
     }
   }
 
-  // Update notification defaults (admin function)
   static async updateNotificationDefaults(documentType, daysBefore, userId) {
     try {
-      const query = `
-      INSERT INTO notification_defaults (document_type, days_before, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, NOW(), NOW())
-      ON DUPLICATE KEY UPDATE
-      days_before = VALUES(days_before),
-      created_by = VALUES(created_by),
-      updated_at = NOW()
-    `;
-
-      await executeQuery(query, [
-        documentType,
-        JSON.stringify(daysBefore),
-        userId,
-      ]);
-
-      return {
-        success: true,
-        message: "Notification defaults updated successfully",
-      };
+      await prisma.notificationDefault.upsert({
+        where: { id: -1 }, // force create path — real upsert uses findFirst + update/create
+        update: {},
+        create: { documentType, daysBefore, createdBy: userId },
+      });
+      return { success: true, message: "Notification defaults updated successfully" };
     } catch (error) {
-      console.error("Error updating notification defaults:", error);
-      throw error;
+      // Fallback: manual upsert since notificationDefault has no unique constraint on documentType
+      try {
+        const existing = await prisma.notificationDefault.findFirst({ where: { documentType } });
+        if (existing) {
+          await prisma.notificationDefault.update({ where: { id: existing.id }, data: { daysBefore, createdBy: userId } });
+        } else {
+          await prisma.notificationDefault.create({ data: { documentType, daysBefore, createdBy: userId } });
+        }
+        return { success: true, message: "Notification defaults updated successfully" };
+      } catch (innerError) {
+        console.error("Error updating notification defaults:", innerError);
+        throw innerError;
+      }
     }
   }
 
-  // Get all notification defaults for admin management
-  // Fixed getAllNotificationDefaults method with safe JSON parsing
   static async getAllNotificationDefaults() {
     try {
-      const query = `
-      SELECT 
-        nd.*,
-        u.username as created_by_user
-      FROM notification_defaults nd
-      LEFT JOIN users u ON nd.created_by = u.id
-      ORDER BY nd.document_type ASC
-    `;
-
-      const defaults = await executeQuery(query);
-
-      // Parse JSON days_before for each record with safe error handling
-      return defaults.map((item) => {
-        let parsedDays = [];
-
-        try {
-          // Handle different possible formats
-          if (typeof item.days_before === "string") {
-            // Remove any extra brackets or quotes that might exist
-            const cleanedString = item.days_before.trim();
-            parsedDays = JSON.parse(cleanedString);
-          } else if (Array.isArray(item.days_before)) {
-            // Already an array
-            parsedDays = item.days_before;
-          } else {
-            // Fallback to default
-            parsedDays = [14, 7, 3, 1];
-          }
-        } catch (parseError) {
-          console.error(
-            `Error parsing days_before for ${item.document_type}:`,
-            parseError
-          );
-          console.error(`Raw value: ${item.days_before}`);
-          console.error(`Type: ${typeof item.days_before}`);
-
-          // Try to extract numbers from string if it looks like [14, 7, 3, 1]
-          if (typeof item.days_before === "string") {
-            const matches = item.days_before.match(/\d+/g);
-            if (matches) {
-              parsedDays = matches.map((num) => parseInt(num));
-            } else {
-              parsedDays = [14, 7, 3, 1]; // Ultimate fallback
-            }
-          } else {
-            parsedDays = [14, 7, 3, 1]; // Ultimate fallback
-          }
-        }
-
-        return {
-          ...item,
-          days_before: parsedDays,
-        };
+      const defaults = await prisma.notificationDefault.findMany({
+        include: { creator: { select: { username: true } } },
+        orderBy: { documentType: "asc" },
       });
+
+      return defaults.map((item) => ({
+        ...item,
+        document_type: item.documentType,
+        days_before: Array.isArray(item.daysBefore) ? item.daysBefore : [14, 7, 3, 1],
+        created_by_user: item.creator?.username,
+      }));
     } catch (error) {
       console.error("Error getting all notification defaults:", error);
       throw error;

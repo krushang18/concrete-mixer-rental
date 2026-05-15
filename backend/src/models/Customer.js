@@ -1,177 +1,87 @@
-const { executeQuery } = require("../config/database");
+const { prisma } = require("../config/database");
 
 class Customer {
-    // Get all customers with filtering and pagination
-    static async getAll(filters = {}) {
+  static async getAll(filters = {}) {
     try {
-      // Build the base query for counting and selecting
-      const baseQuery = `
-      FROM customers c
-      LEFT JOIN quotations q ON c.id = q.customer_id
-    `;
-
-      const conditions = [];
-      const params = [];
-
-      // Apply filters (same logic as before)
+      const where = {};
       if (filters.search) {
-        conditions.push(
-          "(c.company_name LIKE ? OR c.contact_person LIKE ? OR c.phone LIKE ? OR c.email LIKE ? OR c.site_location LIKE ? OR c.address LIKE ?)"
-        );
-        const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        where.OR = [
+          { companyName: { contains: filters.search, mode: "insensitive" } },
+          { contactPerson: { contains: filters.search, mode: "insensitive" } },
+          { phone: { contains: filters.search, mode: "insensitive" } },
+          { email: { contains: filters.search, mode: "insensitive" } },
+          { siteLocation: { contains: filters.search, mode: "insensitive" } },
+          { address: { contains: filters.search, mode: "insensitive" } },
+        ];
+      }
+      if (filters.city) where.address = { contains: filters.city, mode: "insensitive" };
+      if (filters.has_gst === "true" || filters.has_gst === true) {
+        where.gstNumber = { not: null };
+      } else if (filters.has_gst === "false" || filters.has_gst === false) {
+        where.gstNumber = null;
       }
 
-      if (filters.city) {
-        conditions.push("c.address LIKE ?");
-        params.push(`%${filters.city}%`);
-      }
-
-      if (filters.has_gst !== undefined) {
-        if (filters.has_gst === "true" || filters.has_gst === true) {
-          conditions.push('c.gst_number IS NOT NULL AND c.gst_number != ""');
-        } else if (filters.has_gst === "false" || filters.has_gst === false) {
-          conditions.push('(c.gst_number IS NULL OR c.gst_number = "")');
-        }
-      }
-
-      const whereClause =
-        conditions.length > 0 ? " WHERE " + conditions.join(" AND ") : "";
-
-      // First, get the total count
-      const countQuery = `
-      SELECT COUNT(DISTINCT c.id) as total
-      ${baseQuery}
-      ${whereClause}
-    `;
-
-      const [countResult] = await executeQuery(countQuery, params);
-      const total = countResult.total || 0;
-
-      // If no records found, return early
-      if (total === 0) {
-        return {
-          customers: [],
-          total: 0,
-        };
-      }
-
-      // Build the main query with sorting and pagination
-      let mainQuery = `
-      SELECT 
-        c.id,
-        c.company_name,
-        c.contact_person,
-        c.email,
-        c.phone,
-        c.address,
-        c.site_location,
-        c.gst_number,
-        c.created_at,
-        c.updated_at,
-        COUNT(q.id) as total_quotations,
-        MAX(q.created_at) as last_quotation_date,
-        SUM(CASE WHEN q.quotation_status = 'accepted' THEN 1 ELSE 0 END) as accepted_quotations,
-        AVG(q.grand_total) as avg_quotation_amount
-      ${baseQuery}
-      ${whereClause}
-      GROUP BY c.id
-    `;
-
-      // Add sorting
-      const validSortFields = [
-        "company_name",
-        "contact_person",
-        "created_at",
-        "updated_at",
-        "total_quotations",
-        "last_quotation_date",
-        "accepted_quotations",
-      ];
-      const sortBy = validSortFields.includes(filters.sortBy)
-        ? filters.sortBy
-        : "created_at";
-      const sortOrder =
-        filters.sortOrder && filters.sortOrder.toUpperCase() === "ASC"
-          ? "ASC"
-          : "DESC";
-
-      mainQuery += ` ORDER BY c.${sortBy} ${sortOrder}`;
-
-      // Add pagination
       const limit = Math.min(Math.max(parseInt(filters.limit) || 10, 1), 100);
       const offset = Math.max(parseInt(filters.offset) || 0, 0);
+      const sortBy = ["companyName", "contactPerson", "createdAt", "updatedAt"].includes(filters.sortBy) ? filters.sortBy : "createdAt";
+      const sortOrder = filters.sortOrder?.toUpperCase() === "ASC" ? "asc" : "desc";
 
-      mainQuery += ` LIMIT ${limit} OFFSET ${offset}`;
+      const [total, customers] = await Promise.all([
+        prisma.customer.count({ where }),
+        prisma.customer.findMany({
+          where,
+          orderBy: { [sortBy]: sortOrder },
+          take: limit,
+          skip: offset,
+          include: { _count: { select: { quotations: true } } },
+        }),
+      ]);
 
-      const customers = await executeQuery(mainQuery, params);
+      // Attach quotation stats
+      const enriched = customers.map((c) => ({
+        ...c,
+        total_quotations: c._count.quotations,
+        company_name: c.companyName,
+        contact_person: c.contactPerson,
+        site_location: c.siteLocation,
+        gst_number: c.gstNumber,
+        created_at: c.createdAt,
+        updated_at: c.updatedAt,
+      }));
 
-      return {
-        customers,
-        total,
-      };
+      return { customers: enriched, total };
     } catch (error) {
       console.error("❌ Error getting all customers:", error);
       throw error;
     }
   }
 
-  // Get customer by ID
   static async getById(id) {
     try {
-      if (!id) {
-        return null;
-      }
-
-      const query = `
-        SELECT id, company_name, contact_person, email, phone, 
-               address, site_location, gst_number, created_at, updated_at
-        FROM customers 
-        WHERE id = ?
-      `;
-
-      const result = await executeQuery(query, [id]);
-      return result[0] || null;
+      if (!id) return null;
+      const c = await prisma.customer.findUnique({ where: { id: parseInt(id) } });
+      if (!c) return null;
+      return { ...c, company_name: c.companyName, contact_person: c.contactPerson, site_location: c.siteLocation, gst_number: c.gstNumber, created_at: c.createdAt, updated_at: c.updatedAt };
     } catch (error) {
       console.error("❌ Error getting customer by ID:", error);
       throw error;
     }
   }
 
-  // Find customer by contact details
   static async findByContact(contact) {
     try {
-      // FIX: Ensure contact is not undefined
-      if (!contact) {
-        console.log("⚠️ Contact is missing or undefined");
-        return null;
-      }
-
-      const query = `
-        SELECT id, company_name, contact_person, email, phone, 
-               address, site_location, gst_number, created_at, updated_at
-        FROM customers 
-        WHERE phone = ?
-      `;
-
-      // FIX: Convert undefined to null
-      const cleanContact = contact || null;
-      console.log("🔧 Finding customer by contact:", cleanContact);
-
-      const result = await executeQuery(query, [cleanContact]);
-      return result[0] || null;
+      if (!contact) return null;
+      const c = await prisma.customer.findFirst({ where: { phone: contact } });
+      if (!c) return null;
+      return { ...c, company_name: c.companyName, contact_person: c.contactPerson, site_location: c.siteLocation, gst_number: c.gstNumber };
     } catch (error) {
       console.error("❌ Error finding customer by contact:", error);
       throw error;
     }
   }
 
-  // Create new customer
   static async create(customerData) {
     try {
-      console.log("🔧 Customer.create called with:", customerData);
-
-      // FIX: Convert all undefined values to null
       const cleanData = {
         company_name: customerData.company_name || null,
         contact_person: customerData.contact_person || null,
@@ -182,268 +92,131 @@ class Customer {
         gst_number: customerData.gst_number || null,
       };
 
-      // Validate required fields
-      if (!cleanData.phone) {
-        return {
-          success: false,
-          message: "Phone number is required",
-        };
-      }
+      if (!cleanData.phone) return { success: false, message: "Phone number is required" };
+      if (!cleanData.company_name) return { success: false, message: "Company name is required" };
 
-      if (!cleanData.company_name) {
-        return {
-          success: false,
-          message: "Company name is required",
-        };
-      }
-
-      const query = `
-        INSERT INTO customers (
-          company_name, contact_person, email, phone, 
-          address, site_location, gst_number
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const params = [
-        cleanData.company_name,
-        cleanData.contact_person,
-        cleanData.email,
-        cleanData.phone,
-        cleanData.address,
-        cleanData.site_location,
-        cleanData.gst_number,
-      ];
-
-      console.log("🔧 Customer create SQL params:", params);
-
-      const result = await executeQuery(query, params);
-
-      return {
-        success: true,
-        id: result.insertId,
-        message: "Customer created successfully",
-      };
+      const created = await prisma.customer.create({
+        data: {
+          companyName: cleanData.company_name,
+          contactPerson: cleanData.contact_person,
+          email: cleanData.email,
+          phone: cleanData.phone,
+          address: cleanData.address,
+          siteLocation: cleanData.site_location,
+          gstNumber: cleanData.gst_number,
+        },
+      });
+      return { success: true, id: created.id, message: "Customer created successfully" };
     } catch (error) {
       console.error("❌ Error creating customer:", error);
-
-      // Handle duplicate entry error
-      if (error.code === "ER_DUP_ENTRY") {
-        return {
-          success: false,
-          message: "Customer with this phone number already exists",
-        };
-      }
-
+      if (error.code === "P2002") return { success: false, message: "Customer with this phone number already exists" };
       throw error;
     }
   }
 
-  // Update customer
   static async update(id, customerData) {
     try {
-      const {
-        company_name,
-        contact_person,
-        email,
-        phone,
-        address,
-        site_location,
-        gst_number,
-      } = customerData;
-
-      // Validate data
       const validation = this.validateCustomerData(customerData, true);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          message: "Validation failed",
-          errors: validation.errors,
-        };
-      }
+      if (!validation.isValid) return { success: false, message: "Validation failed", errors: validation.errors };
 
-      // Check if customer exists
       const existingCustomer = await this.getById(id);
-      if (!existingCustomer) {
-        return {
-          success: false,
-          message: "Customer not found",
-        };
-      }
+      if (!existingCustomer) return { success: false, message: "Customer not found" };
 
-      // Check for conflicts with other customers
-      if (phone || email) {
-        const conflictingCustomer = await this.findByContact(
-          phone || existingCustomer.phone,
-          email || existingCustomer.email
-        );
+      const { company_name, contact_person, email, phone, address, site_location, gst_number } = customerData;
 
-        if (conflictingCustomer && conflictingCustomer.id !== parseInt(id)) {
-          return {
-            success: false,
-            message: "Another customer with this phone or email already exists",
-          };
-        }
-      }
-
-      const query = `
-        UPDATE customers 
-        SET 
-          company_name = ?,
-          contact_person = ?,
-          email = ?,
-          phone = ?,
-          address = ?,
-          site_location = ?,
-          gst_number = ?,
-          updated_at = NOW()
-        WHERE id = ?
-      `;
-
-      await executeQuery(query, [
-        company_name || existingCustomer.company_name,
-        contact_person !== undefined
-          ? contact_person
-          : existingCustomer.contact_person,
-        email !== undefined ? email : existingCustomer.email,
-        phone || existingCustomer.phone,
-        address !== undefined ? address : existingCustomer.address,
-        site_location !== undefined
-          ? site_location
-          : existingCustomer.site_location,
-        gst_number !== undefined ? gst_number : existingCustomer.gst_number,
-        id,
-      ]);
-
-      return {
-        success: true,
-        message: "Customer updated successfully",
-      };
+      await prisma.customer.update({
+        where: { id: parseInt(id) },
+        data: {
+          companyName: company_name || existingCustomer.company_name,
+          contactPerson: contact_person !== undefined ? contact_person : existingCustomer.contact_person,
+          email: email !== undefined ? email : existingCustomer.email,
+          phone: phone || existingCustomer.phone,
+          address: address !== undefined ? address : existingCustomer.address,
+          siteLocation: site_location !== undefined ? site_location : existingCustomer.site_location,
+          gstNumber: gst_number !== undefined ? gst_number : existingCustomer.gst_number,
+        },
+      });
+      return { success: true, message: "Customer updated successfully" };
     } catch (error) {
       console.error("Error updating customer:", error);
       throw error;
     }
   }
 
-  // Delete customer (check for quotations first)
   static async delete(id) {
     try {
-      // Check if customer exists
       const existingCustomer = await this.getById(id);
-      if (!existingCustomer) {
-        return {
-          success: false,
-          message: "Customer not found",
-        };
-      }
+      if (!existingCustomer) return { success: false, message: "Customer not found" };
 
-      // Check if customer has quotations
-      if (existingCustomer.total_quotations > 0) {
-        return {
-          success: false,
-          message: "Cannot delete customer with existing quotations",
-          quotationCount: existingCustomer.total_quotations,
-        };
-      }
+      const quotationCount = await prisma.quotation.count({ where: { customerId: parseInt(id) } });
+      if (quotationCount > 0) return { success: false, message: "Cannot delete customer with existing quotations", quotationCount };
 
-      // Delete customer
-      await executeQuery("DELETE FROM customers WHERE id = ?", [id]);
-
-      return {
-        success: true,
-        message: "Customer deleted successfully",
-      };
+      await prisma.customer.delete({ where: { id: parseInt(id) } });
+      return { success: true, message: "Customer deleted successfully" };
     } catch (error) {
       console.error("Error deleting customer:", error);
       throw error;
     }
   }
 
-  // Get customer quotation history
   static async getQuotationHistory(id) {
     try {
-      const query = `
-      SELECT 
-        q.id,
-        q.quotation_number,
-        q.created_at,
-        q.subtotal,
-        q.total_gst_amount,
-        q.grand_total,
-        q.quotation_status,
-        q.delivery_status,
-        q.additional_notes,
-        COUNT(qi.id) as total_items,
-        GROUP_CONCAT(
-          DISTINCT CASE 
-            WHEN qi.item_type = 'machine' THEN CONCAT(m.name, ' (', qi.duration_type, ') - ₹', CAST(qi.unit_price * qi.quantity AS UNSIGNED))
-            ELSE NULL 
-          END 
-          SEPARATOR ', '
-        ) as machines,
-        GROUP_CONCAT(
-          DISTINCT CASE 
-            WHEN qi.item_type = 'additional_charge' THEN qi.description
-            ELSE NULL 
-          END 
-          SEPARATOR ', '
-        ) as additional_charges
-      FROM quotations q
-      LEFT JOIN quotation_items qi ON q.id = qi.quotation_id
-      LEFT JOIN quotation_machines m ON qi.quotation_machine_id = m.id AND qi.item_type = 'machine'
-      WHERE q.customer_id = ?
-      GROUP BY q.id
-      ORDER BY q.created_at DESC
-    `;
+      const quotations = await prisma.quotation.findMany({
+        where: { customerId: parseInt(id) },
+        include: { items: { include: { quotationMachine: true } } },
+        orderBy: { createdAt: "desc" },
+      });
 
-      const quotations = await executeQuery(query, [id]);
-      return quotations;
+      return quotations.map((q) => {
+        const machineItems = q.items.filter((i) => i.itemType === "machine");
+        const chargeItems = q.items.filter((i) => i.itemType === "additional_charge");
+        return {
+          id: q.id,
+          quotation_number: q.quotationNumber,
+          created_at: q.createdAt,
+          subtotal: q.subtotal,
+          total_gst_amount: q.totalGstAmount,
+          grand_total: q.grandTotal,
+          quotation_status: q.quotationStatus,
+          delivery_status: q.deliveryStatus,
+          additional_notes: q.additionalNotes,
+          total_items: q.items.length,
+          machines: machineItems.map((i) => `${i.quotationMachine?.name} (${i.durationType}) - ₹${parseFloat(i.unitPrice) * parseFloat(i.quantity)}`).join(", "),
+          additional_charges: chargeItems.map((i) => i.description).filter(Boolean).join(", "),
+        };
+      });
     } catch (error) {
       console.error("Error getting customer quotation history:", error);
       throw error;
     }
   }
 
-  // Search customers for quotation
   static async searchForQuotation(searchTerm) {
     try {
-      const query = `
-        SELECT 
-          id,
-          company_name,
-          contact_person,
-          phone,
-          email,
-          gst_number
-        FROM customers
-        WHERE 
-          company_name LIKE ? OR 
-          contact_person LIKE ? OR 
-          phone LIKE ? OR 
-          email LIKE ?
-        ORDER BY company_name ASC
-        LIMIT 10
-      `;
-
-      const term = `%${searchTerm}%`;
-      const customers = await executeQuery(query, [term, term, term, term]);
-      return customers;
+      const customers = await prisma.customer.findMany({
+        where: {
+          OR: [
+            { companyName: { contains: searchTerm, mode: "insensitive" } },
+            { contactPerson: { contains: searchTerm, mode: "insensitive" } },
+            { phone: { contains: searchTerm, mode: "insensitive" } },
+            { email: { contains: searchTerm, mode: "insensitive" } },
+          ],
+        },
+        orderBy: { companyName: "asc" },
+        take: 10,
+      });
+      return customers.map((c) => ({ id: c.id, company_name: c.companyName, contact_person: c.contactPerson, phone: c.phone, email: c.email, gst_number: c.gstNumber }));
     } catch (error) {
       console.error("Error searching customers for quotation:", error);
       throw error;
     }
   }
 
-  // Get or create customer (for quotations)
   static async getOrCreate(customerData) {
     try {
-      console.log("🔧 Customer.getOrCreate called with:", customerData);
-
-      // FIX: Clean and validate input data
       const cleanData = {
-        company_name:
-          customerData.company_name || customerData.customer_name || null,
-        contact_person:
-          customerData.contact_person || customerData.customer_name || null,
+        company_name: customerData.company_name || customerData.customer_name || null,
+        contact_person: customerData.contact_person || customerData.customer_name || null,
         email: customerData.email || null,
         phone: customerData.phone || customerData.customer_contact || null,
         address: customerData.address || null,
@@ -451,106 +224,40 @@ class Customer {
         gst_number: customerData.gst_number || null,
       };
 
-      console.log("🔧 Cleaned customer data:", cleanData);
+      if (!cleanData.phone) throw new Error("Customer phone number is required");
+      if (!cleanData.company_name) throw new Error("Company name is required");
 
-      // Validate required fields
-      if (!cleanData.phone) {
-        throw new Error("Customer phone number is required");
-      }
+      const existingCustomer = await this.findByContact(cleanData.phone);
+      if (existingCustomer) return { success: true, customer: existingCustomer, created: false };
 
-      if (!cleanData.company_name) {
-        throw new Error("Company name is required");
-      }
-
-      // Try to find existing customer by phone
-      let existingCustomer = await this.findByContact(cleanData.phone);
-
-      if (existingCustomer) {
-        console.log("✅ Found existing customer:", existingCustomer.id);
-        return {
-          success: true,
-          customer: existingCustomer,
-          created: false,
-        };
-      }
-
-      // Create new customer
-      console.log("🔧 Creating new customer...");
       const createResult = await this.create(cleanData);
-
       if (createResult.success) {
         const newCustomer = await this.getById(createResult.id);
-        console.log("✅ Created new customer:", createResult.id);
-        return {
-          success: true,
-          customer: newCustomer,
-          created: true,
-        };
-      } else {
-        throw new Error(createResult.message || "Failed to create customer");
+        return { success: true, customer: newCustomer, created: true };
       }
+      throw new Error(createResult.message || "Failed to create customer");
     } catch (error) {
       console.error("❌ Error in getOrCreate customer:", error);
       throw error;
     }
   }
 
-  // Validate customer data
   static validateCustomerData(data, isUpdate = false) {
     const errors = [];
     const { company_name, phone, email, gst_number } = data;
-
-    // Required fields for creation
     if (!isUpdate) {
-      if (!company_name || company_name.trim().length === 0) {
-        errors.push("Company name is required");
-      }
-
-      if (!phone || phone.trim().length === 0) {
-        errors.push("Phone number is required");
-      }
+      if (!company_name || company_name.trim().length === 0) errors.push("Company name is required");
+      if (!phone || phone.trim().length === 0) errors.push("Phone number is required");
     }
-
-    // Validation for provided fields
-    if (company_name !== undefined) {
-      if (company_name.length > 100) {
-        errors.push("Company name must be less than 100 characters");
-      }
-    }
-
+    if (company_name !== undefined && company_name.length > 100) errors.push("Company name must be less than 100 characters");
     if (phone !== undefined) {
       const cleanPhone = phone.replace(/\D/g, "");
-      if (cleanPhone.length !== 10 || !cleanPhone.match(/^[6-9]/)) {
-        errors.push("Phone must be a valid 10-digit Indian mobile number");
-      }
+      if (cleanPhone.length !== 10 || !cleanPhone.match(/^[6-9]/)) errors.push("Phone must be a valid 10-digit Indian mobile number");
     }
-
-    if (email !== undefined && email.trim().length > 0) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        errors.push("Valid email address is required");
-      }
-    }
-
-    if (
-      gst_number !== undefined &&
-      gst_number &&
-      gst_number.trim().length > 0
-    ) {
-      const gstRegex =
-        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-      if (!gstRegex.test(gst_number.toUpperCase())) {
-        errors.push("GST number format is invalid");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    if (email !== undefined && email.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("Valid email address is required");
+    if (gst_number?.trim().length > 0 && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst_number.toUpperCase())) errors.push("GST number format is invalid");
+    return { isValid: errors.length === 0, errors };
   }
-
-
 }
 
 module.exports = Customer;

@@ -1,4 +1,4 @@
-const { executeQuery } = require("../config/database");
+const { prisma } = require("../config/database");
 const emailService = require("./emailService");
 const Document = require("../models/Document");
 const cron = require("cron");
@@ -28,29 +28,12 @@ class EmailSchedulerService {
         throw new Error("Invalid document information provided");
       }
 
-      const query = `
-        INSERT INTO email_jobs (
-          type,
-          data,
-          status,
-          attempts,
-          max_attempts,
-          created_at,
-          scheduled_for
-        ) VALUES ('document_expiry', ?, 'pending', 0, 3, NOW(), NOW())
-      `;
+      const job = await prisma.emailJob.create({
+        data: { type: "document_expiry", data: documentInfo, status: "pending", attempts: 0, maxAttempts: 3, scheduledFor: new Date() },
+      });
 
-      const result = await executeQuery(query, [JSON.stringify(documentInfo)]);
-
-      console.log(
-        `➕ Document expiry job queued for machine ${documentInfo.machine_number}`
-      );
-
-      return {
-        success: true,
-        jobId: result.insertId,
-        message: "Document expiry notification queued",
-      };
+      console.log(`➕ Document expiry job queued for machine ${documentInfo.machine_number}`);
+      return { success: true, jobId: job.id, message: "Document expiry notification queued" };
     } catch (error) {
       console.error("❌ Error adding document expiry job:", error);
       throw error;
@@ -157,21 +140,16 @@ class EmailSchedulerService {
       // STEP 1: PROCESS PENDING JOBS THAT ARE DUE
       // ====================================================================
 
-      const pendingJobs = await executeQuery(`
-        SELECT 
-          id, 
-          data, 
-          attempts,
-          max_attempts,
-          created_at
-        FROM email_jobs 
-        WHERE type = 'document_expiry' 
-        AND status = 'pending'
-        AND attempts < max_attempts
-        AND (scheduled_for IS NULL OR scheduled_for <= NOW())
-        ORDER BY scheduled_for ASC
-        LIMIT 50
-      `);
+      const pendingJobs = await prisma.emailJob.findMany({
+        where: {
+          type: "document_expiry",
+          status: "pending",
+          attempts: { lt: 3 },
+          OR: [{ scheduledFor: null }, { scheduledFor: { lte: new Date() } }],
+        },
+        orderBy: { scheduledFor: "asc" },
+        take: 50,
+      });
 
       console.log(
         `📬 Found ${pendingJobs.length} due email jobs to process`
@@ -193,98 +171,49 @@ class EmailSchedulerService {
             throw new Error(`Job ${job.id} has no data`);
           }
 
-          let documentInfo = job.data;
-          
-          // Parse data if it's a string (mysql2 usually auto-parses JSON columns)
-          if (typeof documentInfo === 'string') {
-            try {
-              documentInfo = JSON.parse(documentInfo);
-            } catch (parseError) {
-               console.warn(`⚠️ JSON parse warning for job ${job.id}: ${parseError.message}, treating as raw string/object`);
-               // If parse fails, it might be that it was double encoded or something else, 
-               // but if it was "invalid JSON" error on [object Object], it means it was ALREADY an object.
-            }
-          }
+          const documentInfo = job.data;
 
           if (!documentInfo?.document_id || !documentInfo?.machine_number) {
             throw new Error(`Job ${job.id} has incomplete document info`);
           }
 
           // Mark as processing
-          await executeQuery(
-            'UPDATE email_jobs SET status = "processing", attempts = attempts + 1, updated_at = NOW() WHERE id = ?',
-            [job.id]
-          );
+          await prisma.emailJob.update({ where: { id: job.id }, data: { status: "processing", attempts: { increment: 1 } } });
 
-          // Try to send email
           const emailResult = await this.sendDocumentExpiryAlert(documentInfo);
 
           if (emailResult && emailResult.success) {
-            // Success - mark as completed
-            await executeQuery(
-              'UPDATE email_jobs SET status = "completed", processed_at = NOW(), error = NULL, updated_at = NOW() WHERE id = ?',
-              [job.id]
-            );
-
+            await prisma.emailJob.update({ where: { id: job.id }, data: { status: "completed", processedAt: new Date(), error: null } });
             completedCount++;
             console.log(`✅ Email job ${job.id} completed successfully`);
           } else {
-            // Failed - check if we should retry or mark as permanently failed
             const currentAttempts = (job.attempts || 0) + 1;
-            const maxAttempts = job.max_attempts || 3;
+            const maxAttempts = job.maxAttempts || 3;
 
             if (currentAttempts >= maxAttempts) {
-              // Max attempts reached - permanent failure
-              await executeQuery(
-                'UPDATE email_jobs SET status = "failed", error = ?, updated_at = NOW() WHERE id = ?',
-                [emailResult?.error || "Max attempts reached", job.id]
-              );
-
+              await prisma.emailJob.update({ where: { id: job.id }, data: { status: "failed", error: emailResult?.error || "Max attempts reached" } });
               failedCount++;
-              console.error(
-                `❌ Job ${job.id} failed permanently: ${
-                  emailResult?.error || "Unknown error"
-                }`
-              );
+              console.error(`❌ Job ${job.id} failed permanently: ${emailResult?.error || "Unknown error"}`);
             } else {
-              // Reset to pending for retry
-              await executeQuery(
-                'UPDATE email_jobs SET status = "pending", error = ?, updated_at = NOW() WHERE id = ?',
-                [emailResult?.error || "Email send failed", job.id]
-              );
-
-              console.log(
-                `🔄 Job ${job.id} reset for retry (${currentAttempts}/${maxAttempts})`
-              );
+              await prisma.emailJob.update({ where: { id: job.id }, data: { status: "pending", error: emailResult?.error || "Email send failed" } });
+              console.log(`🔄 Job ${job.id} reset for retry (${currentAttempts}/${maxAttempts})`);
             }
           }
 
           processedCount++;
         } catch (jobError) {
           console.error(`❌ Error processing job ${job.id}:`, jobError.message);
-
           try {
-            // Handle job processing errors
             const currentAttempts = (job.attempts || 0) + 1;
-            const maxAttempts = job.max_attempts || 3;
-
+            const maxAttempts = job.maxAttempts || 3;
             if (currentAttempts >= maxAttempts) {
-              await executeQuery(
-                'UPDATE email_jobs SET status = "failed", error = ?, updated_at = NOW() WHERE id = ?',
-                [jobError.message, job.id]
-              );
+              await prisma.emailJob.update({ where: { id: job.id }, data: { status: "failed", error: jobError.message } });
               failedCount++;
             } else {
-              await executeQuery(
-                'UPDATE email_jobs SET status = "pending", error = ?, updated_at = NOW() WHERE id = ?',
-                [jobError.message, job.id]
-              );
+              await prisma.emailJob.update({ where: { id: job.id }, data: { status: "pending", error: jobError.message } });
             }
           } catch (updateError) {
-            console.error(
-              `❌ Critical: Failed to update job ${job.id}:`,
-              updateError.message
-            );
+            console.error(`❌ Critical: Failed to update job ${job.id}:`, updateError.message);
           }
         }
       }
@@ -405,13 +334,12 @@ class EmailSchedulerService {
     try {
       console.log("🧹 Cleaning up old email jobs...");
 
-      const result = await executeQuery(`
-        DELETE FROM email_jobs 
-        WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
-        AND status IN ('completed', 'failed')
-      `);
+      const cutoff = new Date(Date.now() - 30 * 86400000);
+      const result = await prisma.emailJob.deleteMany({
+        where: { createdAt: { lt: cutoff }, status: { in: ["completed", "failed"] } },
+      });
 
-      console.log(`✅ Cleaned up ${result.affectedRows} old email jobs`);
+      console.log(`✅ Cleaned up ${result.count} old email jobs`);
     } catch (error) {
       console.error("❌ Error cleaning up old jobs:", error);
     }

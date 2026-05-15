@@ -1,6 +1,6 @@
 const Document = require("../models/Document");
 const Machine = require("../models/Machine");
-const { executeQuery } = require("../config/database");
+const { prisma } = require("../config/database");
 
 class DocumentController {
   // Get all documents with filtering
@@ -219,8 +219,8 @@ class DocumentController {
   // Get Email Notification Status
   static async getEmailNotificationStatus(req, res) {
       try {
-          // Implement based on email_jobs or logs
-          const jobs = await executeQuery("SELECT COUNT(*) as count, status FROM email_jobs WHERE type='document_expiry' GROUP BY status");
+          const jobGroups = await prisma.emailJob.groupBy({ by: ["status"], where: { type: "document_expiry" }, _count: { status: true } });
+          const jobs = jobGroups.map((g) => ({ status: g.status, count: g._count.status }));
           res.json({ success: true, stats: jobs });
       } catch (error) {
           console.error("Error in getEmailNotificationStatus:", error);

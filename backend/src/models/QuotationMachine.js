@@ -1,194 +1,99 @@
-const { executeQuery } = require("../config/database");
+const { prisma } = require("../config/database");
 
 class QuotationMachine {
-  // Get all machines with pagination
   static async getAll(filters = {}) {
     try {
-      let query = `
-        SELECT
-          id, name, description,
-          priceByDay, priceByWeek, priceByMonth,
-          gst_percentage, created_at, updated_at
-        FROM quotation_machines
-      `;
-
-      const conditions = [];
-      const params = [];
-
+      const where = {};
       if (filters.search) {
-        conditions.push(
-          "(name LIKE ? OR description LIKE ?)"
-        );
-        const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm);
+        where.OR = [
+          { name: { contains: filters.search, mode: "insensitive" } },
+          { description: { contains: filters.search, mode: "insensitive" } },
+        ];
       }
 
-      if (conditions.length > 0) {
-        query += " WHERE " + conditions.join(" AND ");
-      }
-
-      // Sorting
       const sortBy = filters.sortBy || "name";
-      const sortOrder = filters.sortOrder === "DESC" ? "DESC" : "ASC";
-      query += ` ORDER BY ${sortBy} ${sortOrder}`;
+      const sortOrder = (filters.sortOrder || "ASC").toLowerCase();
+      const limit = filters.limit ? parseInt(filters.limit) : undefined;
+      const offset = filters.offset ? parseInt(filters.offset) : 0;
 
-      // Pagination
-      if (filters.limit) {
-        const limit = parseInt(filters.limit);
-        const offset = parseInt(filters.offset) || 0;
-        query += ` LIMIT ${limit} OFFSET ${offset}`;
-      }
-
-      return await executeQuery(query, params);
+      return await prisma.quotationMachine.findMany({
+        where,
+        orderBy: { [sortBy === "gst_percentage" ? "gstPercentage" : sortBy]: sortOrder },
+        take: limit,
+        skip: offset,
+      });
     } catch (error) {
       console.error("Error in QuotationMachine.getAll:", error);
       throw error;
     }
   }
 
-  // Get total count for pagination
   static async count(filters = {}) {
     try {
-      let query = `SELECT COUNT(*) as total FROM quotation_machines`;
-      const conditions = [];
-      const params = [];
-
+      const where = {};
       if (filters.search) {
-        conditions.push(
-          "(name LIKE ? OR description LIKE ?)"
-        );
-        const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm);
+        where.OR = [
+          { name: { contains: filters.search, mode: "insensitive" } },
+          { description: { contains: filters.search, mode: "insensitive" } },
+        ];
       }
-
-      if (conditions.length > 0) {
-        query += " WHERE " + conditions.join(" AND ");
-      }
-
-      const result = await executeQuery(query, params);
-      return result[0].total;
+      return await prisma.quotationMachine.count({ where });
     } catch (error) {
-       console.error("Error in QuotationMachine.count:", error);
-       throw error;
+      console.error("Error in QuotationMachine.count:", error);
+      throw error;
     }
   }
 
-  // Get machine by ID
   static async getById(id) {
     try {
-      const query = `
-        SELECT * FROM quotation_machines WHERE id = ?
-      `;
-      const result = await executeQuery(query, [id]);
-      return result[0] || null;
+      return await prisma.quotationMachine.findUnique({ where: { id: parseInt(id) } });
     } catch (error) {
       console.error("Error getting quotation machine by ID:", error);
       throw error;
     }
   }
 
-  // Create new machine
   static async create(machineData) {
     try {
-      const {
-        name,
-        description,
-        priceByDay,
-        priceByWeek,
-        priceByMonth,
-        gst_percentage,
-      } = machineData;
-
-      const query = `
-        INSERT INTO quotation_machines (
-          name, description,
-          priceByDay, priceByWeek, priceByMonth,
-          gst_percentage, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-      `;
-
-      const result = await executeQuery(query, [
-        name,
-        description || null,
-        priceByDay,
-        priceByWeek,
-        priceByMonth,
-        gst_percentage || 18.0,
-      ]);
-
-      return {
-        success: true,
-        id: result.insertId,
-        message: "Pricing catalog item created successfully",
-      };
+      const { name, description, priceByDay, priceByWeek, priceByMonth, gst_percentage } = machineData;
+      const created = await prisma.quotationMachine.create({
+        data: { name, description: description || null, priceByDay, priceByWeek, priceByMonth, gstPercentage: gst_percentage || 18.0 },
+      });
+      return { success: true, id: created.id, message: "Pricing catalog item created successfully" };
     } catch (error) {
       console.error("Error creating quotation machine:", error);
       throw error;
     }
   }
 
-  // Update machine
   static async update(id, machineData) {
     try {
-      const allowedFields = [
-        "name", "description",
-        "priceByDay", "priceByWeek", "priceByMonth",
-        "gst_percentage"
-      ];
-      
-      const updates = [];
-      const params = [];
-
-      for (const field of allowedFields) {
-        if (machineData[field] !== undefined) {
-          updates.push(`${field} = ?`);
-          params.push(machineData[field]);
-        }
+      const fieldMap = { name: "name", description: "description", priceByDay: "priceByDay", priceByWeek: "priceByWeek", priceByMonth: "priceByMonth", gst_percentage: "gstPercentage" };
+      const data = {};
+      for (const [srcField, prismaField] of Object.entries(fieldMap)) {
+        if (machineData[srcField] !== undefined) data[prismaField] = machineData[srcField];
       }
+      if (Object.keys(data).length === 0) return { success: false, message: "No fields to update" };
 
-      if (updates.length === 0) {
-         return { success: false, message: "No fields to update" };
-      }
-
-      updates.push("updated_at = NOW()");
-      params.push(id);
-
-      const query = `UPDATE quotation_machines SET ${updates.join(", ")} WHERE id = ?`;
-      
-      await executeQuery(query, params);
-
-      return {
-        success: true,
-        message: "Pricing catalog item updated successfully",
-      };
+      await prisma.quotationMachine.update({ where: { id: parseInt(id) }, data });
+      return { success: true, message: "Pricing catalog item updated successfully" };
     } catch (error) {
       console.error("Error updating quotation machine:", error);
       throw error;
     }
   }
 
-  // Delete
   static async delete(id) {
-     try {
-         console.log(`Attempting to delete machine with ID: ${id}`);
-         // Check usage in sales_invoices or other tables if strictly needed, 
-         // but strictly for quotation_items:
-         const usageResult = await executeQuery("SELECT COUNT(*) as count FROM quotation_items WHERE quotation_machine_id = ?", [id]);
-         const usage = usageResult[0];
-         console.log("Usage check result:", usage);
+    try {
+      const usage = await prisma.quotationItem.count({ where: { quotationMachineId: parseInt(id) } });
+      if (usage > 0) return { success: false, message: "Cannot delete: This machine is used in existing quotations." };
 
-         if (usage && usage.count > 0) {
-             console.log("Delete failed: Item is in use.");
-             return { success: false, message: "Cannot delete: This machine is used in existing quotations." };
-         } else {
-             await executeQuery("DELETE FROM quotation_machines WHERE id = ?", [id]);
-             console.log("Delete successful.");
-             return { success: true, message: "Item deleted successfully" };
-         }
-     } catch (error) {
-         console.error("Error deleting quotation machine:", error);
-         throw error;
-     }
+      await prisma.quotationMachine.delete({ where: { id: parseInt(id) } });
+      return { success: true, message: "Item deleted successfully" };
+    } catch (error) {
+      console.error("Error deleting quotation machine:", error);
+      throw error;
+    }
   }
 }
 
