@@ -59,6 +59,7 @@ jobs:
             # ================= BACKEND =================
             echo "🔧 Backend setup"
             cd backend
+            rm -rf node_modules
             npm ci --omit=dev
             npx prisma generate
             npx prisma migrate deploy
