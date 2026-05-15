@@ -1,9 +1,11 @@
 const { prisma } = require("../config/database");
+const { normalize } = require("../utils/snakeCase");
 
 class Company {
   static async getDetails() {
     try {
-      return await prisma.ourCompanyDetails.findFirst({ orderBy: { id: "desc" } });
+      const row = await prisma.ourCompanyDetails.findFirst({ orderBy: { id: "desc" } });
+      return row ? normalize(row) : null;
     } catch (error) {
       console.error("Error fetching company details:", error);
       throw new Error("Failed to fetch company details");

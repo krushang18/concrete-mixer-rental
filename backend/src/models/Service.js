@@ -57,6 +57,13 @@ class Service {
       });
       if (!r) return null;
 
+      // Fetch created_by username separately (no Prisma relation defined for createdBy on ServiceRecord)
+      let createdByUser = null;
+      if (r.createdBy) {
+        const user = await prisma.user.findUnique({ where: { id: r.createdBy }, select: { username: true } });
+        createdByUser = user?.username || null;
+      }
+
       const services = r.services.map((srs) => ({
         record_service_id: srs.id,
         category_id: srs.serviceCategoryId,
@@ -86,6 +93,7 @@ class Service {
         updated_at: r.updatedAt,
         machine_number: r.machine?.machineNumber,
         machine_name: r.machine?.name,
+        created_by_user: createdByUser,
         services,
       };
     } catch (error) {
