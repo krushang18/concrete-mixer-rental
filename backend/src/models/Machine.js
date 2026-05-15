@@ -1,4 +1,5 @@
 const { prisma } = require("../config/database");
+const { normalize, normalizeMany } = require("../utils/snakeCase");
 
 class Machine {
   static async getAll(filters = {}) {
@@ -15,12 +16,13 @@ class Machine {
       const limit = filters.limit ? parseInt(filters.limit) : undefined;
       const offset = filters.offset ? parseInt(filters.offset) : undefined;
 
-      return await prisma.machine.findMany({
+      const rows = await prisma.machine.findMany({
         where,
         orderBy: { machineNumber: "asc" },
         take: limit && !isNaN(limit) && limit > 0 ? limit : undefined,
         skip: offset && !isNaN(offset) && offset >= 0 ? offset : undefined,
       });
+      return normalizeMany(rows);
     } catch (error) {
       console.error("❌ Error in Machine.getAll:", error);
       throw error;
@@ -29,7 +31,8 @@ class Machine {
 
   static async getById(id) {
     try {
-      return await prisma.machine.findUnique({ where: { id: parseInt(id) } });
+      const row = await prisma.machine.findUnique({ where: { id: parseInt(id) } });
+      return row ? normalize(row) : null;
     } catch (error) {
       console.error("Error getting machine by ID:", error);
       throw error;

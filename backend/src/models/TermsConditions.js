@@ -1,4 +1,5 @@
 const { prisma } = require("../config/database");
+const { normalize, normalizeMany } = require("../utils/snakeCase");
 
 class TermsConditions {
   static async getAll(filters = {}) {
@@ -13,7 +14,8 @@ class TermsConditions {
           { description: { contains: filters.search, mode: "insensitive" } },
         ];
       }
-      return await prisma.termsCondition.findMany({ where, orderBy: [{ displayOrder: "asc" }, { title: "asc" }] });
+      const rows = await prisma.termsCondition.findMany({ where, orderBy: [{ displayOrder: "asc" }, { title: "asc" }] });
+      return normalizeMany(rows);
     } catch (error) {
       console.error("Error getting all terms and conditions:", error);
       throw error;
@@ -22,7 +24,8 @@ class TermsConditions {
 
   static async getById(id) {
     try {
-      return await prisma.termsCondition.findUnique({ where: { id: parseInt(id) } });
+      const row = await prisma.termsCondition.findUnique({ where: { id: parseInt(id) } });
+      return row ? normalize(row) : null;
     } catch (error) {
       console.error("Error getting terms and conditions by ID:", error);
       throw error;

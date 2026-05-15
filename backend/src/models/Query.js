@@ -1,4 +1,5 @@
 const { prisma } = require("../config/database");
+const { normalize, normalizeMany } = require("../utils/snakeCase");
 
 class Query {
   static async create(queryData) {
@@ -62,7 +63,7 @@ class Query {
       const toRecord = Math.min(offset + limit, totalRecords);
 
       return {
-        data: rows,
+        data: normalizeMany(rows),
         pagination: {
           current_page: page,
           per_page: limit,
@@ -138,12 +139,14 @@ class Query {
 
   static async getById(id) {
     try {
-      return await prisma.customerQuery.findUnique({ where: { id: parseInt(id) } });
+      const row = await prisma.customerQuery.findUnique({ where: { id: parseInt(id) } });
+      return row ? normalize(row) : null;
     } catch (error) {
       console.error("Error fetching query by ID:", error);
       throw new Error("Failed to fetch query");
     }
   }
+
 
   static async updateStatus(id, status) {
     try {

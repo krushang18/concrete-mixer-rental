@@ -1,5 +1,13 @@
 const { prisma } = require("../config/database");
 
+// QuotationMachine keeps priceByDay/Week/Month in camelCase (frontend expects it)
+// but renames gstPercentage → gst_percentage and timestamps to snake_case
+function normalizeQM(row) {
+  if (!row) return null;
+  const { gstPercentage, createdAt, updatedAt, ...rest } = row;
+  return { ...rest, gst_percentage: gstPercentage, created_at: createdAt, updated_at: updatedAt };
+}
+
 class QuotationMachine {
   static async getAll(filters = {}) {
     try {
@@ -16,12 +24,13 @@ class QuotationMachine {
       const limit = filters.limit ? parseInt(filters.limit) : undefined;
       const offset = filters.offset ? parseInt(filters.offset) : 0;
 
-      return await prisma.quotationMachine.findMany({
+      const rows = await prisma.quotationMachine.findMany({
         where,
         orderBy: { [sortBy === "gst_percentage" ? "gstPercentage" : sortBy]: sortOrder },
         take: limit,
         skip: offset,
       });
+      return rows.map(normalizeQM);
     } catch (error) {
       console.error("Error in QuotationMachine.getAll:", error);
       throw error;
@@ -46,7 +55,8 @@ class QuotationMachine {
 
   static async getById(id) {
     try {
-      return await prisma.quotationMachine.findUnique({ where: { id: parseInt(id) } });
+      const row = await prisma.quotationMachine.findUnique({ where: { id: parseInt(id) } });
+      return normalizeQM(row);
     } catch (error) {
       console.error("Error getting quotation machine by ID:", error);
       throw error;
