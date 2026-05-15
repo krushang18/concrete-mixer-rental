@@ -58,7 +58,6 @@ dist/
 build/
 
 # Uploads
-uploads/
 public/uploads/
 
 # Backup files

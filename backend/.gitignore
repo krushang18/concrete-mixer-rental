@@ -101,7 +101,8 @@ typings/
 ehthumbs.db
 Thumbs.db
 
-# Uploads (preserve directory structure but not actual files)
-uploads/**
-!uploads/**/.gitkeep
+# Uploads: track directory skeleton, ignore actual files
+uploads/company/logo.png
+uploads/company/signature.png
+uploads/company/temp/
 temp/

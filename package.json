@@ -4,12 +4,15 @@
   "description": "Professional web application for M/S O.C.Shah concrete mixer rental business",
   "private": true,
   "scripts": {
-    "dev": "cd backend && npm run dev",
+    "dev": "bash dev.sh all",
+    "dev:backend": "bash dev.sh backend",
+    "dev:frontend": "bash dev.sh frontend",
+    "setup": "bash dev.sh setup",
     "start": "cd backend && npm start",
     "test": "cd backend && npm test",
     "deploy": "bash deployment/scripts/deploy.sh",
     "backup": "bash deployment/scripts/backup.sh",
-    "install-all": "cd backend && npm install",
+    "install-all": "cd backend && npm install && cd ../admin-frontend && npm install",
     "build": "echo 'Building customer site...' && echo 'Static site - no build required'",
     "lint": "cd backend && npm run lint"
   },
@@ -34,6 +37,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17"
   }
