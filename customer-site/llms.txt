@@ -1,0 +1,24 @@
+# M/S O.C.Shah — Self-Loading Concrete Mixer Rental
+
+> M/S O.C.Shah (fioriforrent.com) is a leading provider of self-loading concrete mixer
+> rentals in Gujarat, Rajasthan, and Maharashtra, India. Founded in 2016, the company
+> has 9+ years of experience, operates a fleet of 11 machines (KYB and Ajax brands,
+> 4.0–4.3 cubic metre drum capacity, diesel engine), has completed 800+ projects,
+> and has served 300+ construction clients — including solar power plants, RCC road
+> works, canal lining, and residential and commercial developments.
+> Services include: rental & delivery, flexible duration plans (daily/weekly/monthly),
+> fully insured equipment, 24/7 technical support, and preventive maintenance.
+> Contact: +91-9898020677 | +91-9913737777 | ocsfiori@gmail.com
+> Address: E-706, Radhe Infinity, Raksha Shakti Circle, Kudasan, Gandhinagar, Gujarat 382426, India
+
+## Pages
+
+- [Home](https://fioriforrent.com/): Overview of self-loading concrete mixer rental services, key facts, FAQ section, and customer inquiry CTA.
+- [Services](https://fioriforrent.com/services.html): Full service catalog — rental & delivery, flexible rental durations, insured equipment, 24/7 technical support, preventive maintenance, customer support. Equipment specs: KYB and Ajax self-loading concrete mixers, 4.0–4.3 cubic metre capacity, diesel engine. Rental process steps: inquiry → quote (24 hrs) → delivery → operation → pickup.
+- [About](https://fioriforrent.com/about.html): Company history (founded 2016), values, key statistics (9+ years experience, 800+ projects completed, 300+ clients, 11-machine fleet), and geographic coverage across Gujarat, Rajasthan, and Maharashtra.
+- [Contact](https://fioriforrent.com/contact.html): Office address (E-706, Radhe Infinity, Kudasan, Gandhinagar, Gujarat 382426), phone numbers (+91-9898020677, +91-9913737777), email (ocsfiori@gmail.com), and 24/7 availability.
+- [Get a Quote](https://fioriforrent.com/query.html): Inquiry form for rental quotations — fields include project location, duration, equipment type, and project description.
+
+## Optional
+
+- [Sitemap](https://fioriforrent.com/sitemap.xml): Full page index for search engine crawlers.

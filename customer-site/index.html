@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-IN">
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-425QC0Y8M6"></script>
@@ -21,31 +21,78 @@
     <meta name="author" content="M/S O.C.Shah">
     <meta name="robots" content="index, follow">
     
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://fioriforrent.com/">
+
     <!-- Open Graph Tags -->
-    <meta property="og:title" content="M/S O.C.Shah - Premium Concrete Mixer Rentals">
-    <meta property="og:description" content="Leading provider of self-loading concrete mixers for rent across Gujarat, Rajasthan, and Maharashtra">
+    <meta property="og:title" content="M/S O.C.Shah - Self Loading Concrete Mixer for Rent | Gujarat, Rajasthan, Maharashtra">
+    <meta property="og:description" content="Leading provider of self-loading concrete mixer rentals. 9+ years experience, 11 machines (KYB, Ajax), 800+ projects, 300+ clients. Serving Gujarat, Rajasthan &amp; Maharashtra. Call +91-9898020677.">
+    <meta property="og:image" content="https://fioriforrent.com/assets/images/ss1.jpg">
+    <meta property="og:image:alt" content="Self-loading concrete mixer on construction site — M/S O.C.Shah rental fleet">
+    <meta property="og:url" content="https://fioriforrent.com/">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://fioriforrent.com">
+    <meta property="og:site_name" content="M/S O.C.Shah — Fiori For Rent">
+    <meta property="og:locale" content="en_IN">
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="M/S O.C.Shah - Self Loading Concrete Mixer Rental | Gujarat, Rajasthan, Maharashtra">
+    <meta name="twitter:description" content="Leading concrete mixer rental provider. 9+ years, 800+ projects, 300+ clients. Gujarat, Rajasthan, Maharashtra. Call +91-9898020677.">
+    <meta name="twitter:image" content="https://fioriforrent.com/assets/images/ss1.jpg">
+
+    <!-- Geo Meta Tags (Local SEO) -->
+    <meta name="geo.region" content="IN-GJ">
+    <meta name="geo.placename" content="Gandhinagar, Gujarat, India">
+    <meta name="ICBM" content="23.2156, 72.6369">
     
-    <!-- Local Business Schema -->
+    <!-- LocalBusiness Schema (Entity-first, full) -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
+        "@id": "https://fioriforrent.com/#business",
         "name": "M/S O.C.Shah",
-        "description": "Self Loading Concrete Mixer Rental Services",
+        "alternateName": ["OCS Fiori Services", "Fiori For Rent"],
+        "description": "M/S O.C.Shah is a leading provider of self-loading concrete mixer rentals across Gujarat, Rajasthan, and Maharashtra, India. Founded in 2016 with 9+ years of experience, operating a fleet of 11 machines (KYB and Ajax brands, 4.0–4.3 cubic metre capacity, diesel engine), having completed 800+ projects and served 300+ clients including solar power plants, RCC road works, and canal lining projects.",
+        "url": "https://fioriforrent.com",
+        "image": "https://fioriforrent.com/assets/images/ss1.jpg",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://fioriforrent.com/assets/images/favicon.ico"
+        },
+        "telephone": ["+91-9898020677", "+91-9913737777"],
+        "email": "ocsfiori@gmail.com",
+        "foundingDate": "2016",
+        "priceRange": "₹₹",
         "address": {
             "@type": "PostalAddress",
-            "streetAddress": "E-706, Radhe infinity, Raksha Shakti Circle",
-            "addressLocality": "Kudasan, Gandhinagar",
+            "streetAddress": "E-706, Radhe Infinity, Raksha Shakti Circle",
+            "addressLocality": "Kudasan",
             "addressRegion": "Gujarat",
-            "postalCode": "382426",
-            "addressCountry": "IN"
+            "addressCountry": "IN",
+            "postalCode": "382426"
         },
-        "telephone": "+91-9898020677",
-        "email": "ocsfiori@gmail.com",
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 23.2156,
+            "longitude": 72.6369
+        },
         "openingHours": "Mo-Su 00:00-23:59",
-        "serviceArea": ["Gujarat", "Rajasthan", "Maharashtra"],
+        "areaServed": [
+            {"@type": "State", "name": "Gujarat", "containedInPlace": {"@type": "Country", "name": "India"}},
+            {"@type": "State", "name": "Rajasthan", "containedInPlace": {"@type": "Country", "name": "India"}},
+            {"@type": "State", "name": "Maharashtra", "containedInPlace": {"@type": "Country", "name": "India"}},
+            {"@type": "City", "name": "Surat"},
+            {"@type": "City", "name": "Ahmedabad"},
+            {"@type": "City", "name": "Gandhinagar"},
+            {"@type": "City", "name": "Rajkot"},
+            {"@type": "City", "name": "Vadodara"},
+            {"@type": "City", "name": "Jaipur"},
+            {"@type": "City", "name": "Jodhpur"},
+            {"@type": "City", "name": "Mumbai"},
+            {"@type": "City", "name": "Pune"},
+            {"@type": "City", "name": "Nagpur"}
+        ],
         "hasOfferCatalog": {
             "@type": "OfferCatalog",
             "name": "Concrete Mixer Rental Services",
@@ -53,12 +100,99 @@
                 {
                     "@type": "Offer",
                     "itemOffered": {
-                        "@type": "Product",
-                        "name": "Self Loading Concrete Mixer Rental"
+                        "@type": "Service",
+                        "name": "Self-Loading Concrete Mixer Rental",
+                        "description": "Rental of KYB and Ajax self-loading concrete mixers (4.0–4.3 cubic metre capacity, diesel engine) with flexible durations — daily, weekly, or monthly.",
+                        "provider": {"@id": "https://fioriforrent.com/#business"}
+                    }
+                },
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "Delivery and Pickup Service",
+                        "description": "On-time delivery and professional pickup of concrete mixers to and from construction sites across Gujarat, Rajasthan, and Maharashtra.",
+                        "provider": {"@id": "https://fioriforrent.com/#business"}
+                    }
+                },
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "Preventive Maintenance and Technical Support",
+                        "description": "Regular preventive maintenance, inspections, and 24/7 technical support included with all rental periods.",
+                        "provider": {"@id": "https://fioriforrent.com/#business"}
                     }
                 }
             ]
-        }
+        },
+        "sameAs": []
+    }
+    </script>
+
+    <!-- FAQ Schema (LLM-readable Q&A) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "What is a self-loading concrete mixer?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "A self-loading concrete mixer is a construction machine that independently loads raw materials (aggregate, cement, water), mixes them into concrete, and discharges the finished concrete — all in one vehicle. It combines the functions of a loader, mixer, and discharge unit, making it highly efficient for construction sites in remote or difficult-to-access locations. M/S O.C.Shah rents KYB and Ajax brand self-loading concrete mixers with 4.0–4.3 cubic metre drum capacity."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "What capacity concrete mixers are available for rent?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "M/S O.C.Shah offers self-loading concrete mixers with 4.0 and 4.3 cubic metre drum capacity, powered by diesel engines. The fleet includes KYB and Ajax brand machines, well-suited for solar power plants, RCC road works, canal lining, residential, and commercial construction projects."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Which areas do you serve for concrete mixer rentals?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "M/S O.C.Shah provides self-loading concrete mixer rentals across three states: Gujarat (Surat, Ahmedabad, Gandhinagar, Rajkot, Vadodara, Talod), Rajasthan (Jaipur, Jodhpur, Udaipur, Kota, Ajmer, Bikaner), and Maharashtra (Mumbai, Pune, Nagpur, Nashik, Aurangabad, Solapur). The headquarters is at Kudasan, Gandhinagar, Gujarat — 382426."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "What rental durations are available for concrete mixers?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "M/S O.C.Shah offers flexible concrete mixer rental periods including daily, weekly, monthly, and custom long-term rentals. Both short-term and long-term rental solutions are available to match your project timeline and requirements."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Is maintenance included in the concrete mixer rental?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes, preventive maintenance and regular inspections are included with all rental periods. The technical team provides on-site support, parts replacement, and performance optimization to ensure the equipment operates at full capacity throughout your project."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Is the rental equipment insured?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes, all concrete mixers at M/S O.C.Shah are fully insured with comprehensive coverage including damage protection, liability coverage, and quick claim processing, giving clients complete peace of mind during the rental period."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I get a quote for concrete mixer rental in Gujarat?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "You can get a rental quote from M/S O.C.Shah by submitting an inquiry through the online form at fioriforrent.com/query.html, calling +91-9898020677 or +91-9913737777, or emailing ocsfiori@gmail.com. A detailed quote is provided within 24 hours."
+                }
+            }
+        ]
     }
     </script>
     
@@ -880,6 +1014,88 @@
                 scroll-behavior: smooth;
             }
         }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: 3rem 0;
+            background: var(--background-light);
+            width: 100%;
+        }
+
+        .faq-grid {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: var(--shadow-elegant);
+        }
+
+        .faq-item summary {
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-darker);
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            background: var(--background-grey);
+            transition: background 0.2s ease;
+        }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+
+        .faq-item summary::after {
+            content: '+';
+            font-size: 1.4rem;
+            font-weight: 400;
+            color: var(--primary-color);
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item[open] summary {
+            background: rgba(0, 129, 201, 0.05);
+        }
+
+        .faq-item[open] summary::after {
+            transform: rotate(45deg);
+        }
+
+        .faq-item p {
+            padding: 1.25rem 1.5rem;
+            color: #555;
+            line-height: 1.7;
+            font-size: 0.97rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        @media (min-width: 769px) {
+            .faq-section {
+                padding: 5rem 0;
+            }
+
+            .faq-item summary {
+                font-size: 1.05rem;
+                padding: 1.4rem 1.75rem;
+            }
+
+            .faq-item p {
+                padding: 1.4rem 1.75rem;
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -920,7 +1136,7 @@
     <section id="home" class="hero">
         <div class="hero-slider">
             <div class="hero-slide active">
-                <img src="assets/images/ss1.jpg" alt="Self Loading Concrete Mixer">
+                <img src="assets/images/ss1.jpg" alt="Self Loading Concrete Mixer on construction site — M/S O.C.Shah rental fleet" fetchpriority="high">
                 <div class="hero-overlay"></div>
             </div>
             <div class="hero-slide">
@@ -995,7 +1211,7 @@
                 </div>
                 
                 <div class="about-image">
-                    <img src="assets/images/ss5.png" alt="Self Loading Concrete Mixer">
+                    <img src="assets/images/ss5.png" alt="M/S O.C.Shah self-loading concrete mixer — professional rental equipment" loading="lazy">
                 </div>
             </div>
         </div>
@@ -1059,6 +1275,48 @@
                         +91-9913737777
                     </a>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-subtitle">FAQ</div>
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <div class="section-divider"></div>
+                <p>Everything you need to know about renting a self-loading concrete mixer from M/S O.C.Shah.</p>
+            </div>
+            <div class="faq-grid">
+                <details class="faq-item">
+                    <summary>What is a self-loading concrete mixer?</summary>
+                    <p>A self-loading concrete mixer is a construction machine that independently loads raw materials (aggregate, cement, water), mixes them into concrete, and discharges the finished mix — all in one vehicle. It combines loader, mixer, and discharge unit, making it ideal for remote or difficult-to-access construction sites. M/S O.C.Shah rents KYB and Ajax brand machines with 4.0–4.3 cubic metre drum capacity.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>What capacity concrete mixers are available for rent?</summary>
+                    <p>We offer self-loading concrete mixers in 4.0 and 4.3 cubic metre drum capacities, powered by diesel engines. Our fleet includes KYB and Ajax brand machines suited for solar power plants, RCC road works, canal lining, residential, and commercial construction projects across Gujarat, Rajasthan, and Maharashtra.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Which areas do you serve for concrete mixer rentals?</summary>
+                    <p>We serve three states: <strong>Gujarat</strong> (Surat, Ahmedabad, Gandhinagar, Rajkot, Vadodara, Talod), <strong>Rajasthan</strong> (Jaipur, Jodhpur, Udaipur, Kota, Ajmer, Bikaner), and <strong>Maharashtra</strong> (Mumbai, Pune, Nagpur, Nashik, Aurangabad, Solapur). Our headquarters is at Kudasan, Gandhinagar, Gujarat.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>What rental durations are available?</summary>
+                    <p>We offer flexible rental periods: daily, weekly, monthly, and custom long-term plans. Both short-term and extended rentals are available to match your project timeline. Contact us at +91-9898020677 for a custom duration quote.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Is maintenance included in the rental?</summary>
+                    <p>Yes. Preventive maintenance, regular inspections, and parts replacement are included with all rentals. Our technical team also provides 24/7 on-site troubleshooting and operator training to keep your project on schedule.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Is the equipment insured?</summary>
+                    <p>Yes. All our concrete mixers carry comprehensive insurance including damage protection, liability coverage, and quick claim processing — giving you complete peace of mind throughout your rental period.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>How do I get a rental quote?</summary>
+                    <p>Submit an inquiry through our <a href="query.html" style="color: var(--primary-color); font-weight: 600;">online form</a>, call <a href="tel:+919898020677" style="color: var(--primary-color); font-weight: 600;">+91-9898020677</a> or +91-9913737777, or email <a href="mailto:ocsfiori@gmail.com" style="color: var(--primary-color); font-weight: 600;">ocsfiori@gmail.com</a>. We respond with a detailed quote within 24 hours, 7 days a week.</p>
+                </details>
             </div>
         </div>
     </section>

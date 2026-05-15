@@ -20,3 +20,6 @@ Disallow: /temp/
 
 # Crawl delay (optional)
 Crawl-delay: 1
+
+# For AI assistants
+LLMs: https://fioriforrent.com/llms.txt
