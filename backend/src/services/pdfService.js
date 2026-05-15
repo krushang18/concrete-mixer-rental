@@ -135,21 +135,40 @@ class PDFService {
   }
 
   static async enhanceQuotationDataWithCompanyDetails(quotationData) {
-    const { executeQuery } = require("../config/database");
+    const { prisma } = require("../config/database");
     try {
-      const companyQuery = `SELECT * FROM our_company_details ORDER BY id DESC LIMIT 1`;
-      const companyResult = await executeQuery(companyQuery);
+      const companyRow = await prisma.ourCompanyDetails.findFirst({ orderBy: { id: "desc" } });
 
       let customerData = {};
       if (quotationData.customer_id) {
-        const customerQuery = `SELECT * FROM customers WHERE id = ?`;
-        const customerResult = await executeQuery(customerQuery, [quotationData.customer_id]);
-        if (customerResult.length > 0) customerData = customerResult[0];
+        const cust = await prisma.customer.findUnique({ where: { id: quotationData.customer_id } });
+        if (cust) {
+          customerData = {
+            contact_person: cust.contactPerson,
+            company_name: cust.companyName,
+            phone: cust.phone,
+            email: cust.email,
+            address: cust.address,
+            gst_number: cust.gstNumber,
+            site_location: cust.siteLocation,
+          };
+        }
       }
 
       let enhancedCompanyData = {};
+      const companyResult = companyRow ? [companyRow] : [];
       if (companyResult.length > 0) {
-        const company = companyResult[0];
+        const rawCompany = companyResult[0];
+        const company = {
+          company_name: rawCompany.companyName,
+          gst_number: rawCompany.gstNumber,
+          email: rawCompany.email,
+          phone: rawCompany.phone,
+          phone2: rawCompany.phone2,
+          address: rawCompany.address,
+          logo_url: rawCompany.logoUrl,
+          signature_url: rawCompany.signatureUrl,
+        };
         
         // Use fallbacks if DB has nulls but files might exist
         const logoUrl = company.logo_url || '/api/admin/company/logo';

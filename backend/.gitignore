@@ -101,6 +101,7 @@ typings/
 ehthumbs.db
 Thumbs.db
 
-# Uploads
-uploads/
+# Uploads (preserve directory structure but not actual files)
+uploads/**
+!uploads/**/.gitkeep
 temp/
