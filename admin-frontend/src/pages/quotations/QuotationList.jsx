@@ -23,6 +23,7 @@ import {
   Package,
   Building2,
   Phone,
+  MapPin,
   IndianRupee,
   X,
   Menu,
@@ -98,7 +99,6 @@ const quotationStatusConfig = {
   sent: { label: 'Sent', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Clock },
   accepted: { label: 'Accepted', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
   rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
-  expired: { label: 'Expired', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertCircle }
 };
 
 // Format currency in Indian format
@@ -172,8 +172,8 @@ const StatusBadge = ({ status, size = 'sm', showDropdown = false, onUpdate }) =>
 
 // Mobile-first Filters Component with React Hook Form
 const QuotationFilters = ({ onApplyFilters, onReset }) => {
-  const { filters, showMobileFilters, setFilters, toggleMobileFilters } = useQuotationStore();
-  
+  const { filters, setFilters } = useQuotationStore();
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: yupResolver(filterSchema),
     defaultValues: filters,
@@ -183,177 +183,137 @@ const QuotationFilters = ({ onApplyFilters, onReset }) => {
   const onSubmit = (data) => {
     setFilters(data);
     onApplyFilters();
-    toggleMobileFilters(); // Close mobile filters after apply
   };
 
   const handleReset = () => {
-    reset({
-      status: '',
-      date: '',
-      sort_by: 'created_at',
-      sort_order: 'DESC'
-    });
+    reset({ status: '', date: '', sort_by: 'created_at', sort_order: 'DESC' });
     onReset();
-    toggleMobileFilters(); // Close mobile filters after reset
   };
-  
-  return (
-    <div className="bg-white rounded-lg border mb-4">
-      {/* Mobile filter toggle */}
-      <div className="flex items-center justify-between p-4 lg:hidden">
-        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-          <Filter className="w-5 h-5 mr-2" />
-          Filters
-        </h3>
-        <button
-          onClick={toggleMobileFilters}
-          className="flex items-center text-gray-500 hover:text-gray-700"
-        >
-          {showMobileFilters ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
 
-      {/* Desktop header */}
-      <div className="hidden lg:flex items-center justify-between p-4 border-b">
-        <h3 className="text-lg font-medium text-gray-900 flex items-center">
-          <Filter className="w-5 h-5 mr-2" />
-          Filters
-        </h3>
-      </div>
-      
-      {/* Filter form */}
-      <div className={`p-4 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                {...register('status')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Status</option>
-                {Object.entries(quotationStatusConfig).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Single Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
-                type="date"
-                {...register('date')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-              {errors.date && (
-                <p className="text-red-500 text-xs mt-1">{errors.date.message}</p>
-              )}
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch lg:justify-end gap-2 lg:col-span-1">
-              <button
-                type="submit"
-                className="flex-1 sm:flex-none bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
-              >
-                Apply
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                Reset
-              </button>
-            </div>
+  return (
+    <div className="bg-white rounded-lg border mb-4 p-3">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <select
+              {...register('status')}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+            >
+              <option value="">All</option>
+              {Object.entries(quotationStatusConfig).map(([key, config]) => (
+                <option key={key} value={key}>{config.label}</option>
+              ))}
+            </select>
           </div>
-        </form>
-      </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+            <input
+              type="date"
+              {...register('date')}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+            />
+            {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date.message}</p>}
+          </div>
+
+          <div className="flex items-end gap-1.5 col-span-2 sm:col-span-2">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600 transition-colors text-xs"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex-1 px-2 py-1 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors text-xs"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 };
 
 // Mobile-first Quotation Card Component
-const QuotationCard = ({ quotation, onDelete, onDownload }) => {
+const QuotationCard = ({ quotation, onDelete, onDownload, isDownloading, onStatusUpdate }) => {
   return (
-    <div className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-gray-900 text-sm">{quotation.quotation_number}</h3>
-            <div className="mt-1 flex flex-wrap gap-1">
-              <StatusBadge status={quotation.quotation_status} size="xs" />
-            </div>
-          </div>
-        </div>
+    <div className="bg-white border rounded-lg p-3 space-y-2 hover:shadow-md transition-shadow duration-200">
+      {/* Row 1: ID + Status */}
+      <div className="flex items-center justify-between">
+        <span className="font-semibold text-gray-900 text-sm leading-tight">{quotation.quotation_number}</span>
+        <StatusBadge
+          status={quotation.quotation_status}
+          size="xs"
+          showDropdown={true}
+          onUpdate={(newStatus) => onStatusUpdate(quotation.id, newStatus)}
+        />
       </div>
 
-      <div className="space-y-2 text-sm text-gray-600">
-        <div className="flex items-center">
-          <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
-          <span className="font-medium truncate">{quotation.customer_name}</span>
-          {quotation.company_name && quotation.company_name !== quotation.customer_name && (
-            <span className="ml-1 truncate">({quotation.company_name})</span>
-          )}
-        </div>
-        
-        <div className="flex items-center">
-          <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-          <a href={`tel:${quotation.customer_contact}`} className="text-blue-600">
-            {formatPhone(quotation.customer_contact)}
-          </a>
-        </div>
+      {/* Row 2: Customer Name (Company Name) */}
+      <div className="flex items-center gap-1 text-xs">
+        <Building2 className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+        <span className="font-medium text-gray-800 truncate">{quotation.customer_name}</span>
+        {quotation.company_name && quotation.company_name !== quotation.customer_name && (
+          <span className="text-gray-400 truncate">({quotation.company_name})</span>
+        )}
+      </div>
 
-        <div className="flex items-center">
-          <IndianRupee className="w-4 h-4 mr-2 flex-shrink-0" />
-          <span className="font-semibold text-lg">
-            {formatCurrency(quotation.grand_total)}
-          </span>
+      {/* Row 3: Amount + Site Location */}
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center font-semibold text-gray-900">
+          <IndianRupee className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>{formatCurrency(quotation.grand_total).replace('₹', '')}</span>
         </div>
-
-        {quotation.machines && (
-          <div className="flex items-start">
-            <Package className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
-            <span className="text-xs line-clamp-2">{quotation.machines}</span>
+        {quotation.site_location && (
+          <div className="flex items-center text-gray-500 gap-1 min-w-0 ml-2">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate max-w-[120px]">{quotation.site_location}</span>
           </div>
         )}
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Calendar className="w-4 h-4 mr-1" />
-            <span className="text-xs">
-              {new Date(quotation.created_at).toLocaleDateString('en-IN')}
-            </span>
-          </div>
-          <span className="text-xs text-gray-500">
-            {quotation.days_ago} days ago
-          </span>
-        </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+      <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100">
         <Link
           to={`/quotations/${quotation.id}`}
-          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors text-sm flex items-center justify-center"
+          style={{ height: '24px' }}
+          className="flex-1 bg-gray-100 text-gray-700 px-1.5 rounded-md hover:bg-gray-200 transition-colors text-xs flex items-center justify-center gap-1"
         >
-          <Eye className="w-4 h-4 mr-1" />
+          <Eye className="w-3 h-3" />
           View
         </Link>
         <button
           onClick={() => onDownload(quotation.id)}
-          className="flex-1 bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm flex items-center justify-center"
+          disabled={isDownloading}
+          style={{ height: '24px', minHeight: '0', minWidth: '0' }}
+          className={`flex-1 px-1.5 rounded-md transition-all text-xs flex items-center justify-center gap-1 ${
+            isDownloading
+              ? 'bg-blue-500 text-white cursor-not-allowed'
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+          }`}
         >
-          <Download className="w-4 h-4 mr-1" />
-          PDF
+          {isDownloading ? (
+            <>
+              <RefreshCcw className="w-3 h-3 animate-spin" />
+              Gen…
+            </>
+          ) : (
+            <>
+              <Download className="w-3 h-3" />
+              PDF
+            </>
+          )}
         </button>
         <button
           onClick={() => onDelete(quotation.id)}
-          className="flex-1 bg-red-100 text-red-700 py-1.5 px-3 rounded-lg hover:bg-red-200 transition-colors text-sm flex items-center justify-center"
+          style={{ height: '24px', minHeight: '0', minWidth: '0' }}
+          className="flex-1 px-1.5 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-xs flex items-center justify-center"
           title="Delete"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-3 h-3" />
         </button>
       </div>
     </div>
@@ -367,6 +327,8 @@ const QuotationList = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
+  const [downloadingIds, setDownloadingIds] = useState(new Set());
+
   const {
     filters,
     searchTerm,
@@ -424,10 +386,17 @@ const QuotationList = () => {
 
   // Handle PDF Download
   const handleDownload = async (id) => {
+    setDownloadingIds(prev => new Set(prev).add(id));
     try {
-        await quotationApi.generatePDF(id);
+      await quotationApi.generatePDF(id);
     } catch (error) {
-        console.error("Download failed:", error);
+      console.error("Download failed:", error);
+    } finally {
+      setDownloadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
   
@@ -552,56 +521,76 @@ const QuotationList = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-        {/* Mobile-first Header */}
+        {/* Header */}
         <div className="mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Title row */}
+          <div className="flex items-start justify-between mb-3">
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+              <h1 className="text-base sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
                 Quotation Management
               </h1>
-              <p className="text-gray-600 text-sm sm:text-base mt-1">
+              <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
                 Manage quotations and track delivery status
                 {pagination?.total ? (
-                  <span className="text-xs sm:text-sm text-gray-500 ml-1">
-                    ({pagination.total} total)
-                  </span>
+                  <span className="ml-1">({pagination.total} total)</span>
                 ) : null}
               </p>
             </div>
-            
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
+
+            {/* Desktop-only button row */}
+            <div className="hidden sm:flex items-center gap-2 ml-4 flex-shrink-0">
               <button
                 onClick={() => refetch()}
                 disabled={isFetching}
                 className="flex items-center px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
               >
-                <RefreshCcw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+                <RefreshCcw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
                 Refresh
               </button>
-              {/* <button
-                onClick={handleExport}
-                className="flex items-center px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </button> */}
-              <Link
-                to="/quotations/new"
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Quotation
-              </Link>
               <Link
                 to="/quotations/pricing"
                 className="flex items-center px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
-                <Settings className="w-4 h-4 mr-2" />
+                <Settings className="w-4 h-4 mr-1.5" />
                 Catalog
               </Link>
+              <Link
+                to="/quotations/new"
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                New Quotation
+              </Link>
             </div>
+          </div>
+
+          {/* Mobile-only button rows */}
+          <div className="sm:hidden space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                to="/quotations/pricing"
+                className="flex items-center justify-center px-2 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-xs font-medium"
+              >
+                <Settings className="w-3.5 h-3.5 mr-1" />
+                Catalog
+              </Link>
+              <Link
+                to="/quotations/new"
+                className="flex items-center justify-center px-2 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                New Quotation
+              </Link>
+            </div>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="flex items-center justify-center w-full px-2 py-1 text-gray-500 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 text-xs"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
+              {isFetching ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
         </div>
         
         
@@ -737,10 +726,18 @@ const QuotationList = () => {
                         </Link>
                         <button
                           onClick={() => handleDownload(quotation.id)}
-                          className="p-2 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-gray-100 transition-colors"
-                          title="Download PDF"
+                          disabled={downloadingIds.has(quotation.id)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            downloadingIds.has(quotation.id)
+                              ? 'text-purple-400 bg-purple-50 cursor-not-allowed'
+                              : 'text-purple-600 hover:text-purple-800 hover:bg-gray-100'
+                          }`}
+                          title={downloadingIds.has(quotation.id) ? 'Generating PDF…' : 'Download PDF'}
                         >
-                          <Download className="w-4 h-4" />
+                          {downloadingIds.has(quotation.id)
+                            ? <RefreshCcw className="w-4 h-4 animate-spin" />
+                            : <Download className="w-4 h-4" />
+                          }
                         </button>
                         <button
                           onClick={() => setDeleteDialog({ open: true, id: quotation.id })}
@@ -772,13 +769,15 @@ const QuotationList = () => {
                   </div>
                 </div>
             
-                <div className="divide-y divide-gray-200">
+                <div className="flex flex-col gap-2 p-2">
                   {quotations.map((quotation) => (
                     <QuotationCard
                       key={quotation.id}
                       quotation={quotation}
                       onDelete={(id) => setDeleteDialog({ open: true, id })}
                       onDownload={handleDownload}
+                      isDownloading={downloadingIds.has(quotation.id)}
+                      onStatusUpdate={handleStatusUpdate}
                     />
                   ))}
                 </div>

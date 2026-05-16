@@ -1,15 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
 import toast from 'react-hot-toast';
 import { create } from 'zustand';
-import { 
-  Search, 
-  Filter, 
-  Eye, 
-  Calendar,
+import {
+  Filter,
+  Eye,
   Phone,
   Mail,
   MapPin,
@@ -19,18 +14,14 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  Menu,
-  Building2,
-  ChevronDown // Added
+  ChevronDown,
 } from 'lucide-react';
 import { queryApi } from '../../services/queryApi';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
 import SearchBar from '../../components/common/SearchBar';
 import SearchResultsIndicator from '../../components/common/SearchResultsIndicator';
 import QueryDetailsModal from './QueryDetailsModal';
 
-// Zustand store - simplified without batch operations
 const useQueryStore = create((set) => ({
   filters: {
     status: '',
@@ -38,27 +29,15 @@ const useQueryStore = create((set) => ({
     limit: 10
   },
   searchTerm: '',
-  showMobileFilters: false,
-  
   setFilters: (newFilters) => set((state) => ({
     filters: { ...state.filters, ...newFilters }
   })),
   resetFilters: () => set({
-    filters: {
-      status: '',
-      page: 1,
-      limit: 10
-    },
+    filters: { status: '', page: 1, limit: 10 },
     searchTerm: ''
   }),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  toggleMobileFilters: () => set((state) => ({ showMobileFilters: !state.showMobileFilters }))
 }));
-
-// Simplified filter schema - only status
-const filterSchema = yup.object({
-  status: yup.string()
-});
 
 // Debounce hook
 const useDebounce = (value, delay) => {
@@ -115,85 +94,45 @@ const StatusBadge = ({ status, size = 'sm' }) => {
   );
 };
 
-// Minimal Filter Component
-// Minimal Filter Component
-const QueryFilters = ({ onApplyFilters, onReset }) => {
-  const { filters, showMobileFilters, setFilters, toggleMobileFilters } = useQueryStore();
-  
-  const { register, handleSubmit, reset } = useForm({
-    resolver: yupResolver(filterSchema),
-    defaultValues: filters,
-    mode: 'onChange'
-  });
+// Filter Component
+const QueryFilters = ({ onReset }) => {
+  const { filters, setFilters } = useQueryStore();
 
-  const onSubmit = (data) => {
-    setFilters(data);
-    onApplyFilters();
-    toggleMobileFilters();
+  const handleStatusChange = (e) => {
+    setFilters({ status: e.target.value, page: 1 });
   };
 
-  const handleReset = () => {
-    reset({ status: '' });
-    onReset();
-    toggleMobileFilters();
-  };
-  
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-      {/* Mobile Header */}
-      <div 
-        onClick={toggleMobileFilters}
-        className="flex items-center justify-between p-4 lg:hidden bg-gray-50/50 cursor-pointer active:bg-gray-100 transition-colors"
-      >
-        <span className="text-sm font-semibold text-gray-700 flex items-center">
-          <Filter className="w-4 h-4 mr-2 text-primary-600" />
-          Filter Queries
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} />
-      </div>
-      
-      {/* Filter Content */}
-      <div className={`p-4 ${showMobileFilters ? 'block border-t border-gray-100' : 'hidden lg:block'}`}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-             {/* Status Select */}
-             <div className="w-full lg:w-64 relative">
-               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                 <Filter className="h-4 w-4 text-gray-400" />
-               </div>
-               <select
-                  {...register('status')}
-                  className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all appearance-none cursor-pointer hover:bg-white"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="new">New</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <button
-                type="submit"
-                className="flex-1 lg:flex-none bg-primary-600 text-white px-5 py-2.5 rounded-lg hover:bg-primary-700 transition-all shadow-sm active:scale-[0.98] text-sm font-medium flex items-center justify-center"
-              >
-                Apply
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex-1 lg:flex-none px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Reset
-              </button>
-            </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 p-4">
+      <div className="flex flex-row gap-3 items-center">
+        {/* Status Select */}
+        <div className="flex-1 lg:flex-none lg:w-64 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Filter className="h-4 w-4 text-gray-400" />
           </div>
-        </form>
+          <select
+            value={filters.status}
+            onChange={handleStatusChange}
+            className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all appearance-none cursor-pointer hover:bg-white"
+          >
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* Reset Button */}
+        <button
+          type="button"
+          onClick={onReset}
+          className="px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reset
+        </button>
       </div>
     </div>
   );
@@ -335,10 +274,6 @@ const QueryManagementPage = () => {
     }
   }, [updateStatusMutation, selectedQuery]);
   
-  const applyFilters = useCallback(() => {
-    setFilters({ page: 1 });
-  }, [setFilters]);
-  
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -429,7 +364,7 @@ const QueryManagementPage = () => {
         />
         
         {/* Filters */}
-        <QueryFilters onApplyFilters={applyFilters} onReset={resetFilters} />
+        <QueryFilters onReset={resetFilters} />
         
         {/* Mobile Card View */}
         <div className="lg:hidden space-y-3 mb-4">
@@ -535,7 +470,7 @@ const QueryManagementPage = () => {
                         <td className="px-6 py-4 align-top text-right">
                           <button
                             onClick={() => handleViewQuery(query)}
-                            className="text-gray-400 hover:text-primary-600 p-2 rounded-full hover:bg-primary-50 transition-all opacity-0 group-hover:opacity-100"
+                            className="text-gray-400 hover:text-primary-600 p-2 rounded-full hover:bg-primary-50 transition-all"
                             title="View Details"
                           >
                             <Eye className="w-5 h-5" />

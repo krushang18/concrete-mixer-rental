@@ -94,19 +94,21 @@ class Query {
         where.createdAt = { ...where.createdAt, lte: end };
       }
 
-      const [total, newCount, contactedCount, closedCount, dateAgg] = await Promise.all([
+      const [total, newCount, inProgressCount, completedCount, cancelledCount, dateAgg] = await Promise.all([
         prisma.customerQuery.count({ where }),
         prisma.customerQuery.count({ where: { ...where, status: "new" } }),
-        prisma.customerQuery.count({ where: { ...where, status: "contacted" } }),
-        prisma.customerQuery.count({ where: { ...where, status: "closed" } }),
+        prisma.customerQuery.count({ where: { ...where, status: "in_progress" } }),
+        prisma.customerQuery.count({ where: { ...where, status: "completed" } }),
+        prisma.customerQuery.count({ where: { ...where, status: "cancelled" } }),
         prisma.customerQuery.aggregate({ _min: { createdAt: true }, _max: { createdAt: true }, where }),
       ]);
 
       return {
         total_records: total,
         new_count: newCount,
-        contacted_count: contactedCount,
-        closed_count: closedCount,
+        in_progress_count: inProgressCount,
+        completed_count: completedCount,
+        cancelled_count: cancelledCount,
         earliest_date: dateAgg._min.createdAt,
         latest_date: dateAgg._max.createdAt,
       };

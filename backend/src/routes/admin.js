@@ -719,6 +719,60 @@ router.get("/system/status", async (req, res) => {
 });
 
 // =============================================================================
+// EMAIL TEST ROUTE
+// =============================================================================
+
+router.post("/email/test", async (req, res) => {
+  try {
+    const { createTransporter } = require("../config/email");
+    const to = req.body.to || process.env.ADMIN_EMAILS?.split(",")[0] || process.env.COMPANY_EMAIL;
+
+    if (!to) {
+      return res.status(400).json({ success: false, message: "No recipient address — pass { \"to\": \"addr\" } or set ADMIN_EMAILS in .env" });
+    }
+
+    const transporter = createTransporter();
+    const info = await transporter.sendMail({
+      from: { name: "OCS Fiori Service", address: process.env.COMPANY_EMAIL },
+      to,
+      subject: "Test Email — OCS Fiori Document System",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <div style="background: #0081C9; color: white; padding: 20px 24px;">
+            <h2 style="margin: 0; font-size: 18px;">Test Email</h2>
+            <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.85;">OCS Fiori Document Management System</p>
+          </div>
+          <div style="padding: 24px; background: #f9fafb;">
+            <p style="margin: 0 0 12px; color: #374151;">This is a test email to confirm that the email notification system is working correctly.</p>
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0 0 6px; font-size: 13px; color: #6b7280;">Sent at</p>
+              <p style="margin: 0; font-weight: 600; color: #111827;">${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST</p>
+            </div>
+            <p style="margin: 0; font-size: 13px; color: #6b7280;">If you received this, your SMTP configuration is set up correctly and document expiry notifications will be delivered.</p>
+          </div>
+          <div style="padding: 12px 24px; background: #f3f4f6; text-align: center; font-size: 12px; color: #9ca3af;">
+            OCS Fiori Service &mdash; Document Tracking System
+          </div>
+        </div>
+      `,
+    });
+
+    res.json({
+      success: true,
+      message: `Test email sent to ${to}`,
+      messageId: info.messageId,
+    });
+  } catch (error) {
+    console.error("Test email error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send test email",
+      error: error.message,
+    });
+  }
+});
+
+// =============================================================================
 // 404 HANDLER
 // =============================================================================
 

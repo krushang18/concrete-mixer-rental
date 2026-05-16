@@ -118,10 +118,9 @@ const PricingCatalog = () => {
          toast.success(response.message || 'Item deleted successfully');
       }
     },
-    onError: (error) => {
+    onError: () => {
       setDeleteId(null);
-      // Error is handled globally or shown here
-      toast.error(error.message || 'Failed to delete item');
+      // Toast already shown by the global API interceptor (api.js)
     }
   });
 
@@ -157,36 +156,39 @@ const PricingCatalog = () => {
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-gray-500">Loading catalog...</div>;
+  if (isLoading) return <div className="p-4 text-center text-xs text-gray-500">Loading catalog...</div>;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <button 
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <button
             onClick={() => navigate('/quotations')}
-            className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
-            title="Back to Quotations"
+            className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors shrink-0"
+            style={{ minHeight: 0, minWidth: 0 }}
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pricing Catalog</h1>
-            <p className="text-gray-500 text-sm">Manage standard machines and pricing for quotations</p>
+            <h1 className="text-sm font-bold text-gray-900 leading-tight">Pricing Catalog</h1>
+            <p className="text-xs text-gray-400">Machines & pricing for quotations</p>
           </div>
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium shrink-0"
+          style={{ minHeight: 0, minWidth: 0 }}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-3.5 h-3.5" />
           Add Item
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <div className="p-4 border-b">
-          <SearchBar 
+      <div className="bg-white rounded-lg border">
+        <div className="p-3 border-b">
+          <SearchBar
             value={search}
             onChange={setSearch}
             placeholder="Search items..."
@@ -199,177 +201,147 @@ const PricingCatalog = () => {
             onClear={() => setSearch('')}
           />
         </div>
-        
-        {/* Desktop View (Table) */}
+
+        {/* Desktop Table */}
         <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-3 font-medium text-gray-500">Name</th>
-                <th className="px-6 py-3 font-medium text-gray-500">Monthly Price</th>
-                <th className="px-6 py-3 font-medium text-gray-500">GST %</th>
-                <th className="px-6 py-3 font-medium text-gray-500 text-right">Actions</th>
+                <th className="px-4 py-2.5 font-medium text-gray-500 uppercase tracking-wide">Name</th>
+                <th className="px-4 py-2.5 font-medium text-gray-500 uppercase tracking-wide">Monthly Price</th>
+                <th className="px-4 py-2.5 font-medium text-gray-500 uppercase tracking-wide">GST %</th>
+                <th className="px-4 py-2.5 font-medium text-gray-500 uppercase tracking-wide text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {machines.length === 0 ? (
-                 <tr><td colSpan="4" className="p-6 text-center text-gray-500">No items found.</td></tr>
-              ) : (
-                machines.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{item.name}</div>
-                      {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
-                    </td>
-                    <td className="px-6 py-4">₹{item.priceByMonth}</td>
-                    <td className="px-6 py-4">{item.gst_percentage}%</td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button onClick={() => handleOpenModal(item)} className="text-blue-600 hover:text-blue-800">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setDeleteId(item.id)} className="text-red-600 hover:text-red-800">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                <tr><td colSpan="4" className="p-6 text-center text-gray-400 text-xs">No items found.</td></tr>
+              ) : machines.map(item => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-900">{item.name}</p>
+                    {item.description && <p className="text-gray-400 mt-0.5">{item.description}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">₹{item.priceByMonth}</td>
+                  <td className="px-4 py-3 text-gray-700">{item.gst_percentage}%</td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button onClick={() => handleOpenModal(item)} className="text-blue-600 hover:text-blue-800 inline-flex" style={{ minHeight: 0, minWidth: 0 }}>
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setDeleteId(item.id)} className="text-red-500 hover:text-red-700 inline-flex" style={{ minHeight: 0, minWidth: 0 }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
-        {/* Mobile View (Cards) */}
+        {/* Mobile Cards */}
         <div className="sm:hidden divide-y">
-           {machines.length === 0 ? (
-             <div className="p-6 text-center text-gray-500">No items found.</div>
-           ) : (
-             machines.map(item => (
-               <div key={item.id} className="p-4 space-y-3">
-                 <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium text-gray-900">{item.name}</div>
-                      {item.description && <div className="text-xs text-gray-500 mt-1">{item.description}</div>}
-                    </div>
-                    <div className="flex space-x-3">
-                      <button onClick={() => handleOpenModal(item)} className="text-blue-600">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setDeleteId(item.id)} className="text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                 </div>
-                 <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="bg-gray-50 p-2 rounded">
-                       <span className="text-xs text-gray-500 block">Monthly Price</span>
-                       <span className="font-medium">₹{item.priceByMonth}</span>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded">
-                       <span className="text-xs text-gray-500 block">GST</span>
-                       <span className="font-medium">{item.gst_percentage}%</span>
-                    </div>
-                 </div>
-               </div>
-             ))
-           )}
+          {machines.length === 0 ? (
+            <div className="p-4 text-center text-xs text-gray-400">No items found.</div>
+          ) : machines.map(item => (
+            <div key={item.id} className="p-2.5 flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-900 leading-tight">{item.name}</p>
+                {item.description && <p className="text-xs text-gray-400 mt-0.5 break-words">{item.description}</p>}
+                <div className="flex gap-3 mt-1.5">
+                  <span className="text-xs text-gray-500">₹{item.priceByMonth}<span className="text-gray-400">/mo</span></span>
+                  <span className="text-xs text-gray-500">GST {item.gst_percentage}%</span>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => handleOpenModal(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" style={{ minHeight: 0, minWidth: 0 }}>
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setDeleteId(item.id)} className="p-1 text-red-500 hover:bg-red-50 rounded" style={{ minHeight: 0, minWidth: 0 }}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-        
-        {/* Pagination */}
+
         {pagination && pagination.total > 5 && (
           <Pagination
             pagination={pagination}
             onPageChange={setPage}
-            onLimitChange={(newLimit) => {
-              setLimit(newLimit);
-              setPage(1);
-            }}
+            onLimitChange={(newLimit) => { setLimit(newLimit); setPage(1); }}
           />
         )}
       </div>
 
-      {/* Modal */}
+      {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">{editingItem ? 'Edit Item' : 'New Item'}</h2>
-              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-4 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-gray-900">{editingItem ? 'Edit Item' : 'New Item'}</h2>
+              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600" style={{ minHeight: 0, minWidth: 0 }}>
+                <X className="w-4 h-4" />
               </button>
             </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Machine Name *</label>
-                <input 
-                  {...register('name')} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                <label className="block text-xs font-medium text-gray-700 mb-0.5">Machine Name *</label>
+                <input
+                  {...register('name')}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="e.g. JCB 3DX"
                 />
-                <p className="text-red-500 text-xs mt-1">{errors.name?.message}</p>
+                <p className="text-red-500 text-xs mt-0.5">{errors.name?.message}</p>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea 
-                  {...register('description')} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  rows="3" 
-                  placeholder="Optional details..."
+                <label className="block text-xs font-medium text-gray-700 mb-0.5">Description</label>
+                <textarea
+                  {...register('description')}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  rows="2"
+                  placeholder="Optional details…"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Daily Price (₹)</label>
-                    <input 
-                      type="number" 
-                      {...register('priceByDay')} 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Weekly Price (₹)</label>
-                    <input 
-                      type="number" 
-                      {...register('priceByWeek')} 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Price (₹)</label>
-                    <input 
-                      type="number" 
-                      {...register('priceByMonth')} 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    />
-                 </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-0.5">Daily (₹)</label>
+                  <input type="number" {...register('priceByDay')} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-0.5">Weekly (₹)</label>
+                  <input type="number" {...register('priceByWeek')} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-0.5">Monthly (₹)</label>
+                  <input type="number" {...register('priceByMonth')} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
               </div>
 
               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GST %</label>
-                  <input 
-                    type="number" 
-                    {...register('gst_percentage')} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  />
+                <label className="block text-xs font-medium text-gray-700 mb-0.5">GST %</label>
+                <input type="number" {...register('gst_percentage')} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 mt-2">
-                <button 
-                  type="button" 
-                  onClick={handleCloseModal} 
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-xs text-gray-700 bg-white hover:bg-gray-50"
+                  style={{ minHeight: 0, minWidth: 0 }}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  disabled={createMutation.isLoading || updateMutation.isLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-60"
+                  style={{ minHeight: 0, minWidth: 0 }}
                 >
-                  {(createMutation.isLoading || updateMutation.isLoading) && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Save Item
+                  {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Save
                 </button>
               </div>
             </form>
@@ -379,11 +351,13 @@ const PricingCatalog = () => {
 
       <ConfirmDialog
         open={Boolean(deleteId)}
-        onClose={() => setDeleteId(null)}
+        onCancel={() => setDeleteId(null)}
         onConfirm={() => deleteMutation.mutate(deleteId)}
+        confirmLabel="Delete"
+        confirmVariant="danger"
         title="Delete Item"
         message="Are you sure you want to delete this item from the catalog?"
-        loading={deleteMutation.isLoading}
+        loading={deleteMutation.isPending}
       />
     </div>
   );

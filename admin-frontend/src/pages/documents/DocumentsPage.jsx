@@ -180,34 +180,34 @@ const DocumentsPage = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage machine documentation expiry</p>
+          <h1 className="text-base sm:text-2xl font-bold text-gray-900 leading-tight">Document Management</h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Track and manage machine documentation expiry</p>
         </div>
-        
+
         <button
           onClick={handleAddDocument}
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center px-2.5 py-1.5 sm:px-4 sm:py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-shrink-0"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Document
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+          <span className="hidden xs:inline">Add </span>Document
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex flex-col sm:flex-row items-center gap-4">
-        <div className="flex-1 w-full sm:max-w-xs">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Filter by Machine</label>
-          <div className="relative">
+      <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Machine</label>
             <select
               value={filters.machine_id}
               onChange={(e) => handleFilterChange('machine_id', e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="block w-full px-2 py-1.5 text-xs border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
             >
-              <option value="">Select a Machine...</option>
+              <option value="">All Machines</option>
               {machines.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.machine_number} - {m.name}
@@ -215,71 +215,70 @@ const DocumentsPage = () => {
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="flex-1 w-full sm:max-w-xs">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Filter by Status</label>
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Statuses</option>
-            <option value="expired">Expired</option>
-            <option value="critical">Critical (≤ 3 days)</option>
-            <option value="warning">Warning (≤ 30 days)</option>
-            <option value="valid">Valid</option>
-          </select>
-        </div>
-        
-        <div className="flex-1"></div>
-        
-        <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-md">
-          Showing <strong>{documents.length}</strong> documents
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="block w-full px-2 py-1.5 text-xs border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+            >
+              <option value="all">All</option>
+              <option value="expired">Expired</option>
+              <option value="critical">Critical (≤ 3d)</option>
+              <option value="warning">Warning (≤ 30d)</option>
+              <option value="valid">Valid</option>
+            </select>
+          </div>
+
+          <div className="col-span-2 sm:col-span-2 flex items-end">
+            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1.5 rounded-md border border-gray-100 w-full text-center">
+              <strong>{documents.length}</strong> document{documents.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-           {/* Simple Spinner */}
-           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex justify-center items-center h-48 sm:h-64">
+           <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600"></div>
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-lg border border-dashed border-gray-300">
-          <FileText className="mx-auto h-12 w-12 text-gray-400" />
+        <div className="text-center py-10 sm:py-16 bg-white rounded-lg border border-dashed border-gray-300">
+          <FileText className="mx-auto h-9 w-9 sm:h-12 sm:w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {filters.machine_id 
-              ? "This machine doesn't have any documents managed yet." 
+          <p className="mt-1 text-xs sm:text-sm text-gray-500 px-4">
+            {filters.machine_id
+              ? "This machine doesn't have any documents managed yet."
               : "Select a machine to view its documents or add a new one."}
           </p>
           {filters.machine_id && (
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <button
                 onClick={handleAddDocument}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent shadow-sm text-xs sm:text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                <Plus className="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
                 Add Document Now
               </button>
             </div>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {documents.map((doc) => (
             <div key={doc.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">{documentUtils.getDocumentTypeIcon(doc.document_type)}</span>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
+              <div className="p-3 sm:p-4">
+                <div className="flex justify-between items-start mb-2.5 sm:mb-3">
+                  <div className="flex items-center min-w-0">
+                    <span className="text-lg sm:text-2xl mr-2 flex-shrink-0">{documentUtils.getDocumentTypeIcon(doc.document_type)}</span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 leading-tight truncate">
                         {documentUtils.formatDocumentType(doc.document_type)}
                       </h3>
                       {!filters.machine_id && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-0.5">
                           {doc.machine_number}
                         </span>
                       )}
@@ -287,16 +286,16 @@ const DocumentsPage = () => {
                   </div>
                   <StatusBadge expiryDate={doc.expiry_date} />
                 </div>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
+
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-500">Expires:</span>
                     <span className="font-medium text-gray-900">
                       {documentUtils.formatDate(doc.expiry_date)}
                     </span>
                   </div>
-                  
-                  <div className="flex justify-between text-sm">
+
+                  <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-500">Status:</span>
                     <span className={`font-medium ${
                       doc.days_until_expiry <= 0 ? 'text-red-600' : 'text-gray-900'
@@ -304,9 +303,9 @@ const DocumentsPage = () => {
                       {documentUtils.formatExpiryStatus(doc.expiry_date)}
                     </span>
                   </div>
-                  
+
                   {doc.last_renewed_date && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className="text-gray-500">Last Renewed:</span>
                       <span className="text-gray-900">
                         {documentUtils.formatDate(doc.last_renewed_date)}
@@ -316,34 +315,34 @@ const DocumentsPage = () => {
                 </div>
 
                 {doc.remarks && (
-                  <div className="mt-4 pt-4 border-t border-gray-100 text-sm italic text-gray-500">
+                  <div className="mt-2.5 pt-2.5 border-t border-gray-100 text-xs italic text-gray-500 truncate">
                     "{doc.remarks}"
                   </div>
                 )}
               </div>
-              
-              <div className="bg-gray-50 px-5 py-3 flex justify-between items-center border-t border-gray-100">
-                <button 
+
+              <div className="bg-gray-50 px-3 sm:px-4 py-2 flex justify-between items-center border-t border-gray-100">
+                <button
                   onClick={() => handleRenewClick(doc)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center"
                 >
                   <RefreshCw className="w-3 h-3 mr-1" /> Renew
                 </button>
-                
-                <div className="flex space-x-3">
-                  <button 
+
+                <div className="flex space-x-2 sm:space-x-3">
+                  <button
                     onClick={() => handleEditDocument(doc)}
-                    className="text-gray-400 hover:text-blue-600"
+                    className="p-1 text-gray-400 hover:text-blue-600 rounded"
                     title="Edit"
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDeleteDocument(doc)}
-                    className="text-gray-400 hover:text-red-600"
+                    className="p-1 text-gray-400 hover:text-red-600 rounded"
                     title="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </div>
               </div>

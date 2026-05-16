@@ -107,19 +107,19 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
   const isLoading = createMutation.isLoading || updateMutation.isLoading;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100">
-              <Package className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-blue-50 rounded-xl border border-blue-100">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+              <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight">
                 {isEditing ? 'Edit Machine' : 'Add New Machine'}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 {isEditing ? 'Update machine details below' : 'Add a new machine to your inventory'}
               </p>
             </div>
@@ -133,12 +133,12 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
           {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Basic Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Basic Information</h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
               {/* Machine Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -148,7 +148,7 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
                   type="text"
                   {...register('machine_number')}
                   placeholder="e.g., CMR-001"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all ${
+                  className={`w-full px-3 sm:px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm ${
                     errors.machine_number ? 'border-red-300 focus:ring-red-100' : 'border-gray-200'
                   }`}
                 />
@@ -166,7 +166,7 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
                   type="text"
                   {...register('name')}
                   placeholder="e.g., Fiori DB 350 Self Loading Mixer"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all ${
+                  className={`w-full px-3 sm:px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm ${
                     errors.name ? 'border-red-300 focus:ring-red-100' : 'border-gray-200'
                   }`}
                 />
@@ -184,8 +184,8 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
               <textarea
                 {...register('description')}
                 placeholder="Detailed description of the machine..."
-                rows={4}
-                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none ${
+                rows={3}
+                className={`w-full px-3 sm:px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none text-sm ${
                   errors.description ? 'border-red-300 focus:ring-red-100' : 'border-gray-200'
                 }`}
               />
@@ -196,19 +196,19 @@ const MachineForm = ({ machine, onSuccess, onCancel }) => {
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
             <button
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              className="px-5 py-2.5 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-800 transition-colors disabled:opacity-50 text-sm font-medium"
+              className="px-4 sm:px-5 py-2.5 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-800 transition-colors disabled:opacity-50 text-sm font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !isDirty}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
             >
               {isLoading && <LoadingSpinner size="sm" />}
               <Save className="w-4 h-4" />

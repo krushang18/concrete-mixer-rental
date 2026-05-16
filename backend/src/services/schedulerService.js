@@ -5,10 +5,7 @@ const cron = require("cron");
 
 class EmailSchedulerService {
   constructor() {
-    // Initialize job properties
-    this.documentExpiryMorningJob = null;
-    this.documentExpiryAfternoonJob = null;
-    this.documentExpiryEveningJob = null;
+    this.documentExpiryJob = null;
     this.cleanupJob = null;
   }
 
@@ -249,9 +246,9 @@ class EmailSchedulerService {
     try {
       console.log("⚙️ Initializing email scheduler cron jobs...");
 
-      // Process document expiry jobs - Morning (9:00 AM IST)
-      this.documentExpiryMorningJob = new cron.CronJob(
-        "0 9 * * *", 
+      // Process document expiry jobs every 4 hours: 12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM IST
+      this.documentExpiryJob = new cron.CronJob(
+        "0 */4 * * *",
         () => {
           this.processDocumentExpiryJobs();
         },
@@ -262,7 +259,7 @@ class EmailSchedulerService {
 
       // Clean up old jobs weekly on Sunday at 2 AM
       this.cleanupJob = new cron.CronJob(
-        "0 2 * * 0", // Weekly on Sunday at 2 AM
+        "0 2 * * 0",
         () => {
           this.cleanupOldJobs();
         },
@@ -272,7 +269,7 @@ class EmailSchedulerService {
       );
 
       console.log("✅ Email scheduler cron jobs initialized");
-      console.log("📋 Document expiry check: 9 AM daily");
+      console.log("📋 Document expiry check: every 4 hours (12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM IST)");
       console.log("🧹 Cleanup: Sunday 2 AM weekly");
     } catch (error) {
       console.error("❌ Error initializing cron jobs:", error);
@@ -282,19 +279,19 @@ class EmailSchedulerService {
   // Start cron jobs
   static startCronJobs() {
     try {
-      if (!this.documentExpiryMorningJob) {
+      if (!this.documentExpiryJob) {
         this.initializeCronJobs();
       }
 
-      this.documentExpiryMorningJob.start();
+      this.documentExpiryJob.start();
       if (this.cleanupJob) this.cleanupJob.start();
 
       console.log("✅ Email scheduler cron jobs started successfully");
-      
-      // Run immediately on server start as requested
+
+      // Run immediately on server start so no jobs are missed
       console.log("🚀 Running initial document expiry check on startup...");
       this.processDocumentExpiryJobs().catch(err => {
-          console.error("❌ Error during initial startup check:", err);
+        console.error("❌ Error during initial startup check:", err);
       });
 
     } catch (error) {
@@ -305,9 +302,7 @@ class EmailSchedulerService {
   // Stop cron jobs
   static stopCronJobs() {
     try {
-      if (this.documentExpiryMorningJob) this.documentExpiryMorningJob.stop();
-      if (this.documentExpiryAfternoonJob) this.documentExpiryAfternoonJob.stop();
-      if (this.documentExpiryEveningJob) this.documentExpiryEveningJob.stop();
+      if (this.documentExpiryJob) this.documentExpiryJob.stop();
       if (this.cleanupJob) this.cleanupJob.stop();
 
       console.log("🛑 Email scheduler cron jobs stopped");

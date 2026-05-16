@@ -11,8 +11,9 @@ datasource db {
 
 enum QueryStatus {
   new
-  contacted
-  closed
+  in_progress
+  completed
+  cancelled
 }
 
 enum QuotationStatus {

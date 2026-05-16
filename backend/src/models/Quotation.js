@@ -3,8 +3,9 @@ const { prisma } = require("../config/database");
 class Quotation {
   static async getAllWithPagination(filters = {}) {
     try {
+      const VALID_STATUSES = ['draft', 'sent', 'accepted', 'rejected'];
       const where = {};
-      if (filters.status) where.quotationStatus = filters.status;
+      if (filters.status && VALID_STATUSES.includes(filters.status)) where.quotationStatus = filters.status;
       if (filters.delivery_status) where.deliveryStatus = filters.delivery_status;
       if (filters.start_date) where.createdAt = { ...where.createdAt, gte: new Date(filters.start_date) };
       if (filters.end_date) { const end = new Date(filters.end_date); end.setHours(23, 59, 59, 999); where.createdAt = { ...where.createdAt, lte: end }; }
@@ -36,6 +37,7 @@ class Quotation {
           include: {
             createdByUser: { select: { username: true } },
             items: { include: { quotationMachine: { select: { name: true } } } },
+            customer: { select: { siteLocation: true } },
           },
         }),
       ]);
@@ -66,6 +68,7 @@ class Quotation {
           total_items: q.items.length,
           machines: machineItems.map((i) => i.quotationMachine?.name).filter(Boolean).join(", "),
           machine_total: machineTotal,
+          site_location: q.customer?.siteLocation || null,
         };
       });
 

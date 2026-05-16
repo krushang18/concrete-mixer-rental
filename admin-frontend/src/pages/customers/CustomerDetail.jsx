@@ -189,7 +189,7 @@ const CustomerDetail = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-semibold text-gray-900 truncate mx-2 flex-1 text-center">
+          <h1 className="text-base font-semibold text-gray-900 truncate mx-2 flex-1 text-center">
             {customer.company_name}
           </h1>
           <button
@@ -288,75 +288,75 @@ const CustomerDetail = () => {
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
            
            {/* Mobile Tabs */}
-            <div className="lg:hidden bg-white rounded-xl border border-gray-100 shadow-sm p-1 mb-4">
-              <div className="flex bg-gray-50 rounded-lg p-1">
+            <div className="lg:hidden bg-white rounded-xl border border-gray-100 shadow-sm mb-3">
+              <div className="flex bg-gray-50 rounded-xl p-1">
                 {tabItems.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-all ${
                       activeTab === tab.id
                         ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
+                    <tab.icon className="w-3.5 h-3.5" />
                     {tab.label}
                   </button>
                 ))}
+              </div>
             </div>
-           </div>
 
            {/* Left Sidebar (Desktop) / Main Content Area */}
            <div className={`lg:w-1/3 space-y-6 ${activeTab === 'overview' ? 'block' : 'hidden lg:block'}`}>
               
               {/* Customer Details Card */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                   <h3 className="font-semibold text-gray-900">Contact Details</h3>
+                <div className="px-4 py-3 lg:p-5 border-b border-gray-100">
+                   <h3 className="text-sm font-semibold text-gray-900 lg:text-base">Contact Details</h3>
                 </div>
-                <div className="p-5 space-y-5">
-                   <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                         <Phone className="w-4 h-4 text-blue-600" />
+                <div className="p-4 lg:p-5 space-y-4">
+                   <div className="flex gap-3">
+                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                         <Phone className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-blue-600" />
                       </div>
                       <div>
-                         <p className="text-sm text-gray-500 font-medium mb-0.5">Phone</p>
-                         <a href={`tel:${customer.phone}`} className="text-gray-900 hover:text-blue-600 font-medium">{customer.phone}</a>
+                         <p className="text-xs text-gray-500 font-medium mb-0.5">Phone</p>
+                         <a href={`tel:${customer.phone}`} className="text-sm text-gray-900 hover:text-blue-600 font-medium">{customer.phone}</a>
                       </div>
                    </div>
 
-                   <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                         <Mail className="w-4 h-4 text-blue-600" />
-                      </div>
-                       <div className="flex-1 min-w-0">
-                         <p className="text-sm text-gray-500 font-medium mb-0.5">Email</p>
-                         <a href={`mailto:${customer.email}`} className="text-gray-900 hover:text-blue-600 font-medium truncate block">{customer.email || 'N/A'}</a>
-                      </div>
-                   </div>
-
-                   <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                         <MapPin className="w-4 h-4 text-blue-600" />
+                   <div className="flex gap-3">
+                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                         <Mail className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                         <p className="text-sm text-gray-500 font-medium mb-0.5">Location</p>
-                         <p className="text-gray-900">{customer.site_location || 'N/A'}</p>
+                         <p className="text-xs text-gray-500 font-medium mb-0.5">Email</p>
+                         <a href={`mailto:${customer.email}`} className="text-sm text-gray-900 hover:text-blue-600 font-medium break-all">{customer.email || 'N/A'}</a>
+                      </div>
+                   </div>
+
+                   <div className="flex gap-3">
+                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                         <MapPin className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <p className="text-xs text-gray-500 font-medium mb-0.5">Location</p>
+                         <p className="text-sm text-gray-900">{customer.site_location || 'N/A'}</p>
                          {customer.address && (
-                            <p className="text-sm text-gray-500 mt-1 leading-relaxed">{customer.address}</p>
+                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{customer.address}</p>
                          )}
                       </div>
                    </div>
-                   
+
                    {customer.gst_number && (
-                    <div className="flex gap-4">
-                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-4 h-4 text-blue-600" />
+                    <div className="flex gap-3">
+                       <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-blue-600" />
                        </div>
                        <div>
-                          <p className="text-sm text-gray-500 font-medium mb-0.5">GST Number</p>
-                          <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded font-mono">
+                          <p className="text-xs text-gray-500 font-medium mb-0.5">GST Number</p>
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded font-mono">
                              {customer.gst_number}
                           </span>
                        </div>
@@ -370,53 +370,53 @@ const CustomerDetail = () => {
            <div className={`lg:w-2/3 space-y-6 ${activeTab === 'quotations' ? 'block' : 'hidden lg:block'}`}>
               
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <h3 className="font-semibold text-gray-900">Quotations</h3>
-                       <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                 <div className="px-4 py-3 lg:p-5 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                       <h3 className="text-sm font-semibold text-gray-900 lg:text-base">Quotations</h3>
+                       <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
                           {quotations.length}
                        </span>
                     </div>
                     <button
                       onClick={() => navigate(`/quotations/new?customer=${id}`)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                      className="text-xs lg:text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                       Create New
                     </button>
                  </div>
 
-                 <div className="p-5">
+                 <div className="p-4 lg:p-5">
                     {quotations.length > 0 ? (
                       <div className="space-y-4">
                         {quotations.map((quotation) => {
                           const status = getQuotationStatusDisplay(quotation.quotation_status);
                           return (
-                            <div 
-                              key={quotation.id} 
+                            <div
+                              key={quotation.id}
                               onClick={() => navigate(`/quotations/${quotation.id}`)}
-                              className="group block bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer relative"
-                            > 
-                              <div className="flex items-start justify-between gap-4 mb-3">
+                              className="group block bg-white border border-gray-200 rounded-xl p-3.5 lg:p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer relative"
+                            >
+                              <div className="flex items-start justify-between gap-3 mb-2.5">
                                  <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                                       <span className="font-bold text-gray-900">#{quotation.quotation_number}</span>
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                       <span className="text-sm font-bold text-gray-900">#{quotation.quotation_number}</span>
                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${status.color}`}>
                                           {status.label}
                                        </span>
                                     </div>
                                     <p className="text-xs text-gray-500">{formatDate(quotation.created_at)}</p>
                                  </div>
-                                 <div className="text-right flex-shrink-0 ml-4">
-                                    <p className="text-lg font-bold text-gray-900">{formatCurrency(parseFloat(quotation.grand_total))}</p>
+                                 <div className="text-right flex-shrink-0">
+                                    <p className="text-sm font-bold text-gray-900 lg:text-base">{formatCurrency(parseFloat(quotation.grand_total))}</p>
                                  </div>
                               </div>
-                              
-                              <div className="flex items-end justify-between gap-4 pt-3 border-t border-gray-50">
-                                 <p className="text-sm text-gray-600 flex-1">
+
+                              <div className="flex items-end justify-between gap-3 pt-2.5 border-t border-gray-50">
+                                 <p className="text-xs text-gray-600 flex-1 lg:text-sm">
                                     {quotation.machines || 'Details unavailable'}
                                  </p>
-                                 <span className="text-blue-600 font-medium group-hover:translate-x-1 transition-transform flex items-center text-xs flex-shrink-0 whitespace-nowrap mb-0.5">
+                                 <span className="text-blue-600 font-medium group-hover:translate-x-1 transition-transform flex items-center text-xs flex-shrink-0 whitespace-nowrap">
                                    View Quote <ArrowLeft className="w-3 h-3 ml-1 rotate-180" />
                                  </span>
                               </div>

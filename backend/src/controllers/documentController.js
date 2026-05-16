@@ -108,16 +108,25 @@ class DocumentController {
   }
 
   // Configure Notifications for a Document
+  // Accepts { notification_days: [30, 7, 1] } or { notifications: [{ days_before: 30, is_active: true }, ...] }
   static async configureNotifications(req, res) {
     try {
       const { id } = req.params;
-      const { notification_days } = req.body; // Expect array like [30, 7, 1]
+      const { notification_days, notifications } = req.body;
 
-      if (!Array.isArray(notification_days)) {
-        return res.status(400).json({ error: "notification_days must be an array of numbers" });
+      let daysArray;
+      if (Array.isArray(notification_days)) {
+        daysArray = notification_days;
+      } else if (Array.isArray(notifications)) {
+        daysArray = notifications
+          .filter((n) => n.is_active !== false)
+          .map((n) => n.days_before)
+          .filter((d) => typeof d === "number" && d >= 0);
+      } else {
+        return res.status(400).json({ error: "Provide notification_days array or notifications array" });
       }
 
-      const result = await Document.configureNotifications(id, notification_days);
+      const result = await Document.configureNotifications(id, daysArray);
       res.json(result);
     } catch (error) {
       console.error("Error in configureNotifications:", error);
@@ -130,7 +139,7 @@ class DocumentController {
     try {
       const { id } = req.params;
       const settings = await Document.getNotificationSettings(id);
-      res.json(settings);
+      res.json({ success: true, data: settings });
     } catch (error) {
       console.error("Error in getNotificationSettings:", error);
       res.status(500).json({ error: "Failed to fetch notification settings" });
@@ -141,7 +150,7 @@ class DocumentController {
   static async getNotificationDefaults(req, res) {
       try {
           const defaults = await Document.getNotificationDefaults(req.query.document_type);
-          res.json(defaults);
+          res.json({ success: true, data: defaults });
       } catch (error) {
           console.error("Error in getNotificationDefaults:", error);
           res.status(500).json({ error: "Failed to fetch notification defaults" });
@@ -149,23 +158,35 @@ class DocumentController {
   }
 
   // Update Notification Defaults
+  // Frontend sends { defaults: [{ document_type, days_before }, ...] }
   static async updateNotificationDefaults(req, res) {
       try {
-          const { document_type, days_before } = req.body;
-          const userId = req.user ? req.user.id : null; // Assuming auth middleware adds user
-          const result = await Document.updateNotificationDefaults(document_type, days_before, userId);
-          res.json(result);
+          const userId = req.user ? req.user.id : null;
+          const { defaults, document_type, days_before } = req.body;
+
+          if (Array.isArray(defaults)) {
+              // Batch update from frontend
+              for (const item of defaults) {
+                  await Document.updateNotificationDefaults(item.document_type, item.days_before, userId);
+              }
+          } else {
+              // Single update (legacy / direct call)
+              await Document.updateNotificationDefaults(document_type, days_before, userId);
+          }
+
+          res.json({ success: true, message: "Notification defaults updated successfully" });
       } catch (error) {
           console.error("Error in updateNotificationDefaults:", error);
           res.status(500).json({ error: "Failed to update notification defaults" });
       }
   }
 
-  // Get Notification History
+  // Get Notification History — works for both /notification-history and /:id/notification-history
   static async getNotificationHistory(req, res) {
       try {
-          const history = await Document.getNotificationHistory(req.params.id);
-          res.json(history);
+          const documentId = req.params.id || null;
+          const history = await Document.getNotificationHistory(documentId);
+          res.json({ success: true, data: history });
       } catch (error) {
           console.error("Error in getNotificationHistory:", error);
           res.status(500).json({ error: "Failed to fetch notification history" });

@@ -260,34 +260,34 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess, existingTerms
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-xl sm:rounded-lg w-full sm:max-w-xl max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              {isEditing ? 'Edit Term & Condition' : 'Add New Term & Condition'}
+            <h2 className="text-sm sm:text-base font-semibold text-gray-900">
+              {isEditing ? 'Edit Term & Condition' : 'Add New Term'}
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-xs text-gray-500 mt-0.5">
               {isEditing ? 'Update the term details below' : 'Create a new term for your library'}
             </p>
           </div>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 p-1"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Title Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Type className="w-4 h-4 inline mr-2" />
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Type className="w-3.5 h-3.5 inline mr-1.5" />
                 Title *
               </label>
               <input
@@ -296,27 +296,25 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess, existingTerms
                 onChange={(e) => handleChange('title', e.target.value)}
                 onBlur={() => handleBlur('title')}
                 placeholder="Enter term title..."
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.title && touched.title ? 'border-red-300' : 'border-gray-300'
                 }`}
                 disabled={isLoading}
                 maxLength={200}
               />
               {errors.title && touched.title && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
+                <p className="mt-0.5 text-xs text-red-600 flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
                   {errors.title}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.title.length}/200 characters
-              </p>
+              <p className="mt-0.5 text-xs text-gray-400">{formData.title.length}/200</p>
             </div>
 
             {/* Description Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <AlignLeft className="w-4 h-4 inline mr-2" />
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <AlignLeft className="w-3.5 h-3.5 inline mr-1.5" />
                 Description *
               </label>
               <textarea
@@ -327,141 +325,127 @@ const TermModal = ({ isOpen, onClose, term, categories, onSuccess, existingTerms
                 }}
                 onBlur={() => handleBlur('description')}
                 placeholder="Enter detailed description of the term..."
-                rows={4}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none ${
+                rows={3}
+                className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${
                   errors.description && touched.description ? 'border-red-300' : 'border-gray-300'
                 }`}
                 disabled={isLoading}
                 maxLength={2000}
               />
               {errors.description && touched.description && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
+                <p className="mt-0.5 text-xs text-red-600 flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
                   {errors.description}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.description.length}/2000 characters
-              </p>
+              <p className="mt-0.5 text-xs text-gray-400">{formData.description.length}/2000</p>
             </div>
 
             {/* Display Order Field */}
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Hash className="w-4 h-4 inline mr-2" />
-                  Display Order
-                </label>
-                <input
-                  type="number"
-                  value={formData.display_order}
-                  onChange={(e) => handleChange('display_order', e.target.value)}
-                  onBlur={() => handleBlur('display_order')}
-                  placeholder="Auto-assigned"
-                  min="0"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                    errors.display_order && touched.display_order ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  disabled={isLoading}
-                />
-                {errors.display_order && touched.display_order && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertTriangle className="w-4 h-4 mr-1" />
-                    {errors.display_order}
-                  </p>
-                )}
-                <p className="mt-1 text-xs text-gray-500">
-                  Leave empty for auto-assignment
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Hash className="w-3.5 h-3.5 inline mr-1.5" />
+                Display Order
+              </label>
+              <input
+                type="number"
+                value={formData.display_order}
+                onChange={(e) => handleChange('display_order', e.target.value)}
+                onBlur={() => handleBlur('display_order')}
+                placeholder="Auto-assigned"
+                min="0"
+                className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.display_order && touched.display_order ? 'border-red-300' : 'border-gray-300'
+                }`}
+                disabled={isLoading}
+              />
+              {errors.display_order && touched.display_order && (
+                <p className="mt-0.5 text-xs text-red-600 flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {errors.display_order}
                 </p>
-              </div>
+              )}
+              <p className="mt-0.5 text-xs text-gray-400">Leave empty for auto-assignment</p>
             </div>
 
             {/* Default Status Toggle */}
-            <div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  {formData.is_default ? (
-                    <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                  ) : (
-                    <StarOff className="w-5 h-5 text-gray-400" />
-                  )}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">Default Term</h4>
-                    <p className="text-xs text-gray-600">
-                      Default terms are automatically included in new quotations
-                    </p>
-                  </div>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                {formData.is_default ? (
+                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                ) : (
+                  <StarOff className="w-4 h-4 text-gray-400" />
+                )}
+                <div>
+                  <h4 className="text-xs font-medium text-gray-900">Default Term</h4>
+                  <p className="text-xs text-gray-500">Auto-included in new quotations</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_default}
-                    onChange={(e) => handleChange('is_default', e.target.checked)}
-                    className="sr-only peer"
-                    disabled={isLoading}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                </label>
               </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_default}
+                  onChange={(e) => handleChange('is_default', e.target.checked)}
+                  className="sr-only peer"
+                  disabled={isLoading}
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
             </div>
 
             {/* Preview Section */}
             {(formData.title || formData.description) && (
-              <div className="border-t pt-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Preview</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h5 className="font-medium text-gray-900">{formData.title || 'Term Title'}</h5>
+              <div className="border-t pt-3">
+                <h4 className="text-xs font-medium text-gray-700 mb-2">Preview</h4>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center space-x-1.5 mb-1.5">
+                    <h5 className="text-sm font-medium text-gray-900">{formData.title || 'Term Title'}</h5>
                     {formData.is_default && (
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-xs text-gray-600">
                     {formData.description || 'Term description will appear here...'}
                   </p>
-                  <div className="flex items-center space-x-3">
-                    {formData.display_order && (
-                      <span className="text-xs text-gray-500">
-                        Order: {formData.display_order}
-                      </span>
-                    )}
-                  </div>
+                  {formData.display_order && (
+                    <p className="text-xs text-gray-400 mt-1.5">Order: {formData.display_order}</p>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 p-6 bg-gray-50 flex-shrink-0">
+          <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+              <div className="text-xs text-gray-500">
                 {isDirty && !isLoading && (
                   <span className="flex items-center text-amber-600">
-                    <AlertTriangle className="w-4 h-4 mr-1" />
-                    You have unsaved changes
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Unsaved changes
                   </span>
                 )}
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={isLoading}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading || !isDirty}
-                  className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs"
                 >
                   {isLoading ? (
                     <LoadingSpinner size="small" color="white" />
                   ) : (
-                    <Save className="w-4 h-4 mr-2" />
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
                   )}
-                  {isLoading ? 'Saving...' : (isEditing ? 'Update Term' : 'Create Term')}
+                  {isLoading ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
                 </button>
               </div>
             </div>

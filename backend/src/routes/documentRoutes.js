@@ -1,29 +1,43 @@
 const express = require("express");
 const router = express.Router();
 const DocumentController = require("../controllers/documentController");
-const auth = require("../middleware/auth"); // Assuming you have auth middleware
 
-// Use auth middleware if needed, e.g., router.use(auth);
+// --- Static routes must come before /:id ---
 
-// Get all documents (with filters)
+// GET /expiring
+router.get("/expiring", DocumentController.getExpiring);
+
+// GET /machine/:machineId
+router.get("/machine/:machineId", DocumentController.getByMachine);
+
+// Notification defaults
+router.get("/notification-defaults", DocumentController.getNotificationDefaults);
+router.put("/notification-defaults", DocumentController.updateNotificationDefaults);
+
+// Notification history (all documents)
+router.get("/notification-history", DocumentController.getNotificationHistory);
+
+// Email notification status
+router.get("/email-status", DocumentController.getEmailNotificationStatus);
+
+// Bulk renew
+router.put("/bulk/renew", DocumentController.bulkRenew);
+
+// Apply / initialize / check notifications
+router.post("/apply-default-notifications", DocumentController.applyDefaultNotifications);
+router.post("/initialize-notifications", DocumentController.initializeDefaultNotifications);
+router.post("/check-notifications", DocumentController.checkNotificationsDue);
+
+// --- Collection routes ---
 router.get("/", DocumentController.getAll);
-
-// Get single document
-router.get("/:id", DocumentController.getById);
-
-// Create or Update document (Upsert)
 router.post("/", DocumentController.createOrUpdate);
 
-// Renew document
+// --- Dynamic :id routes (must be last) ---
+router.get("/:id", DocumentController.getById);
 router.post("/:id/renew", DocumentController.renewDocument);
-
-// Get notification settings for a document
 router.get("/:id/notifications", DocumentController.getNotificationSettings);
-
-// Configure notifications for a document
 router.post("/:id/notifications", DocumentController.configureNotifications);
-
-// Delete document
+router.get("/:id/notification-history", DocumentController.getNotificationHistory);
 router.delete("/:id", DocumentController.delete);
 
 module.exports = router;

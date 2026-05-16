@@ -135,35 +135,35 @@ const DocumentFormModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-xl sm:rounded-lg w-full sm:max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-blue-600" />
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 flex-shrink-0">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center">
+            <FileText className="w-4 h-4 mr-1.5 text-blue-600" />
             {doc ? 'Edit Document' : 'Add Document'}
           </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-3 overflow-y-auto flex-1">
           {/* Document Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Document Type <span className="text-red-500">*</span>
             </label>
             <select
               name="document_type"
               value={formData.document_type}
               onChange={handleChange}
-              disabled={!!doc} // Cannot change type when editing
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border disabled:bg-gray-100 disabled:text-gray-500"
+              disabled={!!doc}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-1.5 border text-xs disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="RC_Book">RC Book</option>
               <option value="PUC">PUC Certificate</option>
@@ -171,15 +171,15 @@ const DocumentFormModal = ({
               <option value="Insurance">Insurance Policy</option>
             </select>
             {doc && (
-              <p className="mt-1 text-xs text-gray-500">
-                Document type cannot be changed once created.
+              <p className="mt-0.5 text-xs text-gray-400">
+                Type cannot be changed once created.
               </p>
             )}
           </div>
 
           {/* Expiry Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Expiry Date <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -190,16 +190,16 @@ const DocumentFormModal = ({
                 onChange={handleChange}
                 onBlur={handleBlur}
                 min={new Date().toISOString().split('T')[0]}
-                className={`w-full rounded-md shadow-sm p-2 border pl-10 ${
-                  errors.expiry_date 
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                className={`w-full rounded-md shadow-sm py-1.5 border pl-8 text-xs ${
+                  errors.expiry_date
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                 }`}
               />
-              <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Calendar className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
             {errors.expiry_date && (
-              <p className="mt-1 text-xs text-red-600 flex items-center">
+              <p className="mt-0.5 text-xs text-red-600 flex items-center">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 {errors.expiry_date}
               </p>
@@ -208,8 +208,8 @@ const DocumentFormModal = ({
 
           {/* Last Renewed Date (Optional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Last Renewed Date <span className="text-xs text-gray-500">(Optional)</span>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Last Renewed <span className="text-xs text-gray-400 font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <input
@@ -217,16 +217,16 @@ const DocumentFormModal = ({
                 name="last_renewed_date"
                 value={formData.last_renewed_date}
                 onChange={handleChange}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border pl-10"
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 border pl-8 text-xs"
               />
-              <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Calendar className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          {/* Notification Days (Custom Reminder) */}
+          {/* Notification Days */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Reminder Days <span className="text-xs text-gray-500">(comma separated, e.g. 30, 7, 1)</span>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Reminder Days <span className="text-xs text-gray-400 font-normal">(e.g. 30, 7, 1)</span>
             </label>
             <div className="relative">
               <input
@@ -235,15 +235,15 @@ const DocumentFormModal = ({
                 value={formData.notification_days}
                 onChange={handleChange}
                 placeholder="30, 7, 1"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border pl-10"
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 border pl-8 text-xs"
               />
-              <AlertCircle className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              <AlertCircle className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-0.5 text-xs text-gray-400">
               Days before expiry to send email notifications.
             </p>
             {errors.notification_days && (
-              <p className="mt-1 text-xs text-red-600 flex items-center">
+              <p className="mt-0.5 text-xs text-red-600 flex items-center">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 {errors.notification_days}
               </p>
@@ -252,25 +252,25 @@ const DocumentFormModal = ({
 
           {/* Remarks */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Remarks
             </label>
             <textarea
               name="remarks"
               value={formData.remarks}
               onChange={handleChange}
-              rows="3"
+              rows="2"
               placeholder="Add any notes or details..."
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border text-xs"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t mt-4">
+          <div className="flex items-center justify-end space-x-2 pt-3 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               disabled={isLoading}
             >
               Cancel
@@ -278,9 +278,9 @@ const DocumentFormModal = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center"
+              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center"
             >
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               {doc ? 'Update Document' : 'Add Document'}
             </button>
           </div>

@@ -1,6 +1,5 @@
 // src/services/customerApi.js
 import apiClient from "./api";
-import { toast } from "react-hot-toast";
 
 export class CustomerApiError extends Error {
   constructor(message, errors = [], status = null) {
@@ -33,7 +32,6 @@ export const customerApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to fetch customers";
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -69,7 +67,6 @@ export const customerApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to fetch customers";
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -98,7 +95,6 @@ export const customerApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to search customers";
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -125,9 +121,6 @@ export const customerApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to fetch customer with ID ${id}`;
-      if (error.response?.status !== 404) {
-        toast.error(errorMsg);
-      }
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -144,7 +137,6 @@ export const customerApi = {
 
     try {
       const { data } = await apiClient.post("/admin/customers", customerData);
-      toast.success(data.message || "Customer created successfully");
       return {
         success: true,
         data: data.data || null,
@@ -153,7 +145,6 @@ export const customerApi = {
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Failed to create customer";
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -176,7 +167,6 @@ export const customerApi = {
         `/admin/customers/${id}`,
         customerData
       );
-      toast.success(data.message || "Customer updated successfully");
       return {
         success: true,
         data: data.data || null,
@@ -186,7 +176,6 @@ export const customerApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to update customer with ID ${id}`;
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,
@@ -203,7 +192,6 @@ export const customerApi = {
 
     try {
       const { data } = await apiClient.delete(`/admin/customers/${id}`);
-      toast.success(data.message || "Customer deleted successfully");
       return {
         success: true,
         message: data.message,
@@ -212,7 +200,6 @@ export const customerApi = {
       const errorMsg =
         error.response?.data?.message ||
         `Failed to delete customer with ID ${id}`;
-      toast.error(errorMsg);
       throw new CustomerApiError(
         errorMsg,
         error.response?.data?.errors,

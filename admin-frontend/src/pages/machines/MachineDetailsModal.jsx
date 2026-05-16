@@ -116,9 +116,9 @@ const MachineDetailsModal = ({
       <div className="relative w-full sm:w-[600px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col pointer-events-auto animate-in slide-in-from-bottom-5 duration-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 leading-tight">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
+          <div className="min-w-0 flex-1 mr-3">
+            <h2 className="text-base sm:text-xl font-bold text-gray-900 leading-tight truncate">
               {machine.name}
             </h2>
             <div className="flex items-center gap-2 mt-1">

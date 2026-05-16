@@ -1,22 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
 import toast from 'react-hot-toast';
 import { create } from 'zustand';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
+import {
+  Plus,
   RefreshCw,
   AlertCircle,
   FileText,
-  Settings,
   MoreVertical,
   Edit,
   Trash2,
-  Copy,
   Star,
   StarOff,
   Move,
@@ -27,41 +20,29 @@ import { termsConditionsApi } from '../../services/termsConditionsApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
 import SearchBar from '../../components/common/SearchBar';
-import SearchResultsIndicator from '../../components/common/SearchResultsIndicator';
 import TermModal from './TermModal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 
 // Zustand store for Terms & Conditions state management
-const useTermsStore = create((set, get) => ({
+const useTermsStore = create((set) => ({
   filters: {
     isDefault: '',
     page: 1,
     limit: 12
   },
   searchTerm: '',
-  showMobileFilters: false,
-  
+
   // Actions
   setFilters: (newFilters) => set((state) => ({
     filters: { ...state.filters, ...newFilters }
   })),
   resetFilters: () => set({
-    filters: {
-      isDefault: '',
-      page: 1,
-      limit: 12
-    },
+    filters: { isDefault: '', page: 1, limit: 12 },
     searchTerm: ''
   }),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  toggleMobileFilters: () => set((state) => ({ showMobileFilters: !state.showMobileFilters }))
 }));
-
-// Validation schema for filters
-const filterSchema = yup.object({
-  isDefault: yup.string()
-});
 
 // Custom hook for debouncing - same as reference
 const useDebounce = (value, delay) => {
@@ -77,157 +58,67 @@ const useDebounce = (value, delay) => {
 
 // Main Terms Conditions Page Component - Mobile First
 const TermsConditionsPage = () => {
-  // Nested helper components
-  const TermsFilters = ({ onApplyFilters, onReset }) => {
-    const { filters, showMobileFilters, setFilters, toggleMobileFilters } = useTermsStore();
-    const { register, handleSubmit, reset } = useForm({
-      resolver: yupResolver(filterSchema),
-      defaultValues: filters,
-      mode: 'onChange'
-    });
-
-    const onSubmit = (data) => {
-      setFilters(data);
-      onApplyFilters();
-      // Only toggle on mobile
-      if (window.innerWidth < 1024) {
-        toggleMobileFilters();
-      }
-    };
-
-    const handleReset = () => {
-      reset({ isDefault: '' });
-      onReset();
-      if (window.innerWidth < 1024) {
-        toggleMobileFilters();
-      }
-    };
-    
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-        {/* Mobile Header */}
-        <div 
-          onClick={toggleMobileFilters}
-          className="flex items-center justify-between p-4 lg:hidden bg-gray-50/50 cursor-pointer active:bg-gray-100 transition-colors"
-        >
-          <span className="text-sm font-semibold text-gray-700 flex items-center">
-            <Filter className="w-4 h-4 mr-2 text-blue-600" />
-            Filter Terms
-          </span>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} />
-        </div>
-        
-        {/* Filter Content */}
-        <div className={`p-4 ${showMobileFilters ? 'block border-t border-gray-100' : 'hidden lg:block'}`}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="flex flex-col lg:flex-row gap-4 items-center">
-               
-               {/* Status Select */}
-               <div className="w-full lg:w-64 relative">
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                   <Settings className="h-4 w-4 text-gray-400" />
-                 </div>
-                 <select
-                    {...register('isDefault')}
-                    className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none cursor-pointer hover:bg-white"
-                  >
-                   <option value="">All Terms</option>
-                   <option value="true">Default Only</option>
-                   <option value="false">Non-Default Only</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 w-full lg:w-auto ml-auto">
-                <button
-                  type="submit"
-                  className="flex-1 lg:flex-none bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98] text-sm font-medium flex items-center justify-center"
-                >
-                  Apply Filters
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="flex-1 lg:flex-none px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Reset
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  const TermCard = ({ term, onEdit, onDelete, onDuplicate, onToggleDefault }) => {
+  const TermCard = ({ term, onEdit, onDelete, onToggleDefault }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isDefault = term.is_default === 1 || term.is_default === true;
     const actions = [
       { label: 'Edit', action: () => onEdit(term), icon: Edit },
-      { label: 'Duplicate', action: () => onDuplicate(term.id), icon: Copy },
       { label: term.is_default ? 'Remove Default' : 'Set as Default', action: () => onToggleDefault(term.id, !term.is_default), icon: term.is_default ? StarOff : Star },
       { label: 'Delete', action: () => onDelete(term.id), icon: Trash2, danger: true }
     ];
-    
+
     return (
-      <div className="bg-white border border-gray-100 rounded-xl p-5 hover:shadow-md transition-all duration-200 hover:border-blue-200 group relative">
-        <div className="flex justify-between items-start mb-3">
-           <div className="flex-1 min-w-0 pr-8">
-              <div className="flex items-center gap-2 mb-1.5">
-                 <h3 className="font-semibold text-gray-900 truncate text-base" title={term.title}>{term.title}</h3>
-                 {isDefault && (
-                    <span className="bg-blue-50 text-blue-700 p-1 rounded-md" title="Default Term">
-                       <Star className="w-3.5 h-3.5 fill-current" />
-                    </span>
-                 )}
+      <div className="bg-white border border-gray-100 rounded-xl p-3 sm:p-4 hover:shadow-md transition-all duration-200 hover:border-blue-200 group relative">
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <h3 className="font-semibold text-gray-900 truncate text-sm" title={term.title}>{term.title}</h3>
+              {isDefault && (
+                <span className="bg-blue-50 text-blue-700 p-0.5 rounded flex-shrink-0" title="Default Term">
+                  <Star className="w-3 h-3 fill-current" />
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed" title={term.description}>{term.description}</p>
+          </div>
+
+          <div className="flex-shrink-0 relative">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {isOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-lg shadow-xl z-20 min-w-[148px] py-1 animate-in fade-in zoom-in-95 duration-100">
+                {actions.map((action, index) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        action.action();
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center transition-colors ${
+                        action.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 mr-2" />{action.label}
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed" title={term.description}>{term.description}</p>
-           </div>
-           
-           <div className="absolute top-4 right-4">
-               <button 
-                 onClick={() => setIsOpen(!isOpen)}
-                 className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-               >
-                 <MoreVertical className="w-5 h-5" />
-               </button>
-               
-               {isOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-lg shadow-xl z-20 min-w-[160px] py-1 animate-in fade-in zoom-in-95 duration-100">
-                    {actions.map((action, index) => {
-                      const Icon = action.icon;
-                      return (
-                        <button 
-                          key={index} 
-                          onClick={(e) => { 
-                             e.stopPropagation();
-                             action.action(); 
-                             setIsOpen(false); 
-                          }} 
-                          className={`w-full text-left px-4 py-2.5 text-sm flex items-center transition-colors ${
-                              action.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4 mr-2.5" />{action.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-           </div>
+            )}
+          </div>
         </div>
-        
-        <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-2">
-           <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded">
-              Order: {term.display_order}
-           </span>
-           {/* <span className="text-xs text-gray-400">
-              Last updated: {new Date(term.updated_at || term.created_at).toLocaleDateString()}
-           </span>  */}
+
+        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+          <span className="text-xs font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+            Order: {term.display_order}
+          </span>
         </div>
       </div>
     );
@@ -266,42 +157,92 @@ const TermsConditionsPage = () => {
     if (!isOpen) return null;
 
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between p-5 border-b border-gray-100">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Reorder Terms</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
-               <X className="w-5 h-5" />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[88vh] flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 flex-shrink-0">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">Reorder Terms</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Tap arrows to change position</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
-          
-          <div className="overflow-y-auto p-5 space-y-3 bg-gray-50/50 flex-1">
-            {reorderedTerms.map((term, index) => (
-              <div key={term.id} className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-blue-300 hover:shadow-md transition-all">
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => moveItem(index, Math.max(0, index - 1))} disabled={index === 0} className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30 transition-colors">
-                     <ChevronDown className="w-4 h-4 rotate-180" />
-                  </button>
-                  <button onClick={() => moveItem(index, Math.min(reorderedTerms.length - 1, index + 1))} disabled={index === reorderedTerms.length - 1} className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30 transition-colors">
-                     <ChevronDown className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                     <span className="bg-gray-100 text-gray-600 text-xs font-bold px-1.5 py-0.5 rounded">#{index + 1}</span>
-                     <p className="font-semibold text-gray-900 text-sm truncate">{term.title}</p>
+
+          {/* List */}
+          <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+            {reorderedTerms.map((term, index) => {
+              const isDefault = term.is_default === 1 || term.is_default === true;
+              const isFirst = index === 0;
+              const isLast = index === reorderedTerms.length - 1;
+              return (
+                <div
+                  key={term.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  {/* Position badge */}
+                  <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {index + 1}
+                  </span>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-gray-900 truncate">{term.title}</p>
+                      {isDefault && (
+                        <Star className="w-3 h-3 text-blue-500 fill-current flex-shrink-0" />
+                      )}
+                    </div>
+                    {term.description && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{term.description}</p>
+                    )}
                   </div>
-                  {term.description && <p className="text-xs text-gray-500 line-clamp-1">{term.description}</p>}
+
+                  {/* Up / Down controls */}
+                  <div className="flex flex-col gap-0.5 flex-shrink-0">
+                    <button
+                      onClick={() => moveItem(index, Math.max(0, index - 1))}
+                      disabled={isFirst}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronDown className="w-4 h-4 rotate-180" />
+                    </button>
+                    <button
+                      onClick={() => moveItem(index, Math.min(reorderedTerms.length - 1, index + 1))}
+                      disabled={isLast}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          
-          <div className="flex justify-end gap-3 p-5 border-t border-gray-100 bg-white">
-            <button onClick={onClose} className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={isSaving} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-70 text-sm font-medium shadow-sm transition-colors">
-              {isSaving ? 'Saving...' : 'Save New Order'}
-            </button>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+            <span className="text-xs text-gray-400">{reorderedTerms.length} terms</span>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-1.5 border border-gray-200 bg-white text-gray-600 rounded-lg hover:bg-gray-50 text-xs font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 text-xs font-medium transition-colors flex items-center gap-1.5"
+              >
+                {isSaving && <RefreshCw className="w-3 h-3 animate-spin" />}
+                {isSaving ? 'Saving…' : 'Save Order'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -414,18 +355,6 @@ const TermsConditionsPage = () => {
     }
   });
   
-  const duplicateMutation = useMutation({
-    mutationFn: (id) => termsConditionsApi.duplicate(id),
-    onSuccess: () => {
-      toast.success('Term duplicated successfully');
-      queryClient.invalidateQueries(['terms-conditions']);
-      queryClient.invalidateQueries(['terms-stats']);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to duplicate term');
-    }
-  });
-  
   const reorderMutation = useMutation({
     mutationFn: (orderData) => termsConditionsApi.updateDisplayOrder(orderData),
     onSuccess: () => {
@@ -468,10 +397,6 @@ const TermsConditionsPage = () => {
     }
   }, [deleteMutation, termToDelete]);
   
-  const handleDuplicate = useCallback((termId) => {
-    duplicateMutation.mutate(termId);
-  }, [duplicateMutation]);
-  
   const handleToggleDefault = useCallback(async (termId, isDefault) => {
     try {
       await termsConditionsApi.update(termId, { is_default: isDefault });
@@ -483,8 +408,8 @@ const TermsConditionsPage = () => {
     }
   }, [queryClient]);
   
-  const applyFilters = useCallback(() => {
-    setFilters({ page: 1 });
+  const handleFilterChange = useCallback((value) => {
+    setFilters({ isDefault: value, page: 1 });
   }, [setFilters]);
   
   // Early returns should come after ALL hooks are called
@@ -516,127 +441,155 @@ const TermsConditionsPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 lg:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight leading-tight">
                 Terms & Conditions
               </h1>
-              <p className="text-gray-600 mt-1">
-                Manage your terms and conditions library
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                Manage your terms library
                 {pagination && (
-                  <span className="text-sm ml-2 font-medium bg-gray-100 px-2 py-0.5 rounded-full text-gray-600">
+                  <span className="font-medium bg-gray-100 px-1.5 py-0.5 rounded-full text-gray-500 text-xs">
                     {pagination.total} total
                   </span>
                 )}
               </p>
             </div>
-            
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+              {/* Reorder — text label on sm+, icon-only on mobile */}
               <button
                 onClick={() => setShowReorderModal(true)}
-                className="flex items-center justify-center px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium shadow-sm"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-xs font-medium"
+                title="Reorder"
               >
-                <Move className="w-4 h-4 mr-2 text-gray-500" />
+                <Move className="w-3.5 h-3.5" />
                 Reorder
               </button>
               <button
+                onClick={() => setShowReorderModal(true)}
+                className="sm:hidden p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                title="Reorder"
+              >
+                <Move className="w-4 h-4" />
+              </button>
+
+              {/* Refresh */}
+              <button
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="flex items-center justify-center p-2.5 text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50 shadow-sm"
+                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40"
                 title="Refresh"
               >
-                <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
               </button>
+
+              {/* Add Term */}
               <button
                 onClick={() => {
                   setEditingTerm(null);
                   setShowTermModal(true);
                 }}
-                className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-sm hover:shadow active:scale-[0.98] whitespace-nowrap"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium active:scale-[0.97] whitespace-nowrap"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Term
+                <Plus className="w-3.5 h-3.5" />
+                Add Term
               </button>
             </div>
           </div>
         </div>
-        
+
         {/* Search Bar */}
-        <div className="mb-6">
-           <SearchBar
-             value={searchTerm}
-             onChange={setSearchTerm}
-             placeholder="Search terms by title or description..."
-             isFetching={isFetching}
-             className="w-full"
-           />
+        <div className="mb-4">
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search terms by title or description..."
+            isFetching={isFetching}
+            className="w-full"
+          />
         </div>
         
-        {/* Filters */}
-        <TermsFilters 
-          onApplyFilters={applyFilters} 
-          onReset={resetFilters} 
-        />
-        
+        {/* Filter — always visible, instant apply */}
+        <div className="flex items-center gap-2 mb-4">
+          <select
+            value={filters.isDefault}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+          >
+            <option value="">All Terms</option>
+            <option value="true">Default Only</option>
+            <option value="false">Non-Default Only</option>
+          </select>
+          {filters.isDefault && (
+            <button
+              onClick={() => handleFilterChange('')}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-3 h-3" />
+              Clear
+            </button>
+          )}
+        </div>
+
         {/* Terms Grid */}
         <div className="relative">
           {terms.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
               {terms.map((term) => (
                 <TermCard
                   key={term.id}
                   term={term}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
-                  onDuplicate={handleDuplicate}
                   onToggleDefault={handleToggleDefault}
                 />
               ))}
             </div>
           ) : null}
-          
+
           {/* Empty state */}
           {terms.length === 0 && !isFetching && (
-            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
-               <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                 <FileText className="w-8 h-8" />
-               </div>
-               <h3 className="text-lg font-semibold text-gray-900 mb-1">No terms found</h3>
-               <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                 {searchTerm || filters.isDefault 
-                   ? 'No terms match your search criteria. Try adjusting your filters.' 
-                   : 'Get started by creating your first term and condition.'}
-               </p>
-               
-               {(searchTerm || filters.isDefault) ? (
-                  <button
-                    onClick={resetFilters}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                  >
-                    Clear Filters
-                  </button>
-               ) : (
-                  <button
-                    onClick={() => {
-                      setEditingTerm(null);
-                      setShowTermModal(true);
-                    }}
-                    className="inline-flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create New Term
-                  </button>
-               )}
+            <div className="text-center py-10 sm:py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">No terms found</h3>
+              <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 max-w-xs mx-auto px-4">
+                {searchTerm || filters.isDefault
+                  ? 'No terms match your search criteria. Try adjusting your filters.'
+                  : 'Get started by creating your first term and condition.'}
+              </p>
+
+              {(searchTerm || filters.isDefault) ? (
+                <button
+                  onClick={resetFilters}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  Clear Filters
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingTerm(null);
+                    setShowTermModal(true);
+                  }}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-xs font-medium"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Create New Term
+                </button>
+              )}
             </div>
           )}
         </div>
-        
+
         {/* Pagination */}
         {terms.length > 0 && pagination && (
-          <div className="mt-8">
+          <div className="mt-4 sm:mt-6">
             <Pagination
               pagination={pagination}
               onPageChange={handlePageChange}

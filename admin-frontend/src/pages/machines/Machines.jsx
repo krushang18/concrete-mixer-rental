@@ -1,25 +1,22 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
 import toast from 'react-hot-toast';
 import { create } from 'zustand';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
+import {
+  Plus,
+  Edit,
   Eye,
   RefreshCw,
   AlertCircle,
   ChevronDown,
   Trash,
   Settings,
-  Activity,
   MoreVertical,
-  X
+  Search,
+  X,
+  History,
+  FileText
 } from 'lucide-react';
 import { machineApi } from '../../services/machineApi';
 import MachineForm from './MachineForm';
@@ -38,7 +35,6 @@ const useMachineStore = create((set) => ({
     limit: 10
   },
   searchTerm: '',
-  showMobileFilters: false,
   showForm: false,
   selectedMachine: null,
   
@@ -55,7 +51,6 @@ const useMachineStore = create((set) => ({
     searchTerm: ''
   }),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  toggleMobileFilters: () => set((state) => ({ showMobileFilters: !state.showMobileFilters })),
   setShowForm: (show) => set({ showForm: show }),
   setSelectedMachine: (machine) => set({ selectedMachine: machine }),
   
@@ -65,12 +60,6 @@ const useMachineStore = create((set) => ({
   setDeleteMachine: (machine) => set({ deleteMachine: machine }),
   setShowDeleteConfirm: (show) => set({ showDeleteConfirm: show })
 }));
-
-// Validation schema
-const filterSchema = yup.object({
-  sortBy: yup.string(),
-  sortOrder: yup.string()
-});
 
 // Debounce hook
 const useDebounce = (value, delay) => {
@@ -84,82 +73,51 @@ const useDebounce = (value, delay) => {
 
 // Status Badge Component removed as per user schema
 
-// Minimal Filter Component
+// Filter Component
 const MachineFilters = ({ onApplyFilters, onReset }) => {
-  const { filters, showMobileFilters, toggleMobileFilters, setFilters } = useMachineStore();
-  
-  const { register, handleSubmit, reset } = useForm({
-    resolver: yupResolver(filterSchema),
-    defaultValues: filters,
-    mode: 'onChange'
-  });
+  const { filters, setFilters } = useMachineStore();
 
-  const onSubmit = (data) => {
-    setFilters(data);
+  const handleSortChange = (e) => {
+    setFilters({ sortBy: e.target.value, page: 1 });
     onApplyFilters();
-    toggleMobileFilters();
   };
 
   const handleReset = () => {
-    reset({ sortBy: 'machine_number', sortOrder: 'ASC' });
+    setFilters({ sortBy: 'machine_number', sortOrder: 'ASC', page: 1 });
     onReset();
-    toggleMobileFilters();
   };
-  
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-      {/* Mobile Header */}
-      <div 
-        onClick={toggleMobileFilters}
-        className="flex items-center justify-between p-4 lg:hidden bg-gray-50/50 cursor-pointer active:bg-gray-100 transition-colors"
-      >
-        <span className="text-sm font-semibold text-gray-700 flex items-center">
-          <Filter className="w-4 h-4 mr-2 text-blue-600" />
-          Filter & Sort
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} />
-      </div>
-      
-      {/* Filter Content */}
-      <div className={`p-4 ${showMobileFilters ? 'block border-t border-gray-100' : 'hidden lg:block'}`}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-             {/* Sort Select */}
-             <div className="w-full lg:w-64 relative">
-               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                 <Settings className="h-4 w-4 text-gray-400" />
-               </div>
-               <select
-                  {...register('sortBy')}
-                  className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none cursor-pointer hover:bg-white"
-                >
-                  <option value="machine_number">Sort by Number</option>
-                  <option value="created_at">Sort by Date Created</option>
-                  <option value="name">Sort by Name</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+      <div className="p-3 sm:p-4">
+        <div className="flex flex-row gap-2 sm:gap-3 items-center">
+          {/* Sort Select */}
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Settings className="h-4 w-4 text-gray-400" />
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <button
-                type="submit"
-                className="flex-1 lg:flex-none bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98] text-sm font-medium flex items-center justify-center"
-              >
-                Apply
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex-1 lg:flex-none px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Reset
-              </button>
-            </div>
+            <select
+              value={filters.sortBy}
+              onChange={handleSortChange}
+              className="w-full pl-9 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none cursor-pointer hover:bg-white"
+            >
+              <option value="machine_number">Sort by Number</option>
+              <option value="created_at">Sort by Date Created</option>
+              <option value="name">Sort by Name</option>
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
-        </form>
+
+          {/* Reset */}
+          <button
+            type="button"
+            onClick={handleReset}
+            className="px-3 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 border border-gray-200"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -168,27 +126,28 @@ const MachineFilters = ({ onApplyFilters, onReset }) => {
 // Minimal Mobile Machine Card
 const MachineCard = ({ machine, onView, onEdit, onDelete }) => {
   const [showMenu, setShowMenu] = useState(false);
-  
+  const navigate = useNavigate();
+
   return (
-    <div 
-      className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all group relative"
+    <div
+      className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all relative"
       onClick={() => onView(machine)}
     >
       <div className="flex justify-between items-start mb-3">
         <div className="min-w-0 flex-1 mr-3">
           <div className="flex items-center gap-2 mb-1">
-             <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-mono tracking-wide">
-               #{machine.machine_number}
-             </span>
-             <span className="text-gray-400 text-[10px]">
-               {new Date(machine.created_at).toLocaleDateString()}
-             </span>
+            <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-mono tracking-wide">
+              #{machine.machine_number}
+            </span>
+            <span className="text-gray-400 text-[10px]">
+              {new Date(machine.created_at).toLocaleDateString()}
+            </span>
           </div>
           <h3 className="font-semibold text-gray-900 text-base leading-tight truncate" title={machine.name}>
             {machine.name}
           </h3>
         </div>
-        
+
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -199,10 +158,10 @@ const MachineCard = ({ machine, onView, onEdit, onDelete }) => {
           <MoreVertical className="w-4 h-4" />
         </button>
       </div>
-      
+
       {/* Dropdown Menu */}
       {showMenu && (
-        <div className="absolute right-4 top-10 bg-white border border-gray-100 rounded-lg shadow-xl z-10 min-w-[140px] py-1 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-4 top-10 bg-white border border-gray-100 rounded-lg shadow-xl z-10 min-w-[160px] py-1 animate-in fade-in zoom-in-95 duration-100">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -217,6 +176,29 @@ const MachineCard = ({ machine, onView, onEdit, onDelete }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              navigate(`/services?machine=${machine.id}`);
+              setShowMenu(false);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+          >
+            <History className="w-3.5 h-3.5 mr-2 text-green-500" />
+            Service History
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/documents?machine=${machine.id}`);
+              setShowMenu(false);
+            }}
+            className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+          >
+            <FileText className="w-3.5 h-3.5 mr-2 text-yellow-500" />
+            Documents
+          </button>
+          <div className="border-t border-gray-100 my-1" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               onDelete(machine);
               setShowMenu(false);
             }}
@@ -228,17 +210,11 @@ const MachineCard = ({ machine, onView, onEdit, onDelete }) => {
         </div>
       )}
 
-      {/* Description Info */}
-      <div className="bg-gray-50/50 rounded-lg p-3 mb-4 space-y-2 border border-gray-100">
+      {/* Description */}
+      <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-100">
         <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
           {machine.description || 'No description available'}
         </p>
-      </div>
-
-      <div className="flex justify-end pt-2 border-t border-gray-50">
-         <span className="text-xs font-semibold text-blue-600 flex items-center group-hover:text-blue-700 transition-colors">
-            View Details <Eye className="w-3 h-3 ml-1" />
-         </span>
       </div>
     </div>
   );
@@ -395,28 +371,51 @@ const Machines = () => {
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
         
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Machine Management</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Manage your inventory ({pagination?.total || 0} total machines)
-            </p>
+        <div className="mb-4">
+          {/* Title row */}
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h1 className="text-base sm:text-2xl font-bold text-gray-900 leading-tight">Machine Management</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Manage your inventory ({pagination?.total || 0} total machines)
+              </p>
+            </div>
+
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex items-center gap-2 ml-4 flex-shrink-0">
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="flex items-center px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={handleCreateMachine}
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Machine
+              </button>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-             <button
+
+          {/* Mobile buttons */}
+          <div className="sm:hidden grid grid-cols-2 gap-2">
+            <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50 shadow-sm"
-              title="Refresh"
+              className="flex items-center justify-center px-2 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 text-xs font-medium"
             >
-              <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
+              {isFetching ? 'Refreshing…' : 'Refresh'}
             </button>
             <button
               onClick={handleCreateMachine}
-              className="flex items-center px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow active:scale-[0.98] text-sm"
+              className="flex items-center justify-center px-2 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-3.5 h-3.5 mr-1" />
               Add Machine
             </button>
           </div>

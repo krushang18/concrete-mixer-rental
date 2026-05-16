@@ -142,23 +142,25 @@ const CustomerForm = () => {
   const createMutation = useMutation({
     mutationFn: customerApi.create,
     onSuccess: () => {
+      toast.success('Customer created successfully');
       queryClient.invalidateQueries(['customers']);
       navigate('/customers');
     },
     onError: (error) => {
-      // Toast handled by API
+      toast.error(error.message || 'Failed to create customer');
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => customerApi.update(id, data),
     onSuccess: () => {
+      toast.success('Customer updated successfully');
       queryClient.invalidateQueries(['customers']);
       queryClient.invalidateQueries(['customer', id]);
       navigate('/customers');
     },
     onError: (error) => {
-      // Toast handled by API
+      toast.error(error.message || 'Failed to update customer');
     }
   });
 
@@ -275,118 +277,113 @@ const CustomerForm = () => {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <button
-            onClick={() => navigate('/customers')}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-md"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {isEdit ? 'Edit Customer' : 'Add New Customer'}
-            </h1>
-            <p className="text-gray-600">
-              {isEdit 
-                ? 'Update customer information and details' 
-                : 'Add a new customer to your database'
-              }
-            </p>
-          </div>
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => navigate('/customers')}
+          className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md flex-shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
+            {isEdit ? 'Edit Customer' : 'Add New Customer'}
+          </h1>
+          <p className="text-xs text-gray-500 sm:text-sm">
+            {isEdit ? 'Update customer information' : 'Add a new customer to your database'}
+          </p>
         </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2 sm:text-base">
+            <Building2 className="w-4 h-4 text-blue-600" />
             Company Information
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Company Name */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Company Name — full width */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 Company Name *
               </label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="text"
                   {...register('company_name')}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.company_name ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter company name"
+                  placeholder="Company name"
                 />
               </div>
               {errors.company_name && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.company_name.message}
                 </p>
               )}
             </div>
 
-            {/* Contact Person */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Contact Person — full width on mobile, half on sm+ */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 Contact Person
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="text"
                   {...register('contact_person')}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.contact_person ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter contact person name"
+                  placeholder="Contact person"
                 />
               </div>
               {errors.contact_person && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.contact_person.message}
                 </p>
               )}
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Email — full width on mobile, half on sm+ */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="email"
                   {...register('email')}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter email address"
+                  placeholder="Email address"
                 />
               </div>
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.email.message}
                 </p>
               )}
             </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number *
+            {/* Phone — full on mobile, half on sm+ */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
+                Phone *
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="tel"
                   {...register('phone')}
@@ -394,73 +391,73 @@ const CustomerForm = () => {
                     const formatted = formatPhoneNumber(e.target.value);
                     setValue('phone', formatted, { shouldValidate: true });
                   }}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-2 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.phone ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter 10-digit mobile number"
-                  maxLength={12} // Allow for space in formatting
+                  placeholder="Phone number"
+                  maxLength={12}
                 />
               </div>
               {errors.phone && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.phone.message}
                 </p>
               )}
             </div>
 
-            {/* Site Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Site Location — full on mobile, half on sm+ */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 Site Location
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="text"
                   {...register('site_location')}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-2 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.site_location ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter site location"
+                  placeholder="Site location"
                 />
               </div>
               {errors.site_location && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.site_location.message}
                 </p>
               )}
             </div>
 
-            {/* Address */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Address — full width */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 Address
               </label>
               <textarea
                 {...register('address')}
-                rows={3}
-                className={`w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                rows={2}
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
                   errors.address ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="Enter complete address (optional)"
+                placeholder="Complete address (optional)"
               />
               {errors.address && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.address.message}
                 </p>
               )}
             </div>
 
-            {/* GST Number */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* GST Number — full width */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1 sm:text-sm">
                 GST Number
               </label>
               <div className="relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                 <input
                   type="text"
                   {...register('gst_number')}
@@ -468,63 +465,63 @@ const CustomerForm = () => {
                     const value = e.target.value.toUpperCase();
                     setValue('gst_number', value, { shouldValidate: true });
                   }}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-9 pr-9 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.gst_number ? 'border-red-300' : gstValue && !gstIsValid ? 'border-yellow-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter GST number (e.g., 22AAAAA0000A1Z5)"
+                  placeholder="22AAAAA0000A1Z5 (optional)"
                   maxLength={15}
                 />
                 {gstValue && gstIsValid && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full" />
                     </div>
                   </div>
                 )}
               </div>
               {errors.gst_number && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
+                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {errors.gst_number.message}
                 </p>
               )}
               {gstValue && !gstIsValid && !errors.gst_number && gstValue.trim() !== '' && (
-                <p className="mt-1 text-sm text-yellow-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  GST number format appears incorrect
+                <p className="mt-1 text-xs text-yellow-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                  GST format appears incorrect
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                Leave empty if customer doesn't have GST registration
+              <p className="mt-1 text-xs text-gray-400">
+                Leave empty if not GST registered
               </p>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end pt-6 border-t border-gray-200">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
+            className="flex-1 sm:flex-none flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <X className="w-4 h-4 mr-2" />
+            <X className="w-4 h-4 mr-1.5" />
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || (!isDirty && isEdit)}
-            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
+            className="flex-1 sm:flex-none flex items-center justify-center px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
                 {isEdit ? 'Updating...' : 'Creating...'}
               </>
             ) : (
               <>
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4 mr-1.5" />
                 {isEdit ? 'Update Customer' : 'Create Customer'}
               </>
             )}

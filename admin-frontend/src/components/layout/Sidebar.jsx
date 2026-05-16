@@ -14,17 +14,14 @@ import {
 import { clsx } from 'clsx'
 
 const navigation = [
-
   { name: 'Queries', href: '/queries', icon: MessageSquare },
-  { name: 'Machines', href: '/machines', icon: Truck },
   { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Quotations', href: '/quotations', icon: FileText },
-  { name: 'Documents', href: '/documents', icon: FileBarChart },
   { name: 'Terms & Condition', href: '/terms-and-conditions', icon: FileTerminal },
+  { name: 'Quotations', href: '/quotations', icon: FileText },
+  { name: 'Machines', href: '/machines', icon: Truck },
+  { name: 'Documents', href: '/documents', icon: FileBarChart },
   { name: 'Service', href: '/services', icon: DatabaseBackup },
-
   { name: 'Settings', href: '/settings', icon: Settings },
-
 ]
 
 const Sidebar = ({ isOpen, onClose, isMobile }) => {

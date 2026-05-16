@@ -1,33 +1,23 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import toast from "react-hot-toast";
 import { create } from "zustand";
 import {
   Search,
   Plus,
   Filter,
-
-  Eye,
   Edit,
   Phone,
   Mail,
   MapPin,
-  Users,
-  TrendingUp,
-  Calendar,
-  FileText,
   X,
   RefreshCw,
   AlertCircle,
-  Menu,
   ChevronDown,
-  Settings,
   MoreVertical,
   Trash2,
+  Eye,
 } from "lucide-react";
 import { customerApi } from "../../services/customerApi";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -47,7 +37,6 @@ const useCustomerStore = create((set, get) => ({
     limit: 10,
   },
   searchTerm: "",
-  showMobileFilters: false,
 
   // Actions
   setFilters: (newFilters) =>
@@ -68,18 +57,7 @@ const useCustomerStore = create((set, get) => ({
       searchTerm: "",
     }),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  toggleMobileFilters: () =>
-    set((state) => ({ showMobileFilters: !state.showMobileFilters })),
 }));
-
-// Validation schema for filters
-const filterSchema = yup.object({
-  search: yup.string(),
-  city: yup.string(),
-  has_gst: yup.string().oneOf(["all", "has_gst", "no_gst"]),
-  sortBy: yup.string().oneOf(["created_at", "company_name", "contact_person"]),
-  sortOrder: yup.string().oneOf(["ASC", "DESC"]),
-});
 
 // Custom hook for debouncing
 const useDebounce = (value, delay) => {
@@ -94,87 +72,42 @@ const useDebounce = (value, delay) => {
 };
 
 
-// Minimalist Filter Component
-const CustomerFilters = ({ onApplyFilters, onReset }) => {
-  const { filters, showMobileFilters, toggleMobileFilters, setFilters } = useCustomerStore();
-  
-  const { register, handleSubmit, reset } = useForm({
-    resolver: yupResolver(filterSchema),
-    defaultValues: filters,
-    mode: 'onChange'
-  });
+// Filter Component
+const CustomerFilters = ({ onReset }) => {
+  const { filters, setFilters } = useCustomerStore();
 
-  const onSubmit = (data) => {
-    setFilters(data);
-    onApplyFilters();
-    toggleMobileFilters();
+  const handleSortChange = (e) => {
+    setFilters({ sortOrder: e.target.value, page: 1 });
   };
 
-  const handleReset = () => {
-    reset({ 
-      search: "",
-      city: "",
-      has_gst: "all",
-      sortBy: "created_at",
-      sortOrder: "DESC"
-    });
-    onReset();
-    toggleMobileFilters();
-  };
-  
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
-      {/* Mobile Header */}
-      <div 
-        onClick={toggleMobileFilters}
-        className="flex items-center justify-between p-4 lg:hidden bg-gray-50/50 cursor-pointer active:bg-gray-100 transition-colors"
-      >
-        <span className="text-sm font-semibold text-gray-700 flex items-center">
-          <Filter className="w-4 h-4 mr-2 text-blue-600" />
-          Filter & Sort
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileFilters ? 'rotate-180' : ''}`} />
-      </div>
-      
-      {/* Filter Content */}
-      <div className={`p-4 ${showMobileFilters ? 'block border-t border-gray-100' : 'hidden lg:block'}`}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-             {/* Sort Select */}
-             <div className="w-full lg:w-64 relative">
-               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                 <Settings className="h-4 w-4 text-gray-400" />
-               </div>
-               <select
-                  {...register('sortOrder')}
-                  className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none cursor-pointer hover:bg-white"
-                >
-                  <option value="DESC">Newest First</option>
-                  <option value="ASC">Oldest First</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <button
-                type="submit"
-                className="flex-1 lg:flex-none bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98] text-sm font-medium flex items-center justify-center"
-              >
-                Apply
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex-1 lg:flex-none px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center justify-center"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Reset
-              </button>
-            </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 p-4">
+      <div className="flex flex-row gap-3 items-center">
+        {/* Sort Select */}
+        <div className="flex-1 lg:flex-none lg:w-64 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Filter className="h-4 w-4 text-gray-400" />
           </div>
-        </form>
+          <select
+            value={filters.sortOrder}
+            onChange={handleSortChange}
+            className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-all appearance-none cursor-pointer hover:bg-white"
+          >
+            <option value="DESC">Newest First</option>
+            <option value="ASC">Oldest First</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* Reset Button */}
+        <button
+          type="button"
+          onClick={onReset}
+          className="px-4 py-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium flex items-center"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reset
+        </button>
       </div>
     </div>
   );
@@ -244,7 +177,7 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
         </div>
       )}
 
-      <div className="space-y-2 mb-4">
+      <div className="space-y-2">
         <div className="flex items-center text-sm text-gray-600">
           <Phone className="w-3.5 h-3.5 mr-2 text-gray-400 flex-shrink-0" />
           <span className="truncate">{customer.phone}</span>
@@ -253,12 +186,6 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
           <MapPin className="w-3.5 h-3.5 mr-2 text-gray-400 flex-shrink-0" />
           <span className="truncate">{customer.site_location || 'No location'}</span>
         </div>
-      </div>
-
-      <div className="flex justify-end pt-2 border-t border-gray-50">
-         <span className="text-xs font-semibold text-blue-600 flex items-center group-hover:text-blue-700 transition-colors">
-            View Details <Eye className="w-3 h-3 ml-1" />
-         </span>
       </div>
     </div>
   );
@@ -336,7 +263,7 @@ const Customers = () => {
       queryClient.invalidateQueries(["customers"]);
       toast.success('Customer deleted successfully');
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('Failed to delete customer');
     },
   });
@@ -392,28 +319,51 @@ const Customers = () => {
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
         
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Customer Management</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Manage your customer database ({pagination?.totalItems || 0} total)
-            </p>
+        <div className="mb-4">
+          {/* Title row */}
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h1 className="text-base sm:text-2xl font-bold text-gray-900 leading-tight">Customer Management</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Manage your customer database ({pagination?.totalItems || 0} total)
+              </p>
+            </div>
+
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex items-center gap-2 ml-4 flex-shrink-0">
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="flex items-center px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={() => navigate("/customers/new")}
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Customer
+              </button>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-             <button
+
+          {/* Mobile buttons */}
+          <div className="sm:hidden grid grid-cols-2 gap-2">
+            <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50 shadow-sm"
-              title="Refresh"
+              className="flex items-center justify-center px-2 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 text-xs font-medium"
             >
-              <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
+              {isFetching ? 'Refreshing…' : 'Refresh'}
             </button>
             <button
               onClick={() => navigate("/customers/new")}
-              className="flex items-center px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow active:scale-[0.98] text-sm"
+              className="flex items-center justify-center px-2 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-3.5 h-3.5 mr-1" />
               Add Customer
             </button>
           </div>
@@ -442,7 +392,7 @@ const Customers = () => {
         </div>
 
         {/* Filters */}
-        <CustomerFilters onApplyFilters={() => setFilters({ page: 1 })} onReset={resetFilters} />
+        <CustomerFilters onReset={resetFilters} />
 
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
@@ -458,7 +408,7 @@ const Customers = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50/80 transition-colors group">
+                  <tr key={customer.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-6 py-4 align-top">
                        <div className="flex flex-col">
                          <span className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1" title={customer.company_name}>
@@ -488,7 +438,7 @@ const Customers = () => {
                        </div>
                     </td>
                     <td className="px-6 py-4 align-top text-right">
-                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <div className="flex justify-end gap-2">
                           <button onClick={() => handleViewCustomer(customer)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors" title="View">
                              <Eye className="w-4 h-4" />
                           </button>
