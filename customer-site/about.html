@@ -353,7 +353,7 @@
             height: 50vh;
             min-height: 300px;
             background: linear-gradient(135deg, rgba(0, 129, 201, 0.9), rgba(0, 107, 163, 0.9)),
-                        url('assets/images/ss1.jpg') center/cover;
+                        image-set(url('assets/images/ss1.webp') type('image/webp'), url('assets/images/ss1.jpg') type('image/jpeg')) center/cover;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -999,7 +999,10 @@
                 </div>
                 
                 <div class="story-image fade-in-up">
-                    <img src="assets/images/ss7.jpeg" alt="M/S O.C.Shah self-loading concrete mixer — 11 machine fleet serving Gujarat, Rajasthan, Maharashtra" loading="lazy">
+                    <picture>
+                        <source srcset="assets/images/ss7.webp" type="image/webp">
+                        <img src="assets/images/ss7.jpeg" alt="M/S O.C.Shah self-loading concrete mixer — 11 machine fleet serving Gujarat, Rajasthan, Maharashtra" loading="lazy">
+                    </picture>
                 </div>
             </div>
         </section>

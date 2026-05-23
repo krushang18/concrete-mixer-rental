@@ -346,7 +346,7 @@
             height: 50vh;
             min-height: 300px;
             background: linear-gradient(135deg, rgba(0, 129, 201, 0.9), rgba(0, 107, 163, 0.9)),
-                        url('assets/images/ss2.jpg') center/cover;
+                        image-set(url('assets/images/ss2.webp') type('image/webp'), url('assets/images/ss2.jpg') type('image/jpeg')) center/cover;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1186,7 +1186,10 @@
             <div class="equipment-grid">
                 <div class="equipment-card fade-in-up">
                     <div class="equipment-image">
-                        <img src="assets/images/ss1.jpg" alt="KYB self-loading concrete mixer 4.3 cubic metre — M/S O.C.Shah rental" loading="lazy">
+                        <picture>
+                            <source srcset="assets/images/ss1.webp" type="image/webp">
+                            <img src="assets/images/ss1.jpg" alt="KYB self-loading concrete mixer 4.3 cubic metre — M/S O.C.Shah rental" loading="lazy">
+                        </picture>
                         <span class="equipment-badge">Available for Rent</span>
                     </div>
                     <div class="equipment-content">
@@ -1210,7 +1213,10 @@
 
                 <div class="equipment-card fade-in-up">
                     <div class="equipment-image">
-                        <img src="assets/images/ss3.jpg" alt="Ajax self-loading concrete mixer 4.0 cubic metre — available for rent" loading="lazy">
+                        <picture>
+                            <source srcset="assets/images/ss3.webp" type="image/webp">
+                            <img src="assets/images/ss3.jpg" alt="Ajax self-loading concrete mixer 4.0 cubic metre — available for rent" loading="lazy">
+                        </picture>
                         <span class="equipment-badge">Available for Rent</span>
                     </div>
                     <div class="equipment-content">
