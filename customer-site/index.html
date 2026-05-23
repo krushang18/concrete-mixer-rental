@@ -202,16 +202,14 @@
     <!-- Preconnect for faster resource loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
-    <!-- Preload LCP image -->
-    <link rel="preload" as="image" href="assets/images/ss1.webp" type="image/webp" fetchpriority="high">
+    <!-- Preload LCP hero image — mobile 800w, desktop 1080w -->
+    <link rel="preload" as="image" href="assets/images/ss1-800w.webp" type="image/webp" media="(max-width: 800px)" fetchpriority="high">
+    <link rel="preload" as="image" href="assets/images/ss1.webp" type="image/webp" media="(min-width: 801px)" fetchpriority="high">
 
-    <!-- Fonts (non-render-blocking) -->
+    <!-- Inter font (non-render-blocking) -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"></noscript>
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     
     <style>
         /* Premium Enhancements */
@@ -1018,6 +1016,14 @@
             }
         }
 
+        .svg-icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            fill: currentColor;
+            vertical-align: -0.125em;
+        }
+
         /* Smooth scroll enhancement */
         @media (prefers-reduced-motion: no-preference) {
             html {
@@ -1109,6 +1115,22 @@
     </style>
 </head>
 <body>
+    <!-- Inline SVG icon sprite — replaces Font Awesome CDN -->
+    <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <symbol id="icon-bars" viewBox="0 0 448 512"><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></symbol>
+            <symbol id="icon-times" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></symbol>
+            <symbol id="icon-paper-plane" viewBox="0 0 512 512"><path d="M498.1 5.6c10.1 7 15.4 19.1 13.5 31.2l-64 416c-1.5 9.7-7.4 18.2-16 23s-18.9 5.4-28 1.6L284 427.7l-68.5 74.1c-8.9 9.7-22.9 12.9-35.2 8.1S160 493.2 160 480V396.4c0-4 1.5-7.8 4.2-10.7L331.8 202.8c5.8-6.3 5.6-16-.4-22s-15.7-6.4-22-.7L106 360.8 17.7 316.6C7.1 311.3 .3 300.7 0 288.9s5.9-22.8 16.1-28.7l448-256c10.7-6.1 23.9-6.1 34 .3z"/></symbol>
+            <symbol id="icon-phone" viewBox="0 0 512 512"><path d="M164.9 24.6c-7.7-18.6-28-28.5-47.4-23.2l-88 24C11.7 30.3 0 46.3 0 64.2C0 311.4 200.6 512 447.8 512c17.9 0 33.9-11.7 38.9-29l24-88c5.3-19.4-4.6-39.7-23.2-47.4l-96-40c-16.3-6.8-35.2-2.1-46.3 11.6L304.7 368C234.3 334.7 177.3 277.7 144 207.3L193.3 167c13.7-11.2 18.4-30 11.6-46.3l-40-96z"/></symbol>
+            <symbol id="icon-check-circle" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></symbol>
+            <symbol id="icon-truck" viewBox="0 0 640 512"><path d="M48 0C21.5 0 0 21.5 0 48V368c0 26.5 21.5 48 48 48H64c0 53 43 96 96 96s96-43 96-96H384c0 53 43 96 96 96s96-43 96-96h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V288 256 237.3c0-17-6.7-33.3-18.7-45.3L512 114.7c-12-12-28.3-18.7-45.3-18.7H416V48c0-26.5-21.5-48-48-48H48zM416 160h50.7L544 237.3V256H416V160zM112 416a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm368-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></symbol>
+            <symbol id="icon-clock" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></symbol>
+            <symbol id="icon-shield" viewBox="0 0 512 512"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2c-.5 99.2-41.3 280.7-213.6 363.2c-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0zm0 63.1V467.8C369.9 417 424.6 269.8 425 140.4L256 63.1z"/></symbol>
+            <symbol id="icon-map-marker" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></symbol>
+            <symbol id="icon-envelope" viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></symbol>
+        </defs>
+    </svg>
+
     <!-- Header -->
     <header class="header">
         <nav class="navbar">
@@ -1121,7 +1143,7 @@
                 <li><a href="query.html" class="cta-button">Get Quote</a></li>
             </ul>
             <button class="mobile-menu-toggle" aria-label="Open navigation menu" aria-expanded="false">
-                <i class="fas fa-bars"></i>
+                <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-bars"></use></svg>
             </button>
         </nav>
     </header>
@@ -1130,7 +1152,7 @@
     <div class="mobile-nav">
         <div class="mobile-nav-content">
             <button class="mobile-nav-close">
-                <i class="fas fa-times"></i>
+                <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-times"></use></svg>
             </button>
             <ul class="mobile-nav-links">
                 <li><a href="#home">Home</a></li>
@@ -1147,22 +1169,22 @@
         <div class="hero-slider">
             <div class="hero-slide active">
                 <picture>
-                    <source srcset="assets/images/ss1.webp" type="image/webp">
+                    <source srcset="assets/images/ss1-800w.webp 800w, assets/images/ss1.webp 1080w" sizes="(max-width: 800px) 800px, 1080px" type="image/webp">
                     <img src="assets/images/ss1.jpg" alt="Self Loading Concrete Mixer on construction site — M/S O.C.Shah rental fleet" fetchpriority="high">
                 </picture>
                 <div class="hero-overlay"></div>
             </div>
             <div class="hero-slide">
                 <picture>
-                    <source srcset="assets/images/ss2.webp" type="image/webp">
-                    <img src="assets/images/ss2.jpg" alt="Construction Equipment">
+                    <source srcset="assets/images/ss2-800w.webp 800w, assets/images/ss2.webp 1080w" sizes="(max-width: 800px) 800px, 1080px" type="image/webp">
+                    <img src="assets/images/ss2.jpg" alt="Construction Equipment" loading="lazy">
                 </picture>
                 <div class="hero-overlay"></div>
             </div>
             <div class="hero-slide">
                 <picture>
-                    <source srcset="assets/images/ss3.webp" type="image/webp">
-                    <img src="assets/images/ss3.jpg" alt="Concrete Mixer Rental">
+                    <source srcset="assets/images/ss3-800w.webp 800w, assets/images/ss3.webp 1080w" sizes="(max-width: 800px) 800px, 1080px" type="image/webp">
+                    <img src="assets/images/ss3.jpg" alt="Concrete Mixer Rental" loading="lazy">
                 </picture>
                 <div class="hero-overlay"></div>
             </div>
@@ -1175,11 +1197,11 @@
             
             <div class="hero-buttons">
                 <a href="query.html" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i>
+                    <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-paper-plane"></use></svg>
                     Post Query
                 </a>
                 <a href="tel:+919913737777" class="btn btn-outline">
-                    <i class="fas fa-phone"></i>
+                    <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-phone"></use></svg>
                     Call Now
                 </a>
             </div>
@@ -1209,19 +1231,19 @@
                     
                     <div class="features-grid">
                         <div class="feature-item">
-                            <i class="fas fa-check-circle"></i>
+                            <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-check-circle"></use></svg>
                             <span>High-quality equipment</span>
                         </div>
                         <div class="feature-item">
-                            <i class="fas fa-check-circle"></i>
+                            <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-check-circle"></use></svg>
                             <span>Flexible rental periods</span>
                         </div>
                         <div class="feature-item">
-                            <i class="fas fa-check-circle"></i>
+                            <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-check-circle"></use></svg>
                             <span>Professional maintenance</span>
                         </div>
                         <div class="feature-item">
-                            <i class="fas fa-check-circle"></i>
+                            <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-check-circle"></use></svg>
                             <span>Competitive pricing</span>
                         </div>
                     </div>
@@ -1253,7 +1275,7 @@
             <div class="services-grid">
                 <div class="service-card">
                     <div class="service-icon">
-                        <i class="fas fa-truck"></i>
+                        <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-truck"></use></svg>
                     </div>
                     <h3>Rental & Delivery</h3>
                     <p>Flexible rental options with prompt delivery and pickup services to and from your construction site.</p>
@@ -1261,7 +1283,7 @@
 
                 <div class="service-card">
                     <div class="service-icon">
-                        <i class="fas fa-clock"></i>
+                        <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-clock"></use></svg>
                     </div>
                     <h3>Flexible Duration</h3>
                     <p>Short-term and long-term rental solutions to match your project timeline and requirements.</p>
@@ -1269,7 +1291,7 @@
 
                 <div class="service-card">
                     <div class="service-icon">
-                        <i class="fas fa-shield-alt"></i>
+                        <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-shield"></use></svg>
                     </div>
                     <h3>Insured Equipment</h3>
                     <p>All our concrete mixers are fully insured, giving you peace of mind during your rental period.</p>
@@ -1290,11 +1312,11 @@
                 <p>Contact us today for the best concrete mixer rental solutions for your construction project.</p>
                 <div class="hero-buttons">
                     <a href="query.html" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i>
+                        <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-paper-plane"></use></svg>
                         Submit Inquiry
                     </a>
                     <a href="tel:+919913737777" class="btn btn-outline">
-                        <i class="fas fa-phone"></i>
+                        <svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-phone"></use></svg>
                         +91-9913737777
                     </a>
                 </div>
@@ -1351,15 +1373,15 @@
                 <div class="footer-section">
                     <h3>M/S O.C.Shah</h3>
                     <p>Leading provider of self-loading concrete mixers for rent across Gujarat, Rajasthan, and Maharashtra.</p>
-                    <p><i class="fas fa-map-marker-alt"></i> E-706, Radhe infinity, Raksha Shakti Circle Kudasan, Gandhinagar, Gujarat - 382426</p>
+                    <p><svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-map-marker"></use></svg> E-706, Radhe infinity, Raksha Shakti Circle Kudasan, Gandhinagar, Gujarat - 382426</p>
                 </div>
 
                 <div class="footer-section">
                     <h3>Contact Info</h3>
-                    <a href="tel:+919898020677"><i class="fas fa-phone"></i> +91-9898020677</a>
-                    <a href="tel:+919913737777"><i class="fas fa-phone"></i> +91-9913737777</a>
-                    <a href="mailto:ocsfiori@gmail.com"><i class="fas fa-envelope"></i> ocsfiori@gmail.com</a>
-                    <p><i class="fas fa-clock"></i> Available 24/7</p>
+                    <a href="tel:+919898020677"><svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-phone"></use></svg> +91-9898020677</a>
+                    <a href="tel:+919913737777"><svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-phone"></use></svg> +91-9913737777</a>
+                    <a href="mailto:ocsfiori@gmail.com"><svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-envelope"></use></svg> ocsfiori@gmail.com</a>
+                    <p><svg class="svg-icon" aria-hidden="true" focusable="false"><use href="#icon-clock"></use></svg> Available 24/7</p>
                 </div>
 
                 <div class="footer-section">
